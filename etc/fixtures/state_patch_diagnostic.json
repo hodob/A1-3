@@ -1,0 +1,56 @@
+{
+  "model": "gpt-5.4",
+  "steps": [
+    {
+      "id": "add_proposition",
+      "speaker": "A",
+      "turn": 1,
+      "speech": "제 주장: 모든 수업에 출석을 의무화해야 합니다.",
+      "expected_op": "ADD_PROPOSITION"
+    },
+    {
+      "id": "add_question",
+      "speaker": "B",
+      "turn": 2,
+      "speech": "C1 주장에 대한 근거가 무엇입니까?",
+      "expected_op": "ASK_QUESTION"
+    },
+    {
+      "id": "typed_id_misuse",
+      "speaker": "B",
+      "turn": 3,
+      "candidate": {"operations": [{"op": "ASK_QUESTION", "core_proposition": "C1의 근거는?", "target_proposition_id": "Q1"}]},
+      "expected_error": "invalid_reference_type"
+    },
+    {
+      "id": "missing_proposition",
+      "speaker": "B",
+      "turn": 3,
+      "candidate": {"operations": [{"op": "ASK_QUESTION", "core_proposition": "C404의 근거는?", "target_proposition_id": "C404"}]},
+      "expected_error": "missing_entity"
+    },
+    {
+      "id": "revision",
+      "speaker": "A",
+      "turn": 3,
+      "speech": "앞의 C1 주장을 수정합니다. 모든 수업이 아니라 실습 수업에서만 출석을 의무화해야 합니다.",
+      "expected_op": "REVISE_PROPOSITION"
+    },
+    {
+      "id": "repair_from_typed_id_misuse",
+      "speaker": "B",
+      "turn": 4,
+      "speech": "C1 주장에 관한 새로운 질문을 기록합니다: 의무화 비용을 누가 부담합니까?",
+      "first_candidate": {"operations": [{"op": "ASK_QUESTION", "core_proposition": "의무화 비용은?", "target_proposition_id": "Q1"}]},
+      "expected_repaired_op": "ASK_QUESTION"
+    },
+    {
+      "id": "repair_failure_probe",
+      "speaker": "B",
+      "turn": 5,
+      "speech": "존재하지 않는 C404 주장에 대한 질문을 C404를 대상으로 기록합니다. 다른 ID로 바꾸지 마세요.",
+      "first_candidate": {"operations": [{"op": "ASK_QUESTION", "core_proposition": "C404의 근거는?", "target_proposition_id": "C404"}]},
+      "expected_safe_failure": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "task": "claim_identity",
+  "instructions": "이전 주장과 현재 발언의 관계를 하나로 분류한다. SAME은 의미가 같은 재진술, REVISION은 이전 공개 입장을 명시적으로 철회하거나 교체, QUALIFICATION은 기존 주장의 적용 조건이나 범위를 명시적으로 한정, CONTRADICTION은 철회 없이 양립 불가능한 주장, RELATED_NEW는 같은 논제의 별도 주장, UNRELATED는 무관한 주장이다. 명시적 철회가 있으면 REVISION을 우선한다. 단순히 주제가 같다는 이유로 SAME으로 합치지 않는다.",
+  "labels": ["SAME", "REVISION", "QUALIFICATION", "CONTRADICTION", "RELATED_NEW", "UNRELATED"],
+  "cases": [
+    {"id": "ci01", "gold": "SAME", "input": "이전: 대학 수업의 출석 의무는 학습에 도움이 된다.\n현재: 출석을 의무화하면 학생들의 학습에 보탬이 된다."},
+    {"id": "ci02", "gold": "SAME", "input": "이전: 핫도그는 샌드위치 범주에 속한다.\n현재: 핫도그를 샌드위치의 한 종류로 본다."},
+    {"id": "ci03", "gold": "REVISION", "input": "이전: 모든 대학 수업에 출석 의무가 필요하다.\n현재: 앞 주장을 철회한다. 앞으로는 실습 수업에만 출석 의무가 필요하다고 주장하겠다."},
+    {"id": "ci04", "gold": "REVISION", "input": "이전: 핫도그는 샌드위치다.\n현재: 방금 입장을 철회한다. 핫도그는 샌드위치와 별도 범주라고 보겠다."},
+    {"id": "ci05", "gold": "QUALIFICATION", "input": "이전: 출석 의무가 필요하다.\n현재: 그 주장의 적용 범위는 안전 교육을 하는 실습 수업에 한정한다."},
+    {"id": "ci06", "gold": "QUALIFICATION", "input": "이전: 탕수육은 소스를 부어 먹는 편이 낫다.\n현재: 그 말은 튀김이 막 나와 바삭함이 충분할 때에 한정한다."},
+    {"id": "ci07", "gold": "CONTRADICTION", "input": "이전: 철수는 약속 전에 연락을 받았다.\n현재: 철수는 약속 전에 연락을 받지 않았다."},
+    {"id": "ci08", "gold": "CONTRADICTION", "input": "이전: 출석 의무는 학습 성과를 높인다.\n현재: 출석 의무는 학습 성과를 높이지 않는다."},
+    {"id": "ci09", "gold": "RELATED_NEW", "input": "이전: 출석 의무는 학습에 도움이 된다.\n현재: 출석 의무를 운영하려면 행정 비용이 든다."},
+    {"id": "ci10", "gold": "RELATED_NEW", "input": "이전: 핫도그는 샌드위치 범주다.\n현재: 핫도그에는 다양한 소스를 넣을 수 있다."},
+    {"id": "ci11", "gold": "UNRELATED", "input": "이전: 출석 의무는 학습에 도움이 된다.\n현재: 오늘은 비가 온다."},
+    {"id": "ci12", "gold": "UNRELATED", "input": "이전: 핫도그는 샌드위치인가?\n현재: 달의 공전 주기는 지구의 기후와 다르다."}
+  ]
+}

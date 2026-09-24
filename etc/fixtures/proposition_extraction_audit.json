@@ -1,0 +1,1062 @@
+{
+  "source_run": "runs\\integration-tangsuyuk-guarded-v2",
+  "labels": [
+    "VALID",
+    "INVALID",
+    "DUPLICATE",
+    "OVER_SPLIT",
+    "UNDER_SPLIT",
+    "WRONG_SCOPE",
+    "WRONG_POLARITY",
+    "WRONG_SPEAKER_OR_PROVENANCE",
+    "UNCLEAR"
+  ],
+  "cases": [
+    {
+      "proposition_id": "C1",
+      "turn_id": 1,
+      "speaker": "A",
+      "source_utterance": "저는 탕수육은 소스를 부어 먹는 편이 더 낫다고 봅니다. 탕수육의 핵심은 튀김과 소스가 따로 노는 게 아니라 한 접시에서 맛이 합쳐지는 데 있고, 부어 먹어야 고기·튀김·소스의 균형이 한 번에 맞춰집니다. 비유하자면 회에 초장을 “찍을 자유”도 있지만, 탕수육은 애초에 소스와 만나 완성되는 요리 쪽에 더 가깝습니다.",
+      "extracted_text": "탕수육은 소스를 부어 먹는 편이 더 낫다.",
+      "relations": [
+        {
+          "id": "R1",
+          "from_proposition_id": "C5",
+          "to_proposition_id": "C1",
+          "relation_type": "CONTRADICTS"
+        },
+        {
+          "id": "R7",
+          "from_proposition_id": "C10",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R11",
+          "from_proposition_id": "C17",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R12",
+          "from_proposition_id": "C18",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R13",
+          "from_proposition_id": "C19",
+          "to_proposition_id": "C1",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R14",
+          "from_proposition_id": "C20",
+          "to_proposition_id": "C1",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R15",
+          "from_proposition_id": "C21",
+          "to_proposition_id": "C1",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C2",
+      "turn_id": 1,
+      "speaker": "A",
+      "source_utterance": "저는 탕수육은 소스를 부어 먹는 편이 더 낫다고 봅니다. 탕수육의 핵심은 튀김과 소스가 따로 노는 게 아니라 한 접시에서 맛이 합쳐지는 데 있고, 부어 먹어야 고기·튀김·소스의 균형이 한 번에 맞춰집니다. 비유하자면 회에 초장을 “찍을 자유”도 있지만, 탕수육은 애초에 소스와 만나 완성되는 요리 쪽에 더 가깝습니다.",
+      "extracted_text": "탕수육의 핵심은 튀김과 소스가 따로 노는 것이 아니라 한 접시에서 맛이 합쳐지는 데 있다.",
+      "relations": [
+        {
+          "id": "R4",
+          "from_proposition_id": "C8",
+          "to_proposition_id": "C2",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R5",
+          "from_proposition_id": "C9",
+          "to_proposition_id": "C2",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C3",
+      "turn_id": 1,
+      "speaker": "A",
+      "source_utterance": "저는 탕수육은 소스를 부어 먹는 편이 더 낫다고 봅니다. 탕수육의 핵심은 튀김과 소스가 따로 노는 게 아니라 한 접시에서 맛이 합쳐지는 데 있고, 부어 먹어야 고기·튀김·소스의 균형이 한 번에 맞춰집니다. 비유하자면 회에 초장을 “찍을 자유”도 있지만, 탕수육은 애초에 소스와 만나 완성되는 요리 쪽에 더 가깝습니다.",
+      "extracted_text": "탕수육은 소스를 부어 먹어야 고기·튀김·소스의 균형이 한 번에 맞춰진다.",
+      "relations": [
+        {
+          "id": "R6",
+          "from_proposition_id": "C9",
+          "to_proposition_id": "C3",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C4",
+      "turn_id": 1,
+      "speaker": "A",
+      "source_utterance": "저는 탕수육은 소스를 부어 먹는 편이 더 낫다고 봅니다. 탕수육의 핵심은 튀김과 소스가 따로 노는 게 아니라 한 접시에서 맛이 합쳐지는 데 있고, 부어 먹어야 고기·튀김·소스의 균형이 한 번에 맞춰집니다. 비유하자면 회에 초장을 “찍을 자유”도 있지만, 탕수육은 애초에 소스와 만나 완성되는 요리 쪽에 더 가깝습니다.",
+      "extracted_text": "탕수육은 애초에 소스와 만나 완성되는 요리에 더 가깝다.",
+      "relations": [
+        {
+          "id": "R18",
+          "from_proposition_id": "C24",
+          "to_proposition_id": "C4",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C5",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "찍먹이 더 낫다.",
+      "relations": [
+        {
+          "id": "R1",
+          "from_proposition_id": "C5",
+          "to_proposition_id": "C1",
+          "relation_type": "CONTRADICTS"
+        },
+        {
+          "id": "R2",
+          "from_proposition_id": "C6",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R3",
+          "from_proposition_id": "C7",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R8",
+          "from_proposition_id": "C8",
+          "to_proposition_id": "C5",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R9",
+          "from_proposition_id": "C15",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R10",
+          "from_proposition_id": "C16",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R32",
+          "from_proposition_id": "C48",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R36",
+          "from_proposition_id": "C51",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C6",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "찍먹은 바삭함을 끝까지 지킬 수 있다.",
+      "relations": [
+        {
+          "id": "R2",
+          "from_proposition_id": "C6",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C7",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "찍먹은 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적이다.",
+      "relations": [
+        {
+          "id": "R3",
+          "from_proposition_id": "C7",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C8",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "소스와의 조화가 탕수육의 중요한 매력인 건 인정한다.",
+      "relations": [
+        {
+          "id": "R4",
+          "from_proposition_id": "C8",
+          "to_proposition_id": "C2",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R8",
+          "from_proposition_id": "C8",
+          "to_proposition_id": "C5",
+          "relation_type": "QUALIFIES"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C9",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "그 조화는 먹는 순간에 충분히 만들 수 있다.",
+      "relations": [
+        {
+          "id": "R5",
+          "from_proposition_id": "C9",
+          "to_proposition_id": "C2",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R6",
+          "from_proposition_id": "C9",
+          "to_proposition_id": "C3",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C10",
+      "turn_id": 2,
+      "speaker": "B",
+      "source_utterance": "저는 여전히 찍먹이 더 낫다고 봅니다. 핵심은 간단해요: 바삭함을 끝까지 지킬 수 있고, 한 조각마다 소스 양을 조절할 수 있어서 결과가 더 안정적입니다.  \nA님 말처럼 소스와의 조화가 탕수육의 중요한 매력인 건 인정하지만, 그 조화도 결국 먹는 순간에 충분히 만들 수 있습니다. 굳이 전원에게 같은 농도로 샤워시킬 필요는 없죠.",
+      "extracted_text": "탕수육에 굳이 전원에게 같은 농도로 소스를 부을 필요는 없다.",
+      "relations": [
+        {
+          "id": "R7",
+          "from_proposition_id": "C10",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C11",
+      "turn_id": 3,
+      "speaker": "A",
+      "source_utterance": "방금 말씀의 핵심 전제는 “먹는 순간에 찍으면, 부먹이 만드는 조화와 사실상 같아진다”는 점인데, 저는 그 둘이 완전히 같진 않다고 봅니다. 부먹은 표면 전체에 소스가 얇게 퍼지면서 한입 안에서도 맛이 더 고르게 묶이지만, 찍먹은 대체로 접촉 면만 강해져서 조화가 아니라 ‘튀김 + 소스의 병치’에 가까워지기 쉽거든요.  \n\n물론 바삭함 유지와 조절 가능성은 찍먹의 강점입니다. 다만 탕수육에서 우선순위를 “끝까지 바삭함”에 둘지, 아니면 “소스와 어우러진 한 접시의 완성도”에 둘지가 갈리는 지점인데, 당신은 탕수육의 정체성을 전자에 더 두는 이유를 어떻게 보시나요?",
+      "extracted_text": "먹는 순간에 찍는 것과 부먹이 만드는 조화는 완전히 같지 않다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C12",
+      "turn_id": 3,
+      "speaker": "A",
+      "source_utterance": "방금 말씀의 핵심 전제는 “먹는 순간에 찍으면, 부먹이 만드는 조화와 사실상 같아진다”는 점인데, 저는 그 둘이 완전히 같진 않다고 봅니다. 부먹은 표면 전체에 소스가 얇게 퍼지면서 한입 안에서도 맛이 더 고르게 묶이지만, 찍먹은 대체로 접촉 면만 강해져서 조화가 아니라 ‘튀김 + 소스의 병치’에 가까워지기 쉽거든요.  \n\n물론 바삭함 유지와 조절 가능성은 찍먹의 강점입니다. 다만 탕수육에서 우선순위를 “끝까지 바삭함”에 둘지, 아니면 “소스와 어우러진 한 접시의 완성도”에 둘지가 갈리는 지점인데, 당신은 탕수육의 정체성을 전자에 더 두는 이유를 어떻게 보시나요?",
+      "extracted_text": "부먹은 표면 전체에 소스가 얇게 퍼지면서 한입 안에서도 맛이 더 고르게 묶인다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C13",
+      "turn_id": 3,
+      "speaker": "A",
+      "source_utterance": "방금 말씀의 핵심 전제는 “먹는 순간에 찍으면, 부먹이 만드는 조화와 사실상 같아진다”는 점인데, 저는 그 둘이 완전히 같진 않다고 봅니다. 부먹은 표면 전체에 소스가 얇게 퍼지면서 한입 안에서도 맛이 더 고르게 묶이지만, 찍먹은 대체로 접촉 면만 강해져서 조화가 아니라 ‘튀김 + 소스의 병치’에 가까워지기 쉽거든요.  \n\n물론 바삭함 유지와 조절 가능성은 찍먹의 강점입니다. 다만 탕수육에서 우선순위를 “끝까지 바삭함”에 둘지, 아니면 “소스와 어우러진 한 접시의 완성도”에 둘지가 갈리는 지점인데, 당신은 탕수육의 정체성을 전자에 더 두는 이유를 어떻게 보시나요?",
+      "extracted_text": "찍먹은 대체로 접촉 면만 강해져서 조화라기보다 튀김과 소스의 병치에 가까워지기 쉽다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C14",
+      "turn_id": 3,
+      "speaker": "A",
+      "source_utterance": "방금 말씀의 핵심 전제는 “먹는 순간에 찍으면, 부먹이 만드는 조화와 사실상 같아진다”는 점인데, 저는 그 둘이 완전히 같진 않다고 봅니다. 부먹은 표면 전체에 소스가 얇게 퍼지면서 한입 안에서도 맛이 더 고르게 묶이지만, 찍먹은 대체로 접촉 면만 강해져서 조화가 아니라 ‘튀김 + 소스의 병치’에 가까워지기 쉽거든요.  \n\n물론 바삭함 유지와 조절 가능성은 찍먹의 강점입니다. 다만 탕수육에서 우선순위를 “끝까지 바삭함”에 둘지, 아니면 “소스와 어우러진 한 접시의 완성도”에 둘지가 갈리는 지점인데, 당신은 탕수육의 정체성을 전자에 더 두는 이유를 어떻게 보시나요?",
+      "extracted_text": "바삭함 유지와 조절 가능성은 찍먹의 강점이다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C15",
+      "turn_id": 4,
+      "speaker": "B",
+      "source_utterance": "저는 탕수육의 정체성을 바삭함 쪽에 더 두는 이유가, 소스는 나중에 더할 수 있지만 눅눅해진 튀김은 되돌릴 수 없기 때문입니다. 즉 조화는 찍먹으로도 그때그때 만들 수 있지만, 식감 손실은 한번 가면 끝이라서 실전 기준으로는 보존 가능한 쪽을 먼저 지키는 게 합리적이죠.  \n\n그리고 방금 전제에도 동의하기 어렵습니다. 부먹이 “더 고르게 묶인다”는 건 맞을 수 있어도, 그게 곧 “더 낫다”는 건 아니에요; 균일함은 장점일 수도 있지만, 반대로 한 접시 전체를 같은 상태로 고정해 선택지를 없애기도 하니까요. 오히려 탕수육처럼 식감 대비가 중요한 음식은, 왜 처음부터 전원을 강제 부먹 상태로 만들어야 하죠?",
+      "extracted_text": "탕수육의 정체성을 바삭함 쪽에 더 두는 이유는 소스는 나중에 더할 수 있지만 눅눅해진 튀김은 되돌릴 수 없기 때문이다.",
+      "relations": [
+        {
+          "id": "R9",
+          "from_proposition_id": "C15",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R16",
+          "from_proposition_id": "C22",
+          "to_proposition_id": "C15",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R17",
+          "from_proposition_id": "C23",
+          "to_proposition_id": "C15",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C16",
+      "turn_id": 4,
+      "speaker": "B",
+      "source_utterance": "저는 탕수육의 정체성을 바삭함 쪽에 더 두는 이유가, 소스는 나중에 더할 수 있지만 눅눅해진 튀김은 되돌릴 수 없기 때문입니다. 즉 조화는 찍먹으로도 그때그때 만들 수 있지만, 식감 손실은 한번 가면 끝이라서 실전 기준으로는 보존 가능한 쪽을 먼저 지키는 게 합리적이죠.  \n\n그리고 방금 전제에도 동의하기 어렵습니다. 부먹이 “더 고르게 묶인다”는 건 맞을 수 있어도, 그게 곧 “더 낫다”는 건 아니에요; 균일함은 장점일 수도 있지만, 반대로 한 접시 전체를 같은 상태로 고정해 선택지를 없애기도 하니까요. 오히려 탕수육처럼 식감 대비가 중요한 음식은, 왜 처음부터 전원을 강제 부먹 상태로 만들어야 하죠?",
+      "extracted_text": "조화는 찍먹으로도 그때그때 만들 수 있지만 식감 손실은 한번 가면 끝이므로 실전 기준으로는 보존 가능한 쪽을 먼저 지키는 게 합리적이다.",
+      "relations": [
+        {
+          "id": "R10",
+          "from_proposition_id": "C16",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C17",
+      "turn_id": 4,
+      "speaker": "B",
+      "source_utterance": "저는 탕수육의 정체성을 바삭함 쪽에 더 두는 이유가, 소스는 나중에 더할 수 있지만 눅눅해진 튀김은 되돌릴 수 없기 때문입니다. 즉 조화는 찍먹으로도 그때그때 만들 수 있지만, 식감 손실은 한번 가면 끝이라서 실전 기준으로는 보존 가능한 쪽을 먼저 지키는 게 합리적이죠.  \n\n그리고 방금 전제에도 동의하기 어렵습니다. 부먹이 “더 고르게 묶인다”는 건 맞을 수 있어도, 그게 곧 “더 낫다”는 건 아니에요; 균일함은 장점일 수도 있지만, 반대로 한 접시 전체를 같은 상태로 고정해 선택지를 없애기도 하니까요. 오히려 탕수육처럼 식감 대비가 중요한 음식은, 왜 처음부터 전원을 강제 부먹 상태로 만들어야 하죠?",
+      "extracted_text": "부먹이 더 고르게 묶인다는 점이 곧 더 낫다는 뜻은 아니다.",
+      "relations": [
+        {
+          "id": "R11",
+          "from_proposition_id": "C17",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R23",
+          "from_proposition_id": "C29",
+          "to_proposition_id": "C17",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C18",
+      "turn_id": 4,
+      "speaker": "B",
+      "source_utterance": "저는 탕수육의 정체성을 바삭함 쪽에 더 두는 이유가, 소스는 나중에 더할 수 있지만 눅눅해진 튀김은 되돌릴 수 없기 때문입니다. 즉 조화는 찍먹으로도 그때그때 만들 수 있지만, 식감 손실은 한번 가면 끝이라서 실전 기준으로는 보존 가능한 쪽을 먼저 지키는 게 합리적이죠.  \n\n그리고 방금 전제에도 동의하기 어렵습니다. 부먹이 “더 고르게 묶인다”는 건 맞을 수 있어도, 그게 곧 “더 낫다”는 건 아니에요; 균일함은 장점일 수도 있지만, 반대로 한 접시 전체를 같은 상태로 고정해 선택지를 없애기도 하니까요. 오히려 탕수육처럼 식감 대비가 중요한 음식은, 왜 처음부터 전원을 강제 부먹 상태로 만들어야 하죠?",
+      "extracted_text": "균일함은 장점일 수도 있지만 한 접시 전체를 같은 상태로 고정해 선택지를 없애는 단점도 있다.",
+      "relations": [
+        {
+          "id": "R12",
+          "from_proposition_id": "C18",
+          "to_proposition_id": "C1",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C19",
+      "turn_id": 5,
+      "speaker": "A",
+      "source_utterance": "“강제”라는 표현엔 일부 동의합니다. 여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있어요. 다만 제 주장은 예절 규칙이 아니라 “더 나은 한 접시로서의 형태”에 가깝고, 그 기준에선 처음부터 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶입니다.\n\n그리고 “되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다”는 전제도 꼭 자명하진 않습니다. 탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있거든요. 질문 하나만 드리면, 선택지를 남기는 게 늘 우위라면, 애초에 소스와 함께 내는 탕수육이라는 요리 형식 자체의 의미는 어디에 두시나요?",
+      "extracted_text": "여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있다.",
+      "relations": [
+        {
+          "id": "R13",
+          "from_proposition_id": "C19",
+          "to_proposition_id": "C1",
+          "relation_type": "QUALIFIES"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C20",
+      "turn_id": 5,
+      "speaker": "A",
+      "source_utterance": "“강제”라는 표현엔 일부 동의합니다. 여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있어요. 다만 제 주장은 예절 규칙이 아니라 “더 나은 한 접시로서의 형태”에 가깝고, 그 기준에선 처음부터 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶입니다.\n\n그리고 “되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다”는 전제도 꼭 자명하진 않습니다. 탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있거든요. 질문 하나만 드리면, 선택지를 남기는 게 늘 우위라면, 애초에 소스와 함께 내는 탕수육이라는 요리 형식 자체의 의미는 어디에 두시나요?",
+      "extracted_text": "내 주장은 예절 규칙이 아니라 더 나은 한 접시로서의 형태에 가깝다.",
+      "relations": [
+        {
+          "id": "R14",
+          "from_proposition_id": "C20",
+          "to_proposition_id": "C1",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R19",
+          "from_proposition_id": "C25",
+          "to_proposition_id": "C20",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C21",
+      "turn_id": 5,
+      "speaker": "A",
+      "source_utterance": "“강제”라는 표현엔 일부 동의합니다. 여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있어요. 다만 제 주장은 예절 규칙이 아니라 “더 나은 한 접시로서의 형태”에 가깝고, 그 기준에선 처음부터 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶입니다.\n\n그리고 “되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다”는 전제도 꼭 자명하진 않습니다. 탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있거든요. 질문 하나만 드리면, 선택지를 남기는 게 늘 우위라면, 애초에 소스와 함께 내는 탕수육이라는 요리 형식 자체의 의미는 어디에 두시나요?",
+      "extracted_text": "그 기준에선 처음부터 소스를 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶인다.",
+      "relations": [
+        {
+          "id": "R15",
+          "from_proposition_id": "C21",
+          "to_proposition_id": "C1",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R20",
+          "from_proposition_id": "C26",
+          "to_proposition_id": "C21",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R21",
+          "from_proposition_id": "C27",
+          "to_proposition_id": "C21",
+          "relation_type": "QUALIFIES"
+        },
+        {
+          "id": "R22",
+          "from_proposition_id": "C28",
+          "to_proposition_id": "C21",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R24",
+          "from_proposition_id": "C21",
+          "to_proposition_id": "C29",
+          "relation_type": "CONTRADICTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C22",
+      "turn_id": 5,
+      "speaker": "A",
+      "source_utterance": "“강제”라는 표현엔 일부 동의합니다. 여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있어요. 다만 제 주장은 예절 규칙이 아니라 “더 나은 한 접시로서의 형태”에 가깝고, 그 기준에선 처음부터 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶입니다.\n\n그리고 “되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다”는 전제도 꼭 자명하진 않습니다. 탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있거든요. 질문 하나만 드리면, 선택지를 남기는 게 늘 우위라면, 애초에 소스와 함께 내는 탕수육이라는 요리 형식 자체의 의미는 어디에 두시나요?",
+      "extracted_text": "되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다는 전제는 꼭 자명하진 않다.",
+      "relations": [
+        {
+          "id": "R16",
+          "from_proposition_id": "C22",
+          "to_proposition_id": "C15",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C23",
+      "turn_id": 5,
+      "speaker": "A",
+      "source_utterance": "“강제”라는 표현엔 일부 동의합니다. 여럿이 먹을 때는 선택권 문제가 생기니, 그 상황에선 찍먹이나 반반이 실용적일 수 있어요. 다만 제 주장은 예절 규칙이 아니라 “더 나은 한 접시로서의 형태”에 가깝고, 그 기준에선 처음부터 부어야 소스가 겉에만 찍히는 게 아니라 튀김 표면과 조금 더 넓게 만나면서 맛이 하나로 묶입니다.\n\n그리고 “되돌릴 수 없는 손실이니 바삭함을 우선 보존해야 한다”는 전제도 꼭 자명하진 않습니다. 탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있거든요. 질문 하나만 드리면, 선택지를 남기는 게 늘 우위라면, 애초에 소스와 함께 내는 탕수육이라는 요리 형식 자체의 의미는 어디에 두시나요?",
+      "extracted_text": "탕수육은 생과자처럼 끝까지 순수한 바삭함을 지키는 음식이라기보다, 소스를 입으며 바삭함과 촉촉함이 함께 가는 구간을 즐기는 음식으로도 볼 수 있다.",
+      "relations": [
+        {
+          "id": "R17",
+          "from_proposition_id": "C23",
+          "to_proposition_id": "C15",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C24",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "탕수육이 소스와 함께 나오는 것은 소스가 필요 없다는 뜻이 아니라 각자가 그 조합을 완성하라는 신호에 가깝다.",
+      "relations": [
+        {
+          "id": "R18",
+          "from_proposition_id": "C24",
+          "to_proposition_id": "C4",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C25",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 것은 다른 판단이다.",
+      "relations": [
+        {
+          "id": "R19",
+          "from_proposition_id": "C25",
+          "to_proposition_id": "C20",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C26",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다는 전제는 의문스럽다.",
+      "relations": [
+        {
+          "id": "R20",
+          "from_proposition_id": "C26",
+          "to_proposition_id": "C21",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C27",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "균일한 결합이 부먹의 특징인 것은 인정한다.",
+      "relations": [
+        {
+          "id": "R21",
+          "from_proposition_id": "C27",
+          "to_proposition_id": "C21",
+          "relation_type": "QUALIFIES"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C28",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "탕수육의 매력은 꼭 한 상태로 잠그는 데만 있지 않다.",
+      "relations": [
+        {
+          "id": "R22",
+          "from_proposition_id": "C28",
+          "to_proposition_id": "C21",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C29",
+      "turn_id": 6,
+      "speaker": "B",
+      "source_utterance": "그 의미는 분명 있죠. 탕수육이 소스와 함께 나오는 건 “소스가 필요 없다”가 아니라, 각자가 그 조합을 완성하라는 신호에 가깝다고 봅니다. 커피에 시럽이 같이 나온다고 해서 바리스타가 손님 컵마다 미리 같은 당도로 고정하진 않듯, 소스를 곁들인다는 것과 처음부터 전부 부어 고정한다는 건 다른 판단입니다.\n\n그리고 제가 건드리고 싶은 전제는 이거예요: “표면 전체에 더 고르게 퍼지면 맛이 더 하나로 묶이므로 더 낫다.” 균일한 결합이 부먹의 특징인 건 인정하지만, 탕수육의 매력은 꼭 한 상태로 잠그는 데만 있진 않습니다. 한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연한데, 그 유연성을 포기할 만큼 “고른 코팅”이 결정적으로 우월하다고 보시는 근거는 뭔가요?",
+      "extracted_text": "한입마다 바삭함과 소스의 비율을 조절할 수 있는 쪽이 실제 먹는 결과를 덜 망치고 더 유연하다.",
+      "relations": [
+        {
+          "id": "R23",
+          "from_proposition_id": "C29",
+          "to_proposition_id": "C17",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R24",
+          "from_proposition_id": "C21",
+          "to_proposition_id": "C29",
+          "relation_type": "CONTRADICTS"
+        },
+        {
+          "id": "R27",
+          "from_proposition_id": "C43",
+          "to_proposition_id": "C29",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C30",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "근거는 유연성의 최대치보다 한 접시가 의도한 평균 완성도를 더 높인다는 점이다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C31",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생긴다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C32",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 준다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C33",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "찍먹은 개별 커스터마이징에 강하다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C34",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝다.",
+      "relations": [
+        {
+          "id": "R35",
+          "from_proposition_id": "C50",
+          "to_proposition_id": "C34",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C35",
+      "turn_id": 7,
+      "speaker": "A",
+      "source_utterance": "근거는 “유연성의 최대치”보다 “한 접시가 의도한 평균 완성도”를 더 높인다는 점입니다. 찍먹은 잘 맞출 수도 있지만 매번 직접 조절해야 해서 한입마다 편차가 생기고, 부먹은 그 편차를 줄여서 고기·튀김·소스가 계속 비슷한 결로 만나게 해 줍니다.  \n\n말하자면 찍먹은 개별 커스터마이징에 강하고, 부먹은 요리 자체를 하나의 합주로 들리게 하는 방식에 가깝습니다. 그래서 저는 탕수육의 매력을 “매번 조절하는 자유”보다 “처음부터 한 덩어리의 맛으로 묶이는 경험”에 더 둡니다. 다만 되묻고 싶어요: 당신은 유연성이 좋다고 보지만, 매번 조절해야 해서 한입의 완성도가 들쭉날쭉해지는 비용은 왜 더 작다고 보시나요?",
+      "extracted_text": "나는 탕수육의 매력을 매번 조절하는 자유보다 처음부터 한 덩어리의 맛으로 묶이는 경험에 더 둔다.",
+      "relations": [
+        {
+          "id": "R37",
+          "from_proposition_id": "C51",
+          "to_proposition_id": "C35",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C36",
+      "turn_id": 8,
+      "speaker": "B",
+      "source_utterance": "그 비용을 더 작게 보는 이유는, 들쭉날쭉함은 내가 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵기 때문입니다. 즉 찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 큽니다.  \n\n그리고 저는 “평균 완성도” 전제도 좀 의심합니다. 부먹이 편차를 줄이는 건 맞아도, 그건 어디까지나 모두가 그 평균 상태를 좋아할 때 장점이지, 탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니거든요. 비유하면 볼륨 자동조절이 늘 좋은 건 아닙니다; 어떤 사람은 다이내믹 레인지 자체를 즐기니까요.",
+      "extracted_text": "들쭉날쭉함은 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C37",
+      "turn_id": 8,
+      "speaker": "B",
+      "source_utterance": "그 비용을 더 작게 보는 이유는, 들쭉날쭉함은 내가 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵기 때문입니다. 즉 찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 큽니다.  \n\n그리고 저는 “평균 완성도” 전제도 좀 의심합니다. 부먹이 편차를 줄이는 건 맞아도, 그건 어디까지나 모두가 그 평균 상태를 좋아할 때 장점이지, 탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니거든요. 비유하면 볼륨 자동조절이 늘 좋은 건 아닙니다; 어떤 사람은 다이내믹 레인지 자체를 즐기니까요.",
+      "extracted_text": "찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 크다.",
+      "relations": [
+        {
+          "id": "R25",
+          "from_proposition_id": "C37",
+          "to_proposition_id": "C41",
+          "relation_type": "QUALIFIES"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C38",
+      "turn_id": 8,
+      "speaker": "B",
+      "source_utterance": "그 비용을 더 작게 보는 이유는, 들쭉날쭉함은 내가 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵기 때문입니다. 즉 찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 큽니다.  \n\n그리고 저는 “평균 완성도” 전제도 좀 의심합니다. 부먹이 편차를 줄이는 건 맞아도, 그건 어디까지나 모두가 그 평균 상태를 좋아할 때 장점이지, 탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니거든요. 비유하면 볼륨 자동조절이 늘 좋은 건 아닙니다; 어떤 사람은 다이내믹 레인지 자체를 즐기니까요.",
+      "extracted_text": "부먹이 편차를 줄이는 것은 모두가 그 평균 상태를 좋아할 때만 장점이다.",
+      "relations": [],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C39",
+      "turn_id": 8,
+      "speaker": "B",
+      "source_utterance": "그 비용을 더 작게 보는 이유는, 들쭉날쭉함은 내가 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵기 때문입니다. 즉 찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 큽니다.  \n\n그리고 저는 “평균 완성도” 전제도 좀 의심합니다. 부먹이 편차를 줄이는 건 맞아도, 그건 어디까지나 모두가 그 평균 상태를 좋아할 때 장점이지, 탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니거든요. 비유하면 볼륨 자동조절이 늘 좋은 건 아닙니다; 어떤 사람은 다이내믹 레인지 자체를 즐기니까요.",
+      "extracted_text": "탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니다.",
+      "relations": [
+        {
+          "id": "R26",
+          "from_proposition_id": "C42",
+          "to_proposition_id": "C39",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C40",
+      "turn_id": 8,
+      "speaker": "B",
+      "source_utterance": "그 비용을 더 작게 보는 이유는, 들쭉날쭉함은 내가 바로 다음 조각에서 수정할 수 있지만, 부먹으로 생긴 전체 상태는 되돌리기 어렵기 때문입니다. 즉 찍먹의 실패는 국소적이고 학습 가능하지만, 부먹의 실패는 접시 전체에 적용돼서 리스크가 더 큽니다.  \n\n그리고 저는 “평균 완성도” 전제도 좀 의심합니다. 부먹이 편차를 줄이는 건 맞아도, 그건 어디까지나 모두가 그 평균 상태를 좋아할 때 장점이지, 탕수육처럼 식감과 소스 취향 차이가 큰 음식에선 평균이 꼭 최선은 아니거든요. 비유하면 볼륨 자동조절이 늘 좋은 건 아닙니다; 어떤 사람은 다이내믹 레인지 자체를 즐기니까요.",
+      "extracted_text": "볼륨 자동조절이 늘 좋은 것은 아니며, 어떤 사람은 다이내믹 레인지 자체를 즐긴다.",
+      "relations": [
+        {
+          "id": "R28",
+          "from_proposition_id": "C44",
+          "to_proposition_id": "C40",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C41",
+      "turn_id": 9,
+      "speaker": "A",
+      "source_utterance": "“부먹의 실패는 접시 전체라서 리스크가 더 크다”는 점은 맞습니다. 다만 그건 어디까지나 실패를 피하는 기준이고, 지금 논제는 “덜 망하는 방식”보다 “더 나은 방식”이 무엇이냐에 더 가깝습니다.  \n\n제가 반박하고 싶은 건 바로 그 지점이에요. 탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다, 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다고 봅니다. 볼륨 자동조절 비유를 쓰셨지만, 탕수육은 재생기기보다 조리된 요리에 더 가까워서, 변동 폭 자체를 즐기는 것과 별개로 “한 번에 결이 맞는 맛”이 분명한 장점입니다.",
+      "extracted_text": "부먹의 실패는 접시 전체라서 리스크가 더 크다는 점은 실패를 피하는 기준으로는 맞다.",
+      "relations": [
+        {
+          "id": "R25",
+          "from_proposition_id": "C37",
+          "to_proposition_id": "C41",
+          "relation_type": "QUALIFIES"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C42",
+      "turn_id": 9,
+      "speaker": "A",
+      "source_utterance": "“부먹의 실패는 접시 전체라서 리스크가 더 크다”는 점은 맞습니다. 다만 그건 어디까지나 실패를 피하는 기준이고, 지금 논제는 “덜 망하는 방식”보다 “더 나은 방식”이 무엇이냐에 더 가깝습니다.  \n\n제가 반박하고 싶은 건 바로 그 지점이에요. 탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다, 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다고 봅니다. 볼륨 자동조절 비유를 쓰셨지만, 탕수육은 재생기기보다 조리된 요리에 더 가까워서, 변동 폭 자체를 즐기는 것과 별개로 “한 번에 결이 맞는 맛”이 분명한 장점입니다.",
+      "extracted_text": "지금 논제는 덜 망하는 방식보다 더 나은 방식이 무엇이냐에 더 가깝다.",
+      "relations": [
+        {
+          "id": "R26",
+          "from_proposition_id": "C42",
+          "to_proposition_id": "C39",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C43",
+      "turn_id": 9,
+      "speaker": "A",
+      "source_utterance": "“부먹의 실패는 접시 전체라서 리스크가 더 크다”는 점은 맞습니다. 다만 그건 어디까지나 실패를 피하는 기준이고, 지금 논제는 “덜 망하는 방식”보다 “더 나은 방식”이 무엇이냐에 더 가깝습니다.  \n\n제가 반박하고 싶은 건 바로 그 지점이에요. 탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다, 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다고 봅니다. 볼륨 자동조절 비유를 쓰셨지만, 탕수육은 재생기기보다 조리된 요리에 더 가까워서, 변동 폭 자체를 즐기는 것과 별개로 “한 번에 결이 맞는 맛”이 분명한 장점입니다.",
+      "extracted_text": "탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다.",
+      "relations": [
+        {
+          "id": "R27",
+          "from_proposition_id": "C43",
+          "to_proposition_id": "C29",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R29",
+          "from_proposition_id": "C45",
+          "to_proposition_id": "C43",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R30",
+          "from_proposition_id": "C46",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R31",
+          "from_proposition_id": "C47",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R33",
+          "from_proposition_id": "C48",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        },
+        {
+          "id": "R34",
+          "from_proposition_id": "C49",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C44",
+      "turn_id": 9,
+      "speaker": "A",
+      "source_utterance": "“부먹의 실패는 접시 전체라서 리스크가 더 크다”는 점은 맞습니다. 다만 그건 어디까지나 실패를 피하는 기준이고, 지금 논제는 “덜 망하는 방식”보다 “더 나은 방식”이 무엇이냐에 더 가깝습니다.  \n\n제가 반박하고 싶은 건 바로 그 지점이에요. 탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다, 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다고 봅니다. 볼륨 자동조절 비유를 쓰셨지만, 탕수육은 재생기기보다 조리된 요리에 더 가까워서, 변동 폭 자체를 즐기는 것과 별개로 “한 번에 결이 맞는 맛”이 분명한 장점입니다.",
+      "extracted_text": "탕수육은 재생기기보다 조리된 요리에 더 가깝다.",
+      "relations": [
+        {
+          "id": "R28",
+          "from_proposition_id": "C44",
+          "to_proposition_id": "C40",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C45",
+      "turn_id": 9,
+      "speaker": "A",
+      "source_utterance": "“부먹의 실패는 접시 전체라서 리스크가 더 크다”는 점은 맞습니다. 다만 그건 어디까지나 실패를 피하는 기준이고, 지금 논제는 “덜 망하는 방식”보다 “더 나은 방식”이 무엇이냐에 더 가깝습니다.  \n\n제가 반박하고 싶은 건 바로 그 지점이에요. 탕수육을 한 접시의 요리로 볼 때, 매 조각마다 사용자가 보정해야 성립하는 상태보다, 처음부터 소스와 튀김이 함께 작동하도록 맞춰진 상태가 완성도 면에서 앞선다고 봅니다. 볼륨 자동조절 비유를 쓰셨지만, 탕수육은 재생기기보다 조리된 요리에 더 가까워서, 변동 폭 자체를 즐기는 것과 별개로 “한 번에 결이 맞는 맛”이 분명한 장점입니다.",
+      "extracted_text": "탕수육에서는 변동 폭 자체를 즐기는 것과 별개로 한 번에 결이 맞는 맛이 분명한 장점이다.",
+      "relations": [
+        {
+          "id": "R29",
+          "from_proposition_id": "C45",
+          "to_proposition_id": "C43",
+          "relation_type": "SUPPORTS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C46",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "그 주장은 완성도를 너무 요리 제공 시점에만 묶어 둔다.",
+      "relations": [
+        {
+          "id": "R30",
+          "from_proposition_id": "C46",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C47",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이다.",
+      "relations": [
+        {
+          "id": "R31",
+          "from_proposition_id": "C47",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C48",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높다.",
+      "relations": [
+        {
+          "id": "R32",
+          "from_proposition_id": "C48",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R33",
+          "from_proposition_id": "C48",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C49",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "처음부터 함께 작동하도록 맞춰진 상태가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵다.",
+      "relations": [
+        {
+          "id": "R34",
+          "from_proposition_id": "C49",
+          "to_proposition_id": "C43",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C50",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이다.",
+      "relations": [
+        {
+          "id": "R35",
+          "from_proposition_id": "C50",
+          "to_proposition_id": "C34",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    },
+    {
+      "proposition_id": "C51",
+      "turn_id": 10,
+      "speaker": "B",
+      "source_utterance": "그 주장은 “완성도”를 너무 요리 제공 시점에만 묶어 둡니다. 탕수육은 접시에 놓이는 순간 끝나는 음식이 아니라 먹는 순간 완성되는 음식이고, 그 기준이면 매번 보정 가능해서 실패를 국소화하는 찍먹이 오히려 실전 완성도가 높습니다.  \n\n또 “처음부터 함께 작동하도록 맞춰진 상태”가 늘 더 낫다면, 시간이 지나며 식감이 한 방향으로 고정되는 비용을 설명하기 어렵습니다. 합주 비유를 쓰셨지만, 부먹은 지휘가 안정적인 대신 악기 하나를 계속 젖게 만드는 방식이고, 저는 그 안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다고 봅니다.",
+      "extracted_text": "안정성보다 바삭함이라는 핵심 자산을 보존한 채 필요한 만큼만 소스를 얹는 쪽이 결과가 더 낫다.",
+      "relations": [
+        {
+          "id": "R36",
+          "from_proposition_id": "C51",
+          "to_proposition_id": "C5",
+          "relation_type": "SUPPORTS"
+        },
+        {
+          "id": "R37",
+          "from_proposition_id": "C51",
+          "to_proposition_id": "C35",
+          "relation_type": "ATTACKS"
+        }
+      ],
+      "human_extraction_label": null,
+      "human_issue_type": [],
+      "human_notes": null
+    }
+  ]
+}

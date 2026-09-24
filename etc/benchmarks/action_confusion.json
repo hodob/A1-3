@@ -1,0 +1,15 @@
+{
+  "task": "action_confusion",
+  "instructions": "토론자의 실제 발언에서 주된 Strategic Action을 하나로 분류한다. CHALLENGE_PREMISE는 주장에 깔린 전제 자체를 공격, CHALLENGE_INFERENCE는 전제를 받아들여도 결론이 따라오지 않는다고 지적, REQUEST_SUPPORT는 주장에 대한 근거를 요구, TEST_BOUNDARY는 기존 규칙이 경계 사례에도 적용되는지 시험, REFUTE_CLAIM은 반대 증거·논거를 제시해 주장을 반박, CONCEDE_LOCAL은 제한된 점을 인정하면서 기존 핵심 입장은 유지, REVISE_CLAIM은 자기 주장을 명시적으로 수정한다. 문장에 질문이 있다고 모두 REQUEST_SUPPORT로 분류하지 않는다.",
+  "labels": ["CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "REFUTE_CLAIM", "CONCEDE_LOCAL", "REVISE_CLAIM"],
+  "cases": [
+    {"id": "ac01", "gold": "CHALLENGE_PREMISE", "input": "상대 주장: 온라인 출석 앱을 쓰면 모든 학생이 쉽게 참여할 수 있다.\n발언: 모든 학생이 스마트폰을 갖고 있다는 전제부터 맞습니까?"},
+    {"id": "ac02", "gold": "CHALLENGE_INFERENCE", "input": "상대 주장: 출석률이 높아지면 성적이 오른다.\n발언: 출석률이 높아진다는 점을 인정해도, 그것만으로 학습 성과가 높아진다는 결론은 왜 따라오나요?"},
+    {"id": "ac03", "gold": "REQUEST_SUPPORT", "input": "상대 주장: 출석 의무화로 평균 성적이 20% 오른다.\n발언: 그 20% 수치는 어디에서 확인할 수 있습니까?"},
+    {"id": "ac04", "gold": "CHALLENGE_INFERENCE", "input": "상대 주장: 출석 의무화로 평균 성적이 20% 오른다.\n발언: 그 수치가 정확하다고 해도, 해당 학교의 결과를 모든 대학에 적용해야 한다는 결론은 나오지 않습니다."},
+    {"id": "ac05", "gold": "TEST_BOUNDARY", "input": "상대 규칙: 모든 수업에 출석 의무를 적용한다.\n발언: 야간 근로 학생의 녹화 강의에도 그 규칙을 그대로 적용하시겠습니까?"},
+    {"id": "ac06", "gold": "REFUTE_CLAIM", "input": "상대 주장: 출석 의무가 없으면 수업 성과는 반드시 떨어진다.\n발언: 출석 의무가 없었던 두 강좌에서도 성적이 올랐습니다. 따라서 반드시 떨어진다는 주장은 성립하지 않습니다."},
+    {"id": "ac07", "gold": "CONCEDE_LOCAL", "input": "상대 반박: 출석 관리에는 행정비가 든다.\n발언: 그 비용은 인정합니다. 그래도 실습 수업의 안전을 위해 출석 의무는 유지해야 합니다."},
+    {"id": "ac08", "gold": "REVISE_CLAIM", "input": "이전 자기 주장: 모든 수업에 출석 의무가 필요하다.\n발언: 제 주장을 수정하겠습니다. 이제 실습 수업에만 출석 의무가 필요하다고 주장합니다."}
+  ]
+}

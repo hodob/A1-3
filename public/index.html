@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="두 AI가 실제로 서로의 발언에 반응하며 토론하는 관전형 AI Debate Harness">
+  <title>Clash Lab — AI Debate Harness</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#home">CLASH LAB</a>
+    <nav aria-label="주 메뉴">
+      <a href="#home">주제 입력</a>
+      <a href="#debate">토론</a>
+      <a href="#how-it-works">작동 원리</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="home" class="panel hero" aria-labelledby="home-title">
+      <p class="eyebrow">AI × AI / YOU DECIDE</p>
+      <h1 id="home-title">한 주제를 던지면,<br>AI 둘이 제대로 붙습니다.</h1>
+      <p class="lede">전체 대본을 한 번에 만드는 대신, 각 토론자가 상대의 직전 발언과 Debate State를 보고 다음 행동을 고릅니다.</p>
+      <form id="topic-form" class="topic-form" novalidate>
+        <label for="topic-input">오늘 붙여볼 주제</label>
+        <div class="input-row">
+          <textarea id="topic-input" maxlength="2000" rows="3" placeholder="예: 탕수육 부먹 vs 찍먹"></textarea>
+          <button id="topic-submit" type="submit">분석</button>
+        </div>
+        <div class="form-meta"><span id="topic-count">0 / 2000</span><span>웹 검색 없이 일반지식 + 사용자 제공 맥락 사용</span></div>
+        <p id="home-status" class="status" role="status" aria-live="polite"></p>
+      </form>
+      <div id="motion-card" class="motion-card hidden" aria-live="polite"></div>
+    </section>
+
+    <section id="debate" class="panel debate-section" aria-labelledby="debate-title">
+      <div class="section-heading">
+        <p class="eyebrow">LIVE HARNESS</p>
+        <h2 id="debate-title">토론</h2>
+        <div id="phase-pill" class="phase-pill">대기 중</div>
+      </div>
+      <div id="context-panel" class="context-panel hidden"></div>
+      <div id="debate-empty" class="empty-state">주제를 입력하고 논제를 확인하면 토론이 시작됩니다.</div>
+      <div id="debate-log" class="debate-log" aria-live="polite"></div>
+      <div id="audience-panel" class="audience-panel hidden"></div>
+      <div id="debate-controls" class="debate-controls hidden">
+        <button id="next-turn" type="button">다음 발언</button>
+      </div>
+      <p id="debate-status" class="status" role="status" aria-live="polite"></p>
+      <div id="summary-panel" class="summary-panel hidden"></div>
+      <div id="choice-panel" class="choice-panel hidden"></div>
+    </section>
+
+    <section id="how-it-works" class="panel how-section" aria-labelledby="how-title">
+      <p class="eyebrow">NOT A SCRIPT GENERATOR</p>
+      <h2 id="how-title">왜 그냥 “찬반 대본”이 아닌가</h2>
+      <div class="how-grid">
+        <article><span>01</span><h3>State</h3><p>주장, 관계, 질문, 공개적 입장 변화를 구조화해 다음 턴에 필요한 상태만 유지합니다.</p></article>
+        <article><span>02</span><h3>Action</h3><p>근거 요구, 전제 공격, 반례, 양보 같은 행동 중 지금 가능한 것을 고릅니다.</p></article>
+        <article><span>03</span><h3>Persona</h3><p>캐릭터 연기가 아니라 적법한 행동 중 무엇을 선호하는지에만 영향을 줍니다.</p></article>
+        <article><span>04</span><h3>Guard</h3><p>선택한 행동과 실제 발언이 맞는지, 배정 입장을 뒤집지 않는지 확인한 뒤 State에 반영합니다.</p></article>
+      </div>
+      <div class="flow" aria-label="AI 처리 흐름">
+        <span>INPUT</span><b>→</b><span>PYTHON API</span><b>→</b><span>STATE</span><b>→</b><span>ACTION</span><b>→</b><span>LLM</span><b>→</b><span>UPDATE</span>
+      </div>
+      <p class="footnote">API Key는 브라우저 코드가 아니라 서버 환경 변수에서만 읽습니다.</p>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

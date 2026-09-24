@@ -1,0 +1,668 @@
+{
+  "source_run": "quality-definition-hotdog-v1",
+  "turn_id": 6,
+  "speaker": "B",
+  "action": "REQUEST_SUPPORT",
+  "target_id": "C1",
+  "expected_pair_state": "RESOLVED",
+  "state": {
+    "propositions": [
+      {
+        "id": "C1",
+        "text": "핫도그는 샌드위치에 들어간다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C2",
+        "text": "샌드위치의 분류 기준은 빵이 속재료를 감싸거나 끼운 구조인가이다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C3",
+        "text": "핫도그는 길쭉한 빵 사이에 소시지를 넣어 먹는다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C4",
+        "text": "모양이 다르다고 핫도그를 샌드위치와 별도의 범주로 분류하기 시작하면 샌드위치 분류는 지나치게 흔들리게 된다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C5",
+        "text": "핫도그는 샌드위치와 닮았어도 별도 항목으로 보는 게 더 깔끔하다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C6",
+        "text": "같은 '빵+속재료' 구조만으로 묶으면 타코나 서브류까지 경계가 흐려진다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C7",
+        "text": "핫도그는 보통 한 장처럼 이어진 번을 사용한다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C8",
+        "text": "핫도그는 소시지 중심의 정체성을 가진다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C9",
+        "text": "주문·메뉴에서 핫도그는 독립적으로 취급된다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C10",
+        "text": "실사용 감각상 핫도그는 샌드위치의 하위형이라기보다 별도의 인접 범주에 가깝다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C11",
+        "text": "분류가 깔끔하려면 예외를 덜 만들고 기준이 일관돼야 한다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C12",
+        "text": "핫도그만 별도로 빼면 왜 그것만 특별대우인지 설명 부담이 생긴다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C13",
+        "text": "메뉴판에서의 독립 취급은 실사용 명칭의 문제이다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C14",
+        "text": "메뉴판에서의 독립 취급은 구조 분류의 근거로는 약할 수 있다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C15",
+        "text": "핫도그를 샌드위치에서 빼는 결정적 조건은 번이 이어진 형식이다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C16",
+        "text": "소시지 중심성은 핫도그다움을 강화하는 표지일 뿐이다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C17",
+        "text": "소시지 중심성만으로는 샌드위치 여부를 가르는 기준으로 쓰기에는 충분하지 않다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C18",
+        "text": "상대 기준은 '빵이 뭔가를 끼우면 샌드위치'로 너무 넓어서 경계 시험에 약하다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C19",
+        "text": "그 기준이면 타코나 랍스터 롤까지 샌드위치에 포함하게 된다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C20",
+        "text": "제 기준이라면 랍스터 롤은 샌드위치 쪽에 더 가깝다.",
+        "speaker": "A",
+        "turn": 5
+      },
+      {
+        "id": "C21",
+        "text": "제 기준이라면 타코는 보통 다른 범주로 본다.",
+        "speaker": "A",
+        "turn": 5
+      },
+      {
+        "id": "C22",
+        "text": "더 정확한 기준은 밀가루 빵 계열이 속재료를 갈라 품는 구조이다.",
+        "speaker": "A",
+        "turn": 5
+      }
+    ],
+    "relations": [
+      {
+        "id": "R1",
+        "from_proposition_id": "C2",
+        "to_proposition_id": "C1",
+        "relation_type": "SUPPORTS"
+      },
+      {
+        "id": "R2",
+        "from_proposition_id": "C3",
+        "to_proposition_id": "C1",
+        "relation_type": "SUPPORTS"
+      },
+      {
+        "id": "R3",
+        "from_proposition_id": "C4",
+        "to_proposition_id": "C1",
+        "relation_type": "SUPPORTS"
+      },
+      {
+        "id": "R4",
+        "from_proposition_id": "C9",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R5",
+        "from_proposition_id": "C13",
+        "to_proposition_id": "C9",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R6",
+        "from_proposition_id": "C14",
+        "to_proposition_id": "C9",
+        "relation_type": "ATTACKS"
+      }
+    ],
+    "questions": [
+      {
+        "id": "Q1",
+        "asker": "A",
+        "text": "당신 기준에서 핫도그를 샌드위치에서 빼는 결정적 조건은 “번이 이어져 있다”는 점인가요, 아니면 “소시지 중심”이라는 점인가요?",
+        "core_proposition": "핫도그를 샌드위치에서 빼는 결정적 조건은 번이 이어져 있다는 점인지 아니면 소시지 중심이라는 점인지가 쟁점이다.",
+        "target_proposition_id": "C5",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 3,
+        "source_turn_id": 3
+      },
+      {
+        "id": "Q2",
+        "asker": "B",
+        "text": "그 기준이면 타코나 랍스터 롤까지도 전부 샌드위치라고 받을 건가요, 아니면 어딘가에서 다시 선을 그을 건가요?",
+        "core_proposition": "상대는 자신의 기준에 따르면 타코나 랍스터 롤까지 샌드위치로 볼 것인지, 아니면 어디선가 다시 경계를 그을 것인지 답해야 한다.",
+        "target_proposition_id": "C2",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 4,
+        "source_turn_id": 4
+      },
+      {
+        "id": "Q3",
+        "asker": "A",
+        "text": "번이 이어졌다는 형식 하나가 왜 샌드위치 바깥으로 내보내는 결정선이 되는지, 그 점을 더 분명히 설명해 주시겠습니까?",
+        "core_proposition": "번이 이어졌다는 형식 하나가 왜 샌드위치 바깥으로 내보내는 결정선이 되는지에 대한 설명이 요구된다.",
+        "target_proposition_id": "C15",
+        "response_status": "UNCLEAR",
+        "resolution": "OPEN",
+        "turn": 5,
+        "source_turn_id": 5
+      }
+    ],
+    "commitment_events": [
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C1",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C2",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C3",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C4",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C5",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C6",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C7",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C8",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C9",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C10",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C11",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C12",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C13",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C14",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C15",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C16",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C17",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C18",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C19",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C20",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C21",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C22",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      }
+    ],
+    "question_response_events": [
+      {
+        "question_id": "Q1",
+        "responder": "B",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 4
+      },
+      {
+        "question_id": "Q2",
+        "responder": "A",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 5
+      }
+    ],
+    "event_log": [
+      {
+        "turn": 1,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "핫도그는 샌드위치에 들어간다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "샌드위치의 분류 기준은 빵이 속재료를 감싸거나 끼운 구조인가이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "핫도그는 길쭉한 빵 사이에 소시지를 넣어 먹는다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "모양이 다르다고 핫도그를 샌드위치와 별도의 범주로 분류하기 시작하면 샌드위치 분류는 지나치게 흔들리게 된다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "P2",
+              "to_proposition_ref": "P1",
+              "relation_type": "SUPPORTS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "P3",
+              "to_proposition_ref": "P1",
+              "relation_type": "SUPPORTS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "P4",
+              "to_proposition_ref": "P1",
+              "relation_type": "SUPPORTS"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 2,
+        "speaker": "B",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "핫도그는 샌드위치와 닮았어도 별도 항목으로 보는 게 더 깔끔하다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "같은 '빵+속재료' 구조만으로 묶으면 타코나 서브류까지 경계가 흐려진다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "핫도그는 보통 한 장처럼 이어진 번을 사용한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "핫도그는 소시지 중심의 정체성을 가진다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P5",
+              "text": "주문·메뉴에서 핫도그는 독립적으로 취급된다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P6",
+              "text": "실사용 감각상 핫도그는 샌드위치의 하위형이라기보다 별도의 인접 범주에 가깝다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C2",
+              "to_proposition_ref": "C1",
+              "relation_type": "SUPPORTS"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 3,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "분류가 깔끔하려면 예외를 덜 만들고 기준이 일관돼야 한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "핫도그만 별도로 빼면 왜 그것만 특별대우인지 설명 부담이 생긴다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "메뉴판에서의 독립 취급은 실사용 명칭의 문제이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "메뉴판에서의 독립 취급은 구조 분류의 근거로는 약할 수 있다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C9",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "당신 기준에서 핫도그를 샌드위치에서 빼는 결정적 조건은 “번이 이어져 있다”는 점인가요, 아니면 “소시지 중심”이라는 점인가요?",
+              "core_proposition": "핫도그를 샌드위치에서 빼는 결정적 조건은 번이 이어져 있다는 점인지 아니면 소시지 중심이라는 점인지가 쟁점이다.",
+              "target_proposition_id": "C5"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 4,
+        "speaker": "B",
+        "patch": {
+          "operations": [
+            {
+              "op": "ANSWER_QUESTION",
+              "question_id": "Q1",
+              "response_status": "DIRECT",
+              "resolution": "RESOLVED"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "핫도그를 샌드위치에서 빼는 결정적 조건은 번이 이어진 형식이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "소시지 중심성은 핫도그다움을 강화하는 표지일 뿐이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "소시지 중심성만으로는 샌드위치 여부를 가르는 기준으로 쓰기에는 충분하지 않다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "상대 기준은 '빵이 뭔가를 끼우면 샌드위치'로 너무 넓어서 경계 시험에 약하다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P5",
+              "text": "그 기준이면 타코나 랍스터 롤까지 샌드위치에 포함하게 된다."
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "그 기준이면 타코나 랍스터 롤까지도 전부 샌드위치라고 받을 건가요, 아니면 어딘가에서 다시 선을 그을 건가요?",
+              "core_proposition": "상대는 자신의 기준에 따르면 타코나 랍스터 롤까지 샌드위치로 볼 것인지, 아니면 어디선가 다시 경계를 그을 것인지 답해야 한다.",
+              "target_proposition_id": "C2"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 5,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "제 기준이라면 랍스터 롤은 샌드위치 쪽에 더 가깝다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "제 기준이라면 타코는 보통 다른 범주로 본다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "더 정확한 기준은 밀가루 빵 계열이 속재료를 갈라 품는 구조이다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C13",
+              "to_proposition_ref": "C9",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C14",
+              "to_proposition_ref": "C9",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ANSWER_QUESTION",
+              "question_id": "Q2",
+              "response_status": "DIRECT",
+              "resolution": "RESOLVED"
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "번이 이어졌다는 형식 하나가 왜 샌드위치 바깥으로 내보내는 결정선이 되는지, 그 점을 더 분명히 설명해 주시겠습니까?",
+              "core_proposition": "번이 이어졌다는 형식 하나가 왜 샌드위치 바깥으로 내보내는 결정선이 되는지에 대한 설명이 요구된다.",
+              "target_proposition_id": "C15"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "action_history": [
+    [
+      "A",
+      "EXTEND_ARGUMENT",
+      []
+    ],
+    [
+      "B",
+      "EXTEND_ARGUMENT",
+      []
+    ],
+    [
+      "A",
+      "CHALLENGE_PREMISE",
+      [
+        "C5"
+      ]
+    ],
+    [
+      "B",
+      "CHALLENGE_PREMISE",
+      [
+        "C1"
+      ]
+    ],
+    [
+      "A",
+      "CHALLENGE_PREMISE",
+      [
+        "C9"
+      ]
+    ]
+  ]
+}

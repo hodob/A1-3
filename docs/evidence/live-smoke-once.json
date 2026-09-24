@@ -1,0 +1,208 @@
+{
+  "status": "PASS",
+  "topic": "핫도그는 샌드위치인가?",
+  "claim_type": "DEFINITION",
+  "motion": "핫도그는 샌드위치에 해당한다.",
+  "personas": [
+    "Socratic",
+    "Falsifier"
+  ],
+  "debate_turns": 3,
+  "speakers": [
+    "A",
+    "B",
+    "A"
+  ],
+  "phases": [
+    "OPENING",
+    "OPENING",
+    "CROSSFIRE"
+  ],
+  "transcript": [
+    {
+      "turn": 1,
+      "phase": "OPENING",
+      "speaker": "A",
+      "side_label": "샌드위치설",
+      "utterance": "저는 핫도그를 샌드위치에 포함할 수 있다고 봅니다. 핵심은 정의 기준인데, 빵이 속재료를 감싸거나 끼우는 구조라는 점에서 핫도그는 샌드위치의 일반적 형식과 상당히 겹칩니다. 관습적으로는 별도 항목처럼 다뤄지는 경우가 있지만, 그건 일상적 분류의 문제이지 구조적 분류까지 곧바로 부정하는 근거는 아니라고 생각합니다."
+    },
+    {
+      "turn": 2,
+      "phase": "OPENING",
+      "speaker": "B",
+      "side_label": "독립분류설",
+      "utterance": "저는 독립 분류가 더 정확하다고 봅니다. 구조만으로 묶으면 타코나 서브류처럼 경계 사례가 한꺼번에 들어와서 “샌드위치” 범주가 지나치게 넓어지고, 분류력이 약해집니다. 반대로 관습적 분류를 보면 핫도그는 보통 샌드위치와 별도 항목으로 다뤄지므로, 최소한 실사용 기준에서는 독립 항목으로 보는 편이 더 안정적입니다."
+    },
+    {
+      "turn": 3,
+      "phase": "CROSSFIRE",
+      "speaker": "A",
+      "side_label": "샌드위치설",
+      "utterance": "지금 핵심은 말씀하신 “관습적 분류”가 어느 수준에서 결정적 기준이 되느냐입니다. 핫도그가 실사용에서 별도 항목처럼 취급되는 경우가 있다는 점은 인정하지만, 그것만으로 상위 범주인 샌드위치에서 배제된다고 바로 결론내리긴 어렵습니다.  \n그래서 묻고 싶습니다: “보통 별도 항목으로 다뤄진다”는 판단의 근거를 무엇으로 잡고 계신가요—메뉴 배열, 일상 언어, 아니면 정의 자체인가요? 그 기준이 분류의 본질보다 우선해야 하는 이유도 함께 설명해 주시면 좋겠습니다."
+    }
+  ],
+  "coverage": {
+    "topic_analysis": true,
+    "utterance_generation": true,
+    "combined_compliance": true,
+    "state_patch": true,
+    "relation_extraction_observed": true,
+    "question_extraction_observed": true,
+    "signed_session_roundtrip": true,
+    "neutral_summary": true
+  },
+  "signed_session_roundtrip": true,
+  "state_counts": {
+    "propositions": 9,
+    "relations": 7,
+    "questions": 2,
+    "commitment_events": 10
+  },
+  "state_integrity_issues": [],
+  "compliance_failures": 0,
+  "summary_contract_ok": true,
+  "call_purposes": [
+    "topic_analysis",
+    "utterance_generation",
+    "combined_compliance",
+    "state_patch",
+    "utterance_generation",
+    "combined_compliance",
+    "state_patch",
+    "utterance_generation",
+    "combined_compliance",
+    "state_patch",
+    "neutral_summary"
+  ],
+  "calls": [
+    {
+      "purpose": "topic_analysis",
+      "usage": {
+        "prompt_tokens": 582,
+        "completion_tokens": 152,
+        "total_tokens": 734
+      }
+    },
+    {
+      "purpose": "utterance_generation",
+      "usage": {
+        "prompt_tokens": 446,
+        "completion_tokens": 118,
+        "total_tokens": 564
+      },
+      "chars": 175
+    },
+    {
+      "purpose": "combined_compliance",
+      "usage": {
+        "prompt_tokens": 746,
+        "completion_tokens": 235,
+        "total_tokens": 981
+      },
+      "action_fidelity": "ALIGNED",
+      "stance_compliance": "SUPPORTS_ASSIGNED"
+    },
+    {
+      "purpose": "state_patch",
+      "usage": {
+        "prompt_tokens": 1234,
+        "completion_tokens": 289,
+        "total_tokens": 1523
+      },
+      "turn": 1,
+      "operations": {
+        "ADD_PROPOSITION": 4,
+        "ADD_RELATION": 3
+      },
+      "repair": false
+    },
+    {
+      "purpose": "utterance_generation",
+      "usage": {
+        "prompt_tokens": 568,
+        "completion_tokens": 119,
+        "total_tokens": 687
+      },
+      "chars": 175
+    },
+    {
+      "purpose": "combined_compliance",
+      "usage": {
+        "prompt_tokens": 747,
+        "completion_tokens": 233,
+        "total_tokens": 980
+      },
+      "action_fidelity": "ALIGNED",
+      "stance_compliance": "SUPPORTS_ASSIGNED"
+    },
+    {
+      "purpose": "state_patch",
+      "usage": {
+        "prompt_tokens": 1515,
+        "completion_tokens": 308,
+        "total_tokens": 1823
+      },
+      "turn": 2,
+      "operations": {
+        "ADD_PROPOSITION": 4,
+        "ADD_RELATION": 4
+      },
+      "repair": false
+    },
+    {
+      "purpose": "utterance_generation",
+      "usage": {
+        "prompt_tokens": 726,
+        "completion_tokens": 159,
+        "total_tokens": 885
+      },
+      "chars": 257
+    },
+    {
+      "purpose": "combined_compliance",
+      "usage": {
+        "prompt_tokens": 826,
+        "completion_tokens": 277,
+        "total_tokens": 1103
+      },
+      "action_fidelity": "ALIGNED",
+      "stance_compliance": "SUPPORTS_ASSIGNED"
+    },
+    {
+      "purpose": "state_patch",
+      "usage": {
+        "prompt_tokens": 1856,
+        "completion_tokens": 252,
+        "total_tokens": 2108
+      },
+      "turn": 3,
+      "operations": {
+        "CONCEDE_LOCAL": 1,
+        "ADD_PROPOSITION": 1,
+        "ASK_QUESTION": 2
+      },
+      "repair": false
+    },
+    {
+      "purpose": "neutral_summary",
+      "usage": {
+        "prompt_tokens": 776,
+        "completion_tokens": 489,
+        "total_tokens": 1265
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10022,
+    "completion_tokens": 2631,
+    "total_tokens": 12653,
+    "calls": 11
+  },
+  "budget": {
+    "max_total_tokens": 20000,
+    "remaining_tokens": 7347
+  },
+  "mode": "LIVE",
+  "model": "gpt-5.4",
+  "provider_url_redacted": "https://copa.codyssey.kr/v1/chat/completions"
+}

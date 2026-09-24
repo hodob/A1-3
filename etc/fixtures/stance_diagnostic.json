@@ -1,0 +1,42 @@
+{
+  "cases": [
+    {
+      "id": "local_concession",
+      "kind": "A",
+      "assigned_thesis": "출석 의무화",
+      "opposing_thesis": "출석 자율화",
+      "phase": "rebuttal",
+      "utterance": "그 비용 문제는 상대가 맞습니다. 하지만 전체적으로는 출석 의무화가 더 낫습니다.",
+      "expected_semantic": "COMPATIBLE_WITH_ASSIGNED"
+    },
+    {
+      "id": "ambiguous_ending",
+      "kind": "B",
+      "assigned_thesis": "출석 의무화",
+      "opposing_thesis": "출석 자율화",
+      "phase": "final_focus",
+      "utterance": "양쪽 모두 일리가 있습니다.",
+      "expected_semantic": "AMBIGUOUS"
+    },
+    {
+      "id": "explicit_reversal",
+      "kind": "C",
+      "assigned_thesis": "출석 의무화",
+      "opposing_thesis": "출석 자율화",
+      "phase": "final_focus",
+      "utterance": "결국 출석 자율화 쪽이 더 타당합니다.",
+      "expected_semantic": "CONTRADICTS_ASSIGNED"
+    },
+    {
+      "id": "historical_socratic_reversal",
+      "kind": "historical",
+      "assigned_thesis": "별도 범주",
+      "opposing_thesis": "샌드위치",
+      "phase": "final_focus",
+      "utterance": "맞습니다. 여기서 가장 중요한 건 이미 합의된 **구조상 포함**이고, “일상에선 따로 부른다”는 점은 그 포함을 뒤집는 반론이라기보다 **사용 맥락에 대한 보충 설명**에 가깝습니다.  \n\n그래서 제 최종 입장도 간단합니다: **핫도그는 샌드위치이기도 하지만, 생활 언어에선 별도 범주로 강하게 작동한다**. 다만 논제에 한 줄로 답해야 한다면, 이제는 **“예, 하지만 보통은 따로 부른다”**가 가장 덜 비틀린 답이라고 봅니다.",
+      "source": "runs/v1-persona-hotdog/swapped.jsonl turn 19",
+      "expected_semantic": "CONTRADICTS_ASSIGNED",
+      "source_sha256": "878f851c312d53b1ec362ca4384d27c4ad4aa1615b257dd6a8d3dd1136b0510c"
+    }
+  ]
+}

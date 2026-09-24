@@ -1,0 +1,878 @@
+{
+  "source_run": "quality-policy-attendance-v1",
+  "turn_id": 7,
+  "speaker": "A",
+  "action": "REQUEST_SUPPORT",
+  "target_id": "C13",
+  "expected_pair_state": "RESOLVED",
+  "state": {
+    "propositions": [
+      {
+        "id": "C1",
+        "text": "대학은 수업 출석을 원칙적으로 의무화할 수 있어야 한다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C2",
+        "text": "대학 교육은 단순한 정보 전달이 아니라 공동의 학습 과정이다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C3",
+        "text": "학생은 등록을 통해 일정한 참여 의무를 부담한다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C4",
+        "text": "대학은 수업의 질서와 상호작용을 보호할 책임이 있다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C5",
+        "text": "출석 의무는 학생의 자율성을 전면 부정하는 장치가 아니다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C6",
+        "text": "출석 의무는 최소한의 학습 책임을 명확히 하는 기준이 될 수 있다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C7",
+        "text": "예외 사유와 과도한 제재는 엄격히 제한해야 한다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C8",
+        "text": "예외 사유와 과도한 제재의 조정 가능성은 출석 의무 자체를 부정할 이유가 아니다.",
+        "speaker": "A",
+        "turn": 1
+      },
+      {
+        "id": "C9",
+        "text": "출석 자율화가 더 현실적이다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C10",
+        "text": "대학생은 미성년자가 아니며 스스로 시간과 학습 방식을 관리해야 하는 단계이다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C11",
+        "text": "일률적 출석 의무는 책임을 키우기보다 형식적 출석만 늘릴 가능성이 있다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C12",
+        "text": "과목 성격이 크게 다른데 같은 규칙을 강제하면 비용이 크다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C13",
+        "text": "토론·실습 중심 수업은 참여 기준을 둘 수 있다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C14",
+        "text": "강의형 수업까지 출석을 일괄 의무화하는 것은 효율보다 행정 관리만 늘릴 수 있다.",
+        "speaker": "B",
+        "turn": 2
+      },
+      {
+        "id": "C15",
+        "text": "자율이 필요하다는 점은 대학이 최소한의 참여 기준을 아예 두지 말아야 한다는 결론으로 바로 이어지지 않는다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C16",
+        "text": "공동 토론·피드백·실습처럼 다른 학생의 학습 기회에도 영향을 주는 수업에서는 등록한 학생에게 일정한 출석 의무를 요구하는 것이 더 일관된 원칙이다.",
+        "speaker": "A",
+        "turn": 3
+      },
+      {
+        "id": "C17",
+        "text": "과목 성격상 대체 불가능한 현장 참여가 핵심인 실험·실습·임상·발표·토론 수업에서는 대학이나 담당교수가 출석이나 참여 요건을 둘 권한은 인정한다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C18",
+        "text": "그 권한은 \"대학은 원칙적으로 출석을 의무화해야 한다\"의 근거가 아니라 예외적으로 필요할 때 과목 단위로 정당화해야 할 제한이다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C19",
+        "text": "과목별 차이가 큰데 기본값을 의무로 놓으면 대체 가능한 강의형 수업까지 형식적 출석 관리가 따라붙기 쉽다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C20",
+        "text": "과목별 차이가 큰데 기본값을 의무로 놓으면 학습 성과보다 통제와 행정 집행이 앞서는 구조가 된다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C21",
+        "text": "더 맞는 원칙은 자율을 기본으로 하고 교육 방식상 필요가 입증되는 수업만 제한적으로 의무화하는 것이다.",
+        "speaker": "B",
+        "turn": 4
+      },
+      {
+        "id": "C22",
+        "text": "대학 수업 중 적지 않은 영역에서 출석·참여 요건이 정당화될 수 있다면, 문제는 의무라는 원칙 자체가 아니라 그것을 어디까지 어떻게 적용하느냐이다.",
+        "speaker": "A",
+        "turn": 5
+      },
+      {
+        "id": "C23",
+        "text": "대학 수업 중 적지 않은 영역에서 출석·참여 요건이 정당화될 수 있다면, 기본 원칙을 자율로 둘 필연성은 없다.",
+        "speaker": "A",
+        "turn": 5
+      },
+      {
+        "id": "C24",
+        "text": "강의형 수업도 질의응답, 즉각적 피드백, 수업 분위기와 집중의 공동 형성처럼 현장 참여의 가치가 있을 수 있다.",
+        "speaker": "A",
+        "turn": 5
+      },
+      {
+        "id": "C25",
+        "text": "출석을 강제하려면 그 수업의 핵심 학습이 현장 동시참여 없이는 실질적으로 대체되기 어렵다는 점이 먼저 설명되어야 한다.",
+        "speaker": "B",
+        "turn": 6
+      },
+      {
+        "id": "C26",
+        "text": "강의형 수업도 경우에 따라 출석 요건이 정당화될 수 있다.",
+        "speaker": "B",
+        "turn": 6
+      },
+      {
+        "id": "C27",
+        "text": "강의형 수업의 출석 요건 정당화 판단은 기본값이 의무가 아니라 과목 단위의 입증이어야 한다.",
+        "speaker": "B",
+        "turn": 6
+      }
+    ],
+    "relations": [
+      {
+        "id": "R1",
+        "from_proposition_id": "C2",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R2",
+        "from_proposition_id": "C3",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R3",
+        "from_proposition_id": "C4",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R4",
+        "from_proposition_id": "C5",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R5",
+        "from_proposition_id": "C6",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R6",
+        "from_proposition_id": "C13",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R7",
+        "from_proposition_id": "C12",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R8",
+        "from_proposition_id": "C17",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R9",
+        "from_proposition_id": "C18",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      },
+      {
+        "id": "R10",
+        "from_proposition_id": "C21",
+        "to_proposition_id": "C1",
+        "relation_type": "ATTACKS"
+      }
+    ],
+    "questions": [
+      {
+        "id": "Q1",
+        "asker": "A",
+        "text": "과목별 차이가 크다는 이유로 일률 의무화가 곤란하다면, 전면 자율화가 아니라 최소한 대학이 과목 성격에 따라 출석 의무를 설정할 권한은 인정하는가?",
+        "core_proposition": "전면 자율화가 아니라 최소한 대학이 과목 성격에 따라 출석 의무를 설정할 권한을 인정하는가?",
+        "target_proposition_id": "C12",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 3,
+        "source_turn_id": 3
+      },
+      {
+        "id": "Q2",
+        "asker": "A",
+        "text": "왜 그 기준이 오직 토론·실습 중심 수업 유형에만 한정된다고 보시는지 불분명합니다.",
+        "core_proposition": "출석·참여 기준이 정당화되는 범위가 왜 오직 토론·실습 중심 수업에만 한정되는가?",
+        "target_proposition_id": "C13",
+        "response_status": "UNCLEAR",
+        "resolution": "OPEN",
+        "turn": 5,
+        "source_turn_id": 5
+      },
+      {
+        "id": "Q3",
+        "asker": "A",
+        "text": "강의형 수업도 현장 참여의 가치가 있을 수 있는데, 어떤 원칙으로 그것만 일괄적으로 대체 가능하다고 판단하시는지 묻고 싶습니다.",
+        "core_proposition": "어떤 원칙으로 강의형 수업을 일괄적으로 대체 가능하다고 판단하는가?",
+        "target_proposition_id": "C14",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 5,
+        "source_turn_id": 5
+      },
+      {
+        "id": "Q4",
+        "asker": "B",
+        "text": "왜 일부 수업에서 출석 요건이 필요하다는 점이 기본 원칙을 자율이 아니라 의무로 두어야 한다는 결론으로 이어지는가?",
+        "core_proposition": "일부 수업에서 출석 요건이 필요하다는 점이 왜 기본 원칙을 자율이 아니라 의무로 두어야 한다는 결론으로 이어지는가?",
+        "target_proposition_id": "C1",
+        "response_status": "UNCLEAR",
+        "resolution": "OPEN",
+        "turn": 6,
+        "source_turn_id": 6
+      },
+      {
+        "id": "Q5",
+        "asker": "B",
+        "text": "왜 강의형 수업까지 포함하는 일반 원칙으로 출석 의무를 넓혀야 하는가?",
+        "core_proposition": "왜 강의형 수업까지 포함하는 일반 원칙으로 출석 의무를 넓혀야 하는가?",
+        "target_proposition_id": "C1",
+        "response_status": "UNCLEAR",
+        "resolution": "OPEN",
+        "turn": 6,
+        "source_turn_id": 6
+      }
+    ],
+    "commitment_events": [
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C1",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C2",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C3",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C4",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C5",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C6",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C7",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C8",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 1
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C9",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C10",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C11",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C12",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C13",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C14",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 2
+      },
+      {
+        "event": "CONCEDE",
+        "speaker": "A",
+        "proposition_id": "C10",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C15",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C16",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 3
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C17",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C18",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C19",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C20",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C21",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 4
+      },
+      {
+        "event": "CONCEDE",
+        "speaker": "A",
+        "proposition_id": "C17",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C22",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C23",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "A",
+        "proposition_id": "C24",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 5
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C25",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 6
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C26",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 6
+      },
+      {
+        "event": "ASSERT",
+        "speaker": "B",
+        "proposition_id": "C27",
+        "old_proposition_id": null,
+        "new_proposition_id": null,
+        "turn": 6
+      }
+    ],
+    "question_response_events": [
+      {
+        "question_id": "Q1",
+        "responder": "B",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 4
+      },
+      {
+        "question_id": "Q3",
+        "responder": "B",
+        "response_status": "DIRECT",
+        "resolution": "RESOLVED",
+        "turn": 6
+      }
+    ],
+    "event_log": [
+      {
+        "turn": 1,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "대학은 수업 출석을 원칙적으로 의무화할 수 있어야 한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "대학 교육은 단순한 정보 전달이 아니라 공동의 학습 과정이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "학생은 등록을 통해 일정한 참여 의무를 부담한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "대학은 수업의 질서와 상호작용을 보호할 책임이 있다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P5",
+              "text": "출석 의무는 학생의 자율성을 전면 부정하는 장치가 아니다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P6",
+              "text": "출석 의무는 최소한의 학습 책임을 명확히 하는 기준이 될 수 있다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P7",
+              "text": "예외 사유와 과도한 제재는 엄격히 제한해야 한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P8",
+              "text": "예외 사유와 과도한 제재의 조정 가능성은 출석 의무 자체를 부정할 이유가 아니다."
+            }
+          ]
+        }
+      },
+      {
+        "turn": 2,
+        "speaker": "B",
+        "patch": {
+          "operations": [
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "출석 자율화가 더 현실적이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "대학생은 미성년자가 아니며 스스로 시간과 학습 방식을 관리해야 하는 단계이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "일률적 출석 의무는 책임을 키우기보다 형식적 출석만 늘릴 가능성이 있다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "과목 성격이 크게 다른데 같은 규칙을 강제하면 비용이 크다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P5",
+              "text": "토론·실습 중심 수업은 참여 기준을 둘 수 있다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P6",
+              "text": "강의형 수업까지 출석을 일괄 의무화하는 것은 효율보다 행정 관리만 늘릴 수 있다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C2",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C3",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C4",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C5",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C6",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 3,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "CONCEDE_LOCAL",
+              "proposition_id": "C10"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "자율이 필요하다는 점은 대학이 최소한의 참여 기준을 아예 두지 말아야 한다는 결론으로 바로 이어지지 않는다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "공동 토론·피드백·실습처럼 다른 학생의 학습 기회에도 영향을 주는 수업에서는 등록한 학생에게 일정한 출석 의무를 요구하는 것이 더 일관된 원칙이다."
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "과목별 차이가 크다는 이유로 일률 의무화가 곤란하다면, 전면 자율화가 아니라 최소한 대학이 과목 성격에 따라 출석 의무를 설정할 권한은 인정하는가?",
+              "core_proposition": "전면 자율화가 아니라 최소한 대학이 과목 성격에 따라 출석 의무를 설정할 권한을 인정하는가?",
+              "target_proposition_id": "C12"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 4,
+        "speaker": "B",
+        "patch": {
+          "operations": [
+            {
+              "op": "ANSWER_QUESTION",
+              "question_id": "Q1",
+              "response_status": "DIRECT",
+              "resolution": "RESOLVED"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "과목 성격상 대체 불가능한 현장 참여가 핵심인 실험·실습·임상·발표·토론 수업에서는 대학이나 담당교수가 출석이나 참여 요건을 둘 권한은 인정한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "그 권한은 \"대학은 원칙적으로 출석을 의무화해야 한다\"의 근거가 아니라 예외적으로 필요할 때 과목 단위로 정당화해야 할 제한이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "과목별 차이가 큰데 기본값을 의무로 놓으면 대체 가능한 강의형 수업까지 형식적 출석 관리가 따라붙기 쉽다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P4",
+              "text": "과목별 차이가 큰데 기본값을 의무로 놓으면 학습 성과보다 통제와 행정 집행이 앞서는 구조가 된다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P5",
+              "text": "더 맞는 원칙은 자율을 기본으로 하고 교육 방식상 필요가 입증되는 수업만 제한적으로 의무화하는 것이다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C13",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C12",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 5,
+        "speaker": "A",
+        "patch": {
+          "operations": [
+            {
+              "op": "CONCEDE_LOCAL",
+              "proposition_id": "C17"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "대학 수업 중 적지 않은 영역에서 출석·참여 요건이 정당화될 수 있다면, 문제는 의무라는 원칙 자체가 아니라 그것을 어디까지 어떻게 적용하느냐이다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "대학 수업 중 적지 않은 영역에서 출석·참여 요건이 정당화될 수 있다면, 기본 원칙을 자율로 둘 필연성은 없다."
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "왜 그 기준이 오직 토론·실습 중심 수업 유형에만 한정된다고 보시는지 불분명합니다.",
+              "core_proposition": "출석·참여 기준이 정당화되는 범위가 왜 오직 토론·실습 중심 수업에만 한정되는가?",
+              "target_proposition_id": "C13"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "강의형 수업도 질의응답, 즉각적 피드백, 수업 분위기와 집중의 공동 형성처럼 현장 참여의 가치가 있을 수 있다."
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "강의형 수업도 현장 참여의 가치가 있을 수 있는데, 어떤 원칙으로 그것만 일괄적으로 대체 가능하다고 판단하시는지 묻고 싶습니다.",
+              "core_proposition": "어떤 원칙으로 강의형 수업을 일괄적으로 대체 가능하다고 판단하는가?",
+              "target_proposition_id": "C14"
+            }
+          ]
+        }
+      },
+      {
+        "turn": 6,
+        "speaker": "B",
+        "patch": {
+          "operations": [
+            {
+              "op": "ANSWER_QUESTION",
+              "question_id": "Q3",
+              "response_status": "DIRECT",
+              "resolution": "RESOLVED"
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P1",
+              "text": "출석을 강제하려면 그 수업의 핵심 학습이 현장 동시참여 없이는 실질적으로 대체되기 어렵다는 점이 먼저 설명되어야 한다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P2",
+              "text": "강의형 수업도 경우에 따라 출석 요건이 정당화될 수 있다."
+            },
+            {
+              "op": "ADD_PROPOSITION",
+              "temp_id": "P3",
+              "text": "강의형 수업의 출석 요건 정당화 판단은 기본값이 의무가 아니라 과목 단위의 입증이어야 한다."
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C17",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C18",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ADD_RELATION",
+              "from_proposition_ref": "C21",
+              "to_proposition_ref": "C1",
+              "relation_type": "ATTACKS"
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "왜 일부 수업에서 출석 요건이 필요하다는 점이 기본 원칙을 자율이 아니라 의무로 두어야 한다는 결론으로 이어지는가?",
+              "core_proposition": "일부 수업에서 출석 요건이 필요하다는 점이 왜 기본 원칙을 자율이 아니라 의무로 두어야 한다는 결론으로 이어지는가?",
+              "target_proposition_id": "C1"
+            },
+            {
+              "op": "ASK_QUESTION",
+              "text": "왜 강의형 수업까지 포함하는 일반 원칙으로 출석 의무를 넓혀야 하는가?",
+              "core_proposition": "왜 강의형 수업까지 포함하는 일반 원칙으로 출석 의무를 넓혀야 하는가?",
+              "target_proposition_id": "C1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "action_history": [
+    [
+      "A",
+      "EXTEND_ARGUMENT",
+      []
+    ],
+    [
+      "B",
+      "EXTEND_ARGUMENT",
+      []
+    ],
+    [
+      "A",
+      "CHALLENGE_PREMISE",
+      [
+        "C9"
+      ]
+    ],
+    [
+      "B",
+      "CHALLENGE_PREMISE",
+      [
+        "C1"
+      ]
+    ],
+    [
+      "A",
+      "CHALLENGE_PREMISE",
+      [
+        "C13"
+      ]
+    ],
+    [
+      "B",
+      "REQUEST_SUPPORT",
+      [
+        "C1"
+      ]
+    ]
+  ]
+}

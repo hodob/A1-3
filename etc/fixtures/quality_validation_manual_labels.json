@@ -1,0 +1,55 @@
+{
+  "review_source": "AI manual review; not independent human adjudication",
+  "runs": {
+    "quality-playful-tangsuyuk-v1": [
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "PARTIALLY_ALIGNED", "REASONABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "MINOR", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"]
+    ],
+    "quality-definition-hotdog-v1": [
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "PARTIALLY_ALIGNED", "REASONABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "PARTIALLY_ALIGNED", "LOW_VALUE", "NONE", "MINOR", "OK"]
+    ],
+    "quality-policy-attendance-v1": [
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "REASONABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "LOW_VALUE", "NONE", "MINOR", "DULL"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "REASONABLE", "MEANINGFUL", "NONE", "OK"]
+    ],
+    "quality-comparison-remote-v1": [
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "NOT_APPLICABLE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "ENGAGING"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "MINOR", "OK"],
+      ["GOOD", "ALIGNED", "HIGH_VALUE", "MEANINGFUL", "NONE", "OK"]
+    ]
+  },
+  "persona_observations": {
+    "quality-playful-tangsuyuk-v1": "Falsifier는 넓은 전제와 필요조건을 반복 시험했고 Pragmatist는 조절 가능성·실패 비용·실행 안정성을 비교했다.",
+    "quality-definition-hotdog-v1": "Socratic은 분류 기준을 질문했고 Falsifier는 타코·랍스터 롤·포켓형 빵 경계 사례를 사용했다.",
+    "quality-policy-attendance-v1": "Principlist는 참여 의무·운영권·공동 학습 원칙을, Pragmatist는 과목별 필요성과 행정 비용을 중심으로 논증했다.",
+    "quality-comparison-remote-v1": "Pragmatist는 통근·조율 비용과 기본값을 비교했고 Synthesist는 재택 장점을 인정한 뒤 적용 범위를 한정했다."
+  }
+}

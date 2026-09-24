@@ -1,0 +1,7 @@
+{
+  "web_mode": "mock",
+  "provider": {
+    "url": "https://copa.codyssey.kr/v1",
+    "model": "gpt-5.4"
+  }
+}
