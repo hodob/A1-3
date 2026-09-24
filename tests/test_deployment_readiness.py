@@ -21,6 +21,11 @@ class DeploymentReadinessTests(unittest.TestCase):
         self.assertEqual(config.get("$schema"), "https://openapi.vercel.sh/vercel.json")
         self.assertGreaterEqual(config["functions"]["api/*.py"]["maxDuration"], 120)
 
+    def test_vercel_uses_other_preset_for_multiple_python_functions(self):
+        config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+        self.assertIn("framework", config)
+        self.assertIsNone(config["framework"])
+
     def test_vercel_security_headers_are_defined(self):
         config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
         header_map = {}
