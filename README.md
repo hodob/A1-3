@@ -28,8 +28,8 @@
 
 ## 배포 URL
 
-- Vercel: **배포 후 URL 입력**
-- GitHub: **저장소 생성 후 URL 입력**
+- Vercel: https://a1-3-green.vercel.app
+- GitHub: https://github.com/hodob/A1-3
 
 ## 프로젝트 구조
 
