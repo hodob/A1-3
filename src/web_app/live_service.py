@@ -481,6 +481,9 @@ class LiveDebateWebService:
                     "speaker": speaker,
                     "phase": phase_lower,
                     "turn_task": task.kind.value,
+                    "action": selected.name,
+                    "target_ids": list(selected.target_ids),
+                    "target_text": target_text,
                     "speech": checked.utterance,
                 },
                 state,
@@ -516,6 +519,8 @@ class LiveDebateWebService:
             metadata = attempt.get("metadata") or {}
             if metadata.get("usage") is not None:
                 item["usage"] = metadata.get("usage")
+            if metadata.get("context_counts") is not None:
+                item["context_counts"] = metadata.get("context_counts")
             compact_attempts.append(item)
 
         self._debug(
