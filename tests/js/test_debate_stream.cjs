@@ -39,7 +39,7 @@ test('closed stream without commit is rejected', async () => {
 test('debug events are forwarded before commit', async () => {
   const seen = [];
   const result = await readDebateStream(response([
-    'event: debug\\ndata: {"event":"draft_reset","attempt":2}\\n\\nevent: commit\\ndata: {"utterance":"ok","session":{}}\\n\\n',
+    'event: debug\ndata: {"event":"draft_reset","attempt":2}\n\nevent: commit\ndata: {"utterance":"ok","session":{}}\n\n',
   ]), (kind, data) => seen.push([kind, data]));
   assert.equal(result.utterance, 'ok');
   assert.deepEqual(seen[0], ['debug', {event: 'draft_reset', attempt: 2}]);
