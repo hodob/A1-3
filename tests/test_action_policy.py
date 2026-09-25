@@ -67,6 +67,19 @@ class ActionPolicyTests(unittest.TestCase):
         self.assertIn(selected.name, {"DEFEND_CLAIM", "REVISE_CLAIM"})
         self.assertEqual(selected.target_ids, ("C1",))
 
+    def test_answer_question_about_opponent_claim_allows_refute_or_concede(self):
+        from src.debate_engine.debate_control import plan_turn_task
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "이 주장에 동의하나요?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=2)
+        task = plan_turn_task(state, speaker="B", phase="crossfire")
+        options = eligible_actions(state, "B", "crossfire", turn_task=task)
+        self.assertEqual({option.name for option in options}, {"REFUTE_CLAIM", "CONCEDE_LOCAL"})
+        self.assertTrue(all(option.target_ids == ("C1",) for option in options))
+
     def test_noncomparative_audience_task_does_not_force_weighing(self):
         from src.debate_engine.debate_control import TurnTask, TurnTaskKind
         state = apply_patch(DebateState(), {"operations": [
