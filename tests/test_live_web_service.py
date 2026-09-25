@@ -14,9 +14,12 @@ class FakeDeps(LiveRuntimeDependencies):
         self.generated = []
         self.structured_tools = []
 
-    def generate_text(self, provider, messages, timeout=90):
+    def generate_text(self, provider, messages, timeout=90, on_delta=None):
         self.generated.append(messages)
-        return "저는 제 입장을 지지하며 핵심 이유를 제시합니다.", {"usage": {"total_tokens": 1}}
+        text = "저는 제 입장을 지지하며 핵심 이유를 제시합니다."
+        if on_delta:
+            on_delta(text)
+        return text, {"usage": {"total_tokens": 1}}
 
     def check_compliance(self, provider, **kwargs):
         return CombinedComplianceAssessment(
