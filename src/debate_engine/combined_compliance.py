@@ -156,7 +156,7 @@ def judge_combined(provider: dict, *, action: str, target_id: str | None, target
     return assessment, {"usage": response_payload.get("usage"), "elapsed_seconds": round(time.monotonic() - started, 3)}
 
 
-def _failure_codes(semantic: CombinedComplianceAssessment, stance: StanceLabel, *, turn_task: str | None) -> list[str]:
+def _failure_codes(semantic: CombinedComplianceAssessment, stance: StanceLabel, *, turn_task: str | None, task_primary: bool = False) -> list[str]:
     failures: list[str] = []
     if stance == StanceLabel.CONTRADICTS_ASSIGNED:
         failures.append(FailureCode.STANCE_REVERSAL.value)
@@ -165,7 +165,7 @@ def _failure_codes(semantic: CombinedComplianceAssessment, stance: StanceLabel, 
 
     if semantic.action_fidelity in (ActionFidelityLabel.MISALIGNED, ActionFidelityLabel.UNCLEAR):
         failures.append(FailureCode.ACTION_NOT_PERFORMED.value)
-    elif semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED:
+    elif semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and not task_primary:
         if not semantic.primary_action_performed:
             failures.append(FailureCode.ACTION_NOT_PERFORMED.value)
         if not semantic.target_used:
@@ -303,7 +303,8 @@ def finalize_compliant_utterance(
             semantic_skipped = False
 
         stance = StanceLabel.CONTRADICTS_ASSIGNED if local_stance.label == StanceLabel.CONTRADICTS_ASSIGNED else semantic.stance_compliance
-        failures = _failure_codes(semantic, stance, turn_task=turn_task)
+        task_primary = turn_task in {"ANSWER_OPEN_QUESTION", "ADDRESS_AUDIENCE"}
+        failures = _failure_codes(semantic, stance, turn_task=turn_task, task_primary=task_primary)
         failures.extend(issue.get("code", "SURFACE_VIOLATION") for issue in surface_issues)
         failures = list(dict.fromkeys(failures))
 
@@ -314,7 +315,7 @@ def finalize_compliant_utterance(
             semantic.additional_move_protocol_compliant,
         ))
         action_ok = semantic.action_fidelity == ActionFidelityLabel.ALIGNED or (
-            semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and partial_ok
+            semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and (partial_ok or task_primary)
         )
         stance_ok = stance in (StanceLabel.SUPPORTS_ASSIGNED, StanceLabel.COMPATIBLE_WITH_ASSIGNED)
         task_ok = turn_task is None or semantic.task_fidelity in (TaskFidelityLabel.ADVANCES_TASK, TaskFidelityLabel.PARTIAL)
