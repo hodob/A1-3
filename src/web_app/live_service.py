@@ -26,7 +26,7 @@ from src.debate_engine.action_pair_state import filter_available_pairs
 from src.debate_engine.action_policy import eligible_actions, select_action_for_speaker
 from src.debate_engine.debate_control import TurnTask, TurnTaskKind, plan_turn_task
 from src.debate_engine.combined_compliance import finalize_compliant_utterance, judge_combined
-from src.debate_engine.surface_contract import extract_state_references, known_reference_ids, validate_surface
+from src.debate_engine.surface_contract import extract_state_references, validate_surface
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError
 from src.debate_engine.debate_harness import call_model, speech_messages
 from src.debate_engine.provider_adapter import CURRENT_PROVIDER, ProviderAdapter
@@ -395,12 +395,13 @@ class LiveDebateWebService:
             return result
 
         def local_validate(utterance: str) -> list[dict]:
+            exposed_reference_ids = set(selected.target_ids) | set(task.target_ids)
             return [
                 issue.as_dict()
                 for issue in validate_surface(
                     utterance,
                     phase=phase_lower,
-                    allowed_reference_ids=known_reference_ids(state),
+                    allowed_reference_ids=exposed_reference_ids,
                 )
             ]
 
