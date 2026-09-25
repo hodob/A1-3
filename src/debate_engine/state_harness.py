@@ -27,6 +27,7 @@ PATCH_INSTRUCTIONS = (
     "기존 명제의 text는 변경하지 않습니다. 수정은 새 명제와 REVISE event를 만듭니다. "
     "발언자가 기존 명제를 인정하면 같은 내용을 새 ADD_PROPOSITION으로 만들지 말고 CONCEDE_LOCAL로 기존 C ID를 참조하세요. "
     "비유·수사적 예시는 그 자체가 독립적인 논증적 commitment가 아니라면 Proposition으로 저장하지 마세요. "
+    "[[C24]], [[Q3]] 같은 표기는 기존 State 항목을 가리키는 citation marker입니다. marker 문자열 자체를 새 Proposition text에 복사하지 말고, 참조된 기존 항목과의 의미 관계만 추출하세요. "
     "서로 독립적인 명제를 하나의 Proposition으로 합치지 마세요. 의문형으로 명시된 실제 질문은 빠뜨리지 말고 ASK_QUESTION으로 기록하세요. "
     "Relation 의미 규칙: SUPPORTS는 한 Proposition이 다른 Proposition의 이유, 근거, 기준 또는 정당화를 제공합니다. "
     "ATTACKS는 다른 Proposition의 근거 또는 타당성을 약화시키지만 둘이 동시에 참일 수도 있습니다. "
