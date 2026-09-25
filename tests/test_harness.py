@@ -94,7 +94,9 @@ class HarnessTests(unittest.TestCase):
     def test_final_focus_budget_stays_short_but_allows_crystallization(self):
         turn = {"persona": "Socratic", "side": "left", "phase": "final_focus", "speaker": "A"}
         prompt = speech_messages({"motion": "M", "sides": ["left", "right"], "tone": "SERIOUS"}, turn, [])[0]["content"]
-        self.assertIn("반드시 2문장 이내", prompt)\n        self.assertIn("한 문단", prompt)\n        self.assertIn("질문하지 마세요", prompt)
+        self.assertIn("반드시 2문장 이내", prompt)
+        self.assertIn("한 문단", prompt)
+        self.assertIn("질문하지 마세요", prompt)
         self.assertIn("새 핵심 근거 없이", prompt)
 
     def test_records_never_include_api_keys(self):
