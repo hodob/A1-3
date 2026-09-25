@@ -24,7 +24,7 @@ from .errors import SafeFailure
 from src.debate_engine.action_execution_contracts import CONTRACTS
 from src.debate_engine.action_pair_state import filter_available_pairs
 from src.debate_engine.action_policy import eligible_actions, select_action_for_speaker
-from src.debate_engine.debate_control import TurnTask, TurnTaskKind, plan_turn_task
+from src.debate_engine.debate_control import TurnTask, TurnTaskKind, build_control_view, plan_turn_task
 from src.debate_engine.combined_compliance import finalize_compliant_utterance, judge_combined
 from src.debate_engine.surface_contract import extract_state_references, validate_surface
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError
@@ -235,6 +235,36 @@ class LiveDebateWebService:
             target_id = candidate.target_ids[0] if candidate.target_ids else None
             return target_id, " | ".join(target_texts) if target_texts else None
 
+        def working_reference_ids() -> list[str]:
+            """References visible to this turn: contract targets + QUD/facet anchors + recent cited refs."""
+            control = build_control_view(state)
+            ordered = list(dict.fromkeys([*selected.target_ids, *task.target_ids]))
+
+            # A QUD reference also exposes the proposition it is about.
+            for ref_id in list(ordered):
+                if not ref_id.startswith("Q"):
+                    continue
+                question = next((q for q in state.questions if q.id == ref_id), None)
+                if question and question.target_proposition_id:
+                    ordered.append(question.target_proposition_id)
+
+            # Expose representative/current forms of targeted semantic facets.
+            for ref_id in list(ordered):
+                if not ref_id.startswith("C"):
+                    continue
+                facet_id = control.proposition_to_facet.get(ref_id)
+                facet = next((f for f in control.facets if f.id == facet_id), None)
+                if facet:
+                    ordered.extend([facet.representative_id, facet.current_id])
+
+            # Recent chips are already visible to the model in recent transcript text,
+            # so keep those references valid instead of creating a prompt/validator contradiction.
+            for item in session.transcript[-3:]:
+                for ref in item.references:
+                    ordered.append(ref.id)
+
+            return list(dict.fromkeys(ref_id for ref_id in ordered if reference_info(ref_id)))[:12]
+
         target_id, target_text = target_contract(selected)
         turn = {
             "turn": turn_number,
@@ -247,7 +277,7 @@ class LiveDebateWebService:
         def build_messages(feedback: str = "") -> list[dict[str, str]]:
             messages = speech_messages(self._scenario(session), turn, self._transcript_for_prompt(session))
             contract = CONTRACTS[selected.name]
-            reference_ids = list(dict.fromkeys([*selected.target_ids, *task.target_ids]))
+            reference_ids = working_reference_ids()
             reference_items = []
             for ref_id in reference_ids:
                 info = reference_info(ref_id)
@@ -263,11 +293,12 @@ class LiveDebateWebService:
                 f"<task kind=\"{task.kind.value}\">{xml_escape(task.description)}</task>"
                 f"<action>{selected.name}</action>"
                 f"<required_semantic_effect>{xml_escape(contract.required_semantic_effect)}</required_semantic_effect>"
-                f"<targets>{references_xml}</targets>"
+                f"<targets>{xml_escape(target_text or '(없음)')}</targets>"
                 "</turn_contract>"
+                f"<available_references>{references_xml}</available_references>"
                 "<reference_rule>"
-                "targets에 제공된 기존 State 항목을 발언에서 명시적으로 가리킬 때는 [[C24]], [[Q3]] 형식의 marker를 사용하세요. "
-                "marker 자체는 사용자 UI에서 원 발언 링크로 변환됩니다. 제공되지 않은 ID를 추측해서 만들지 마세요."
+                "available_references에 있는 기존 State 항목만 [[C24]], [[Q3]] 형식의 marker로 가리킬 수 있습니다. "
+                "marker는 사용자 UI에서 원 발언 링크로 변환됩니다. 목록 밖의 ID를 추측해서 만들지 마세요."
                 "</reference_rule>"
             )
             messages[1]["content"] += turn_contract
@@ -309,8 +340,10 @@ class LiveDebateWebService:
             action=selected.name,
             target_ids=list(selected.target_ids),
             target_text=target_text,
-            prompt_version="speech-v4-structured",
-            retry_policy_version="typed-repair-v1",
+            available_reference_ids=working_reference_ids(),
+            qud_id=task.issue_id if task.kind == TurnTaskKind.ANSWER_OPEN_QUESTION else None,
+            prompt_version="speech-v5-qud",
+            retry_policy_version="typed-repair-v2",
         )
 
         generation_attempt = 0
@@ -395,13 +428,12 @@ class LiveDebateWebService:
             return result
 
         def local_validate(utterance: str) -> list[dict]:
-            exposed_reference_ids = set(selected.target_ids) | set(task.target_ids)
             return [
                 issue.as_dict()
                 for issue in validate_surface(
                     utterance,
                     phase=phase_lower,
-                    allowed_reference_ids=exposed_reference_ids,
+                    allowed_reference_ids=set(working_reference_ids()),
                 )
             ]
 
@@ -485,6 +517,8 @@ class LiveDebateWebService:
                     "action": selected.name,
                     "target_ids": list(selected.target_ids),
                     "target_text": target_text,
+                    "reference_ids": [ref["id"] for ref in references],
+                    "qud_id": task.issue_id if task.kind == TurnTaskKind.ANSWER_OPEN_QUESTION else None,
                     "speech": checked.utterance,
                 },
                 state,
