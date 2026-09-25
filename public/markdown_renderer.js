@@ -1,4 +1,4 @@
-/* Safe Markdown rendering for AI-generated conversation text. */
+/* Safe Markdown rendering for AI-generated conversation text and state references. */
 (function (root, factory) {
   const api = factory(root);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -27,17 +27,42 @@
     );
   }
 
-  function hardenLinks(node) {
-    if (!node || typeof node.querySelectorAll !== 'function') return;
-    node.querySelectorAll('a').forEach(link => {
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer nofollow');
+  function referenceMarkdown(source, options = {}) {
+    const refs = new Map((options.references || []).map(item => [item.id, item]));
+    let text = String(source ?? '');
+    if (options.draft) {
+      text = text.replace(/\[\[[CQ]\d*$/g, '');
+    }
+    return text.replace(/\[\[([CQ]\d+)\]\]/g, (whole, id) => {
+      if (options.draft) return '↖ 이전 발언';
+      const ref = refs.get(id);
+      if (!ref || !Number.isFinite(Number(ref.turn))) return whole;
+      const speaker = ref.speaker === 'B' ? 'B' : 'A';
+      const turn = Number(ref.turn);
+      return '[↖ ' + speaker + ' · 발언 ' + turn + '](#turn-' + turn + ' "State ' + id + '")';
     });
   }
 
-  function render(node, source, inline) {
+  function hardenLinks(node) {
+    if (!node || typeof node.querySelectorAll !== 'function') return;
+    node.querySelectorAll('a').forEach(link => {
+      const href = typeof link.getAttribute === 'function' ? (link.getAttribute('href') || '') : '';
+      if (/^#turn-\d+$/.test(href)) {
+        link.classList?.add?.('state-ref');
+        if (typeof link.removeAttribute === 'function') {
+          link.removeAttribute('target');
+          link.removeAttribute('rel');
+        }
+        return;
+      }
+      link.setAttribute?.('target', '_blank');
+      link.setAttribute?.('rel', 'noopener noreferrer nofollow');
+    });
+  }
+
+  function render(node, source, inline, options = {}) {
     if (!node) return;
-    const markdown = String(source ?? '');
+    const markdown = referenceMarkdown(source, options);
     if (!dependenciesReady()) {
       node.textContent = markdown;
       node.classList?.remove?.('markdown-rendered');
@@ -63,7 +88,8 @@
   }
 
   return {
-    renderBlock(node, source) { render(node, source, false); },
-    renderInline(node, source) { render(node, source, true); },
+    referenceMarkdown,
+    renderBlock(node, source, options = {}) { render(node, source, false, options); },
+    renderInline(node, source, options = {}) { render(node, source, true, options); },
   };
 });
