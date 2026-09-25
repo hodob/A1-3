@@ -728,7 +728,7 @@ function renderSummary() {
 
 async function loadSummary() {
   const retry = loadSummary;
-  const data = await performOperation('summary', '서로의 논점을 정리하고 있어요.', retry, id => api('/api/neutral-summary', {
+  const data = await performOperation('summary', '토론 정리를 준비하고 있어요.', retry, id => api('/api/neutral-summary', {
     motion: state.session.motion,
     transcript: state.session.transcript,
   }, id));
