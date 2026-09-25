@@ -124,6 +124,63 @@ class CombinedComplianceTests(unittest.TestCase):
         self.assertTrue(result.committed)
         self.assertEqual(result.attempts, 1)
 
+    def test_task_primary_accepts_misaligned_secondary_action_when_task_advances(self):
+        assessment = CombinedComplianceAssessment(
+            ActionFidelityLabel.MISALIGNED,
+            StanceLabel.SUPPORTS_ASSIGNED,
+            "secondary action was not performed",
+            "stance ok",
+            task_fidelity=TaskFidelityLabel.ADVANCES_TASK,
+            task_reason="직접 질문에 답함",
+        )
+        result = finalize_compliant_utterance(
+            lambda _: "질문에 직접 답합니다.",
+            self.assignment,
+            "WEIGH_COMPARATIVE",
+            "target",
+            "crossfire",
+            lambda *_: assessment,
+            turn_task="ANSWER_OPEN_QUESTION",
+        )
+        self.assertTrue(result.committed)
+        self.assertEqual(result.attempts, 1)
+        self.assertEqual(result.checks[0]["failure_codes"], [])
+
+    def test_repair_prompt_contains_observed_location_and_admissible_repairs(self):
+        verdicts = iter([
+            CombinedComplianceAssessment(
+                ActionFidelityLabel.MISALIGNED,
+                StanceLabel.SUPPORTS_ASSIGNED,
+                "target comparison missing",
+                "stance ok",
+                task_fidelity=TaskFidelityLabel.OFF_TASK,
+                task_reason="question was not answered",
+            ),
+            CombinedComplianceAssessment(
+                ActionFidelityLabel.ALIGNED,
+                StanceLabel.SUPPORTS_ASSIGNED,
+                "ok",
+                "ok",
+                task_fidelity=TaskFidelityLabel.ADVANCES_TASK,
+                task_reason="ok",
+            ),
+        ])
+        prompts = []
+        result = finalize_compliant_utterance(
+            lambda feedback: (prompts.append(feedback), "draft")[1],
+            self.assignment,
+            "WEIGH_COMPARATIVE",
+            "target",
+            "crossfire",
+            lambda *_: next(verdicts),
+            turn_task="WEIGH_COMPETING_REASONS",
+        )
+        self.assertTrue(result.committed)
+        self.assertIn('location="action_execution"', prompts[1])
+        self.assertIn("<observed>target comparison missing</observed>", prompts[1])
+        self.assertIn("<allowed_repairs>", prompts[1])
+        self.assertIn("<forbidden>", prompts[1])
+
     def test_third_attempt_can_replan_after_repeated_task_action_conflict(self):
         bad = CombinedComplianceAssessment(
             ActionFidelityLabel.PARTIALLY_ALIGNED,

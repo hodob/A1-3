@@ -31,6 +31,79 @@ class ActionPolicyTests(unittest.TestCase):
         second = select_action(options, [(first.name, first.target_ids)])
         self.assertNotEqual((first.name, first.target_ids), (second.name, second.target_ids))
 
+    def test_answer_open_question_is_bound_to_question_target(self):
+        from src.debate_engine.debate_control import plan_turn_task
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A의 핵심 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "그 주장의 근거는?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="B", turn=2)
+        task = plan_turn_task(state, speaker="A", phase="crossfire")
+        options = eligible_actions(state, "A", "crossfire", turn_task=task)
+        self.assertEqual({option.name for option in options}, {"DEFEND_CLAIM", "REVISE_CLAIM"})
+        self.assertTrue(all(option.target_ids == ("C1",) for option in options))
+
+    def test_answer_obligation_can_reuse_defend_pair_for_a_new_question(self):
+        from src.debate_engine.debate_control import plan_turn_task
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 핵심 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "새 질문", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="B", turn=2)
+        task = plan_turn_task(state, speaker="A", phase="crossfire")
+        options = eligible_actions(state, "A", "crossfire", turn_task=task)
+        selected = select_action_for_speaker(
+            options,
+            [("A", "DEFEND_CLAIM", ("C1",))],
+            "A",
+            state=state,
+            current_turn=3,
+            persona="Pragmatist",
+            turn_task=task,
+        )
+        self.assertIsNotNone(selected)
+        self.assertIn(selected.name, {"DEFEND_CLAIM", "REVISE_CLAIM"})
+        self.assertEqual(selected.target_ids, ("C1",))
+
+    def test_answer_question_about_opponent_claim_allows_refute_or_concede(self):
+        from src.debate_engine.debate_control import plan_turn_task
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "이 주장에 동의하나요?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=2)
+        task = plan_turn_task(state, speaker="B", phase="crossfire")
+        options = eligible_actions(state, "B", "crossfire", turn_task=task)
+        self.assertEqual({option.name for option in options}, {"REFUTE_CLAIM", "CONCEDE_LOCAL"})
+        self.assertTrue(all(option.target_ids == ("C1",) for option in options))
+
+    def test_noncomparative_audience_task_does_not_force_weighing(self):
+        from src.debate_engine.debate_control import TurnTask, TurnTaskKind
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "B 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="B", turn=2)
+        task = TurnTask(TurnTaskKind.ADDRESS_AUDIENCE, (), "관객 입력에 직접 답하세요: 볶는 방식도 있나요?")
+        options = eligible_actions(state, "A", "audience_response", turn_task=task)
+        self.assertNotIn("WEIGH_COMPARATIVE", {option.name for option in options})
+
+    def test_comparative_audience_task_may_use_weighing(self):
+        from src.debate_engine.debate_control import TurnTask, TurnTaskKind
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "B 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="B", turn=2)
+        task = TurnTask(TurnTaskKind.ADDRESS_AUDIENCE, (), "두 방식 중 어느 쪽이 더 중요한가요?")
+        options = eligible_actions(state, "A", "audience_response", turn_task=task)
+        self.assertIn("WEIGH_COMPARATIVE", {option.name for option in options})
+
     def test_press_requires_partial_or_evaded_open_question(self):
         state = apply_patch(DebateState(), {"operations": [{"op": "ASK_QUESTION", "core_proposition": "왜?"}]}, speaker="A", turn=1)
         self.assertFalse(any(option.name == "PRESS_UNANSWERED" for option in eligible_actions(state, "A", "crossfire")))

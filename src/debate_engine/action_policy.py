@@ -35,17 +35,29 @@ def eligible_actions(state: DebateState, speaker: str, phase: str, *, turn_task:
             target = turn_task.target_ids[:1]
             return [ActionCandidate("REFUTE_CLAIM", target), ActionCandidate("CONCEDE_LOCAL", target)] if target else []
         if kind == TurnTaskKind.ANSWER_OPEN_QUESTION:
-            # Answering is a response obligation, not a strategic action. Pick a compatible
-            # move while the prompt requires the answer first.
-            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
-            options += [ActionCandidate("CONCEDE_LOCAL", (p.id,)) for p in reversed(opponent)]
-            options += [ActionCandidate("REVISE_CLAIM", (p.id,)) for p in reversed(own)]
-            if opponent and own:
-                options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
-            return options or [ActionCandidate("EXTEND_ARGUMENT")]
+            # The Immediate QUD determines the strategic target. Persona preference may
+            # choose between compatible moves, but may not redirect the turn elsewhere.
+            question = next((q for q in state.questions if q.id in turn_task.target_ids), None)
+            if question and question.target_proposition_id:
+                target = next((p for p in state.propositions if p.id == question.target_proposition_id), None)
+                if target is not None:
+                    control = build_control_view(state)
+                    facet_id = control.proposition_to_facet.get(target.id)
+                    current_id = next((f.current_id for f in control.facets if f.id == facet_id), target.id)
+                    if target.speaker == speaker:
+                        return [
+                            ActionCandidate("DEFEND_CLAIM", (current_id,)),
+                            ActionCandidate("REVISE_CLAIM", (current_id,)),
+                        ]
+                    return [
+                        ActionCandidate("REFUTE_CLAIM", (current_id,)),
+                        ActionCandidate("CONCEDE_LOCAL", (current_id,)),
+                    ]
+            return [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])] or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.ADDRESS_AUDIENCE:
-            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
-            if opponent and own:
+            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])]
+            comparative = any(token in turn_task.description for token in ("비교", "차이", "어느", "더 낫", "더 중요", "우선"))
+            if comparative and opponent and own:
                 options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
             return options or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.NARROW_DISAGREEMENT:
@@ -80,13 +92,18 @@ def select_action(options: list[ActionCandidate], previous: list[tuple[str, tupl
     return next((candidate for candidate in options if (candidate.name, candidate.target_ids) not in used), None)
 
 
-def select_action_for_speaker(options: list[ActionCandidate], previous: list[tuple[str, str, tuple[str, ...]]], speaker: str, *, state: DebateState | None = None, current_turn: int | None = None, persona: str | None = None) -> ActionCandidate | None:
+def select_action_for_speaker(options: list[ActionCandidate], previous: list[tuple[str, str, tuple[str, ...]]], speaker: str, *, state: DebateState | None = None, current_turn: int | None = None, persona: str | None = None, turn_task: TurnTask | None = None) -> ActionCandidate | None:
     remaining = list(options)
     if state is None or current_turn is None:
         speaker_previous = {(action, targets) for owner, action, targets in previous if owner == speaker}
         remaining = [candidate for candidate in remaining if (candidate.name, candidate.target_ids) not in speaker_previous]
         return max(remaining, key=lambda candidate: preference_level(persona, candidate.name), default=None)
-    remaining = filter_available_pairs(state, speaker, remaining, previous, current_turn=current_turn)
+    task_primary = turn_task is not None and turn_task.kind in {
+        TurnTaskKind.ANSWER_OPEN_QUESTION,
+        TurnTaskKind.ADDRESS_AUDIENCE,
+    }
+    if not task_primary:
+        remaining = filter_available_pairs(state, speaker, remaining, previous, current_turn=current_turn)
 
     # Prevent semantic duplicate proposition IDs from bypassing Action×Target exhaustion.
     # Raw proposition IDs remain authoritative, but the control plane treats members of
@@ -100,20 +117,21 @@ def select_action_for_speaker(options: list[ActionCandidate], previous: list[tup
         facet_id = control.proposition_to_facet.get(first)
         if facet_id:
             used_semantic_pairs.add((action, facet_id))
-    semantic_filtered = []
-    for candidate in remaining:
-        if not candidate.target_ids:
+    if not task_primary:
+        semantic_filtered = []
+        for candidate in remaining:
+            if not candidate.target_ids:
+                semantic_filtered.append(candidate)
+                continue
+            facet_id = control.proposition_to_facet.get(candidate.target_ids[0])
+            if facet_id and (candidate.name, facet_id) in used_semantic_pairs:
+                continue
+            if facet_id in control.agreed_facet_ids and candidate.name in {
+                "CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CHECK_CONSISTENCY", "REFUTE_CLAIM", "CLARIFY_CLAIM", "SEEK_COMMITMENT"
+            }:
+                continue
             semantic_filtered.append(candidate)
-            continue
-        facet_id = control.proposition_to_facet.get(candidate.target_ids[0])
-        if facet_id and (candidate.name, facet_id) in used_semantic_pairs:
-            continue
-        if facet_id in control.agreed_facet_ids and candidate.name in {
-            "CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CHECK_CONSISTENCY", "REFUTE_CLAIM", "CLARIFY_CLAIM", "SEEK_COMMITMENT"
-        }:
-            continue
-        semantic_filtered.append(candidate)
-    remaining = semantic_filtered
+        remaining = semantic_filtered
 
     def candidate_key(candidate: ActionCandidate) -> tuple:
         if candidate.target_ids and candidate.target_ids[0].startswith("Q"):

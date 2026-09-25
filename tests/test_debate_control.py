@@ -5,6 +5,7 @@ from src.debate_engine.debate_control import (
     ProgressType,
     TurnTaskKind,
     build_control_view,
+    immediate_qud,
     plan_turn_task,
 )
 
@@ -56,6 +57,52 @@ class DebateControlTests(unittest.TestCase):
         task = plan_turn_task(state, speaker="B", phase="crossfire")
         self.assertEqual(task.kind, TurnTaskKind.ANSWER_OPEN_QUESTION)
         self.assertEqual(task.target_ids, ("Q1",))
+
+    def test_same_turn_same_target_questions_form_one_qud_group(self):
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "B 핵심 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="B", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "끝까지 바삭한가?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+            {"op": "ASK_QUESTION", "core_proposition": "찍는 순간 식감을 잃는 것 아닌가?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=2)
+
+        view = build_control_view(state)
+        self.assertEqual(len(view.question_groups), 1)
+        group = view.question_groups[0]
+        self.assertEqual(group.member_ids, ("Q1", "Q2"))
+        self.assertEqual(group.current_question_id, "Q2")
+        task = plan_turn_task(state, speaker="B", phase="crossfire")
+        self.assertEqual(task.kind, TurnTaskKind.ANSWER_OPEN_QUESTION)
+        self.assertEqual(task.target_ids, ("Q2",))
+        self.assertEqual(task.issue_id, group.id)
+
+        state = apply_patch(state, {"operations": [
+            {"op": "ANSWER_QUESTION", "question_id": "Q2", "response_status": "DIRECT", "resolution": "RESOLVED"},
+        ]}, speaker="B", turn=3)
+        view = build_control_view(state)
+        self.assertEqual(view.question_groups[0].status, "RESOLVED")
+        self.assertIsNone(immediate_qud(view, state, "B"))
+        self.assertNotEqual(plan_turn_task(state, speaker="B", phase="crossfire").kind, TurnTaskKind.ANSWER_OPEN_QUESTION)
+
+    def test_resolved_latest_qud_does_not_resurrect_older_unrelated_question(self):
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "B 주장 1", "semantic_kind": "NEW_REASON"},
+            {"op": "ADD_PROPOSITION", "text": "B 주장 2", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="B", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "첫 쟁점?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+            {"op": "ASK_QUESTION", "core_proposition": "둘째 쟁점?", "target_proposition_id": "C2", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=2)
+        task = plan_turn_task(state, speaker="B", phase="crossfire")
+        self.assertEqual(task.target_ids, ("Q2",))
+        state = apply_patch(state, {"operations": [
+            {"op": "ANSWER_QUESTION", "question_id": "Q2", "response_status": "DIRECT", "resolution": "RESOLVED"},
+        ]}, speaker="B", turn=3)
+
+        view = build_control_view(state)
+        self.assertIsNone(immediate_qud(view, state, "B"))
+        self.assertNotEqual(plan_turn_task(state, speaker="B", phase="crossfire").kind, TurnTaskKind.ANSWER_OPEN_QUESTION)
 
     def test_audience_question_overrides_existing_agenda(self):
         task = plan_turn_task(DebateState(), speaker="A", phase="audience_response", audience_question="볶는다는 것도 있어")

@@ -1,8 +1,7 @@
 """Derived debate control-plane state.
 
-Raw DebateState remains the source of truth for what was said. This module derives
-semantic facets, question groups, progress events, and the next TurnTask used to
-control whether a new utterance is worth generating.
+Raw DebateState remains authoritative. This module derives semantic facets,
+QUD/question groups, progress, and the next conversational obligation.
 """
 from __future__ import annotations
 
@@ -63,8 +62,13 @@ class ArgumentFacet:
 class QuestionGroup:
     id: str
     representative_question_id: str
+    current_question_id: str
     member_ids: tuple[str, ...]
     status: str
+    asker: str
+    target_proposition_id: str | None
+    core_proposition: str
+    last_turn: int
     repeated_count: int = 0
 
 
@@ -111,8 +115,6 @@ def build_control_view(state: DebateState) -> DebateControlView:
     props_by_id = {p.id: p for p in state.propositions}
     prop_record_by_id = {x["proposition_id"]: x for x in prop_records if x.get("proposition_id")}
 
-    # Older fixtures have no control annotation. Treat them as independent facets;
-    # semantic collapse only happens when extraction explicitly says it is safe.
     facet_members: dict[str, list[str]] = {}
     facet_meta: dict[str, tuple[str, str, int]] = {}
     facet_current: dict[str, str] = {}
@@ -146,27 +148,58 @@ def build_control_view(state: DebateState) -> DebateControlView:
     repeated: dict[str, int] = {}
     question_by_id = {q.id: q for q in state.questions}
     record_by_qid = {x["question_id"]: x for x in question_records if x.get("question_id")}
+
+    def same_turn_target_group(question) -> str | None:
+        if not question.target_proposition_id:
+            return None
+        facet_id = proposition_to_facet.get(question.target_proposition_id)
+        for prior in reversed(state.questions):
+            if prior.id == question.id:
+                continue
+            if prior.asker != question.asker or prior.source_turn_id != question.source_turn_id:
+                continue
+            if not prior.target_proposition_id:
+                continue
+            if proposition_to_facet.get(prior.target_proposition_id) == facet_id:
+                return question_to_group.get(prior.id)
+        return None
+
     for question in sorted(state.questions, key=lambda q: (q.turn, int(q.id[1:]))):
         record = record_by_qid.get(question.id, {})
         anchor = record.get("anchor_question_id")
-        if anchor in question_to_group:
-            group_id = question_to_group[anchor]
-        else:
+        group_id = question_to_group.get(anchor) if anchor else None
+        if group_id is None:
+            group_id = same_turn_target_group(question)
+        if group_id is None:
             group_id = f"QG-{question.id}"
         question_to_group[question.id] = group_id
         group_members.setdefault(group_id, []).append(question.id)
+
     for record in question_records:
         if record.get("semantic_kind") == "SAME_QUESTION" and record.get("anchor_question_id"):
             anchor = record["anchor_question_id"]
             group_id = question_to_group.get(anchor, f"QG-{anchor}")
             repeated[group_id] = repeated.get(group_id, 0) + 1
 
-    question_groups = []
+    question_groups: list[QuestionGroup] = []
     for group_id, members in group_members.items():
-        representative = members[0]
-        statuses = [question_by_id[qid].resolution for qid in members]
-        status = "OPEN" if any(x == "OPEN" for x in statuses) else "RESOLVED"
-        question_groups.append(QuestionGroup(group_id, representative, tuple(members), status, repeated.get(group_id, 0)))
+        representative = question_by_id[members[0]]
+        current = question_by_id[members[-1]]
+        # A direct/qualified resolution to one formulation resolves the Immediate QUD
+        # represented by this MIU group, even if another surface question node remains OPEN.
+        status = "RESOLVED" if any(question_by_id[qid].resolution == "RESOLVED" for qid in members) else "OPEN"
+        question_groups.append(QuestionGroup(
+            group_id,
+            representative.id,
+            current.id,
+            tuple(members),
+            status,
+            current.asker,
+            current.target_proposition_id,
+            current.core_proposition,
+            max(question_by_id[qid].source_turn_id for qid in members),
+            repeated.get(group_id, 0),
+        ))
 
     progress: dict[int, set[ProgressType]] = {}
     for record in prop_records:
@@ -195,7 +228,6 @@ def build_control_view(state: DebateState) -> DebateControlView:
         elif event.event == "REVISE":
             progress.setdefault(event.turn, set()).add(ProgressType.REVISION)
 
-    # Ensure turns that emitted only unannotated legacy propositions still appear.
     for proposition in state.propositions:
         progress.setdefault(proposition.turn, set())
         if proposition.id not in prop_record_by_id:
@@ -217,13 +249,28 @@ def build_control_view(state: DebateState) -> DebateControlView:
     )
 
 
+def immediate_qud(view: DebateControlView, state: DebateState, speaker: str) -> QuestionGroup | None:
+    """Return only the top/current opponent QUD.
+
+    We intentionally do not resurrect an older unrelated open question after a newer
+    QUD has been resolved. Questions from one turn against the same target facet are
+    treated as one MIU group.
+    """
+    groups = [g for g in view.question_groups if g.asker != speaker]
+    if not groups:
+        return None
+    newest_turn = max(g.last_turn for g in groups)
+    newest = [g for g in groups if g.last_turn == newest_turn]
+    top = max(newest, key=lambda g: int(g.current_question_id[1:]))
+    return top if top.status == "OPEN" else None
+
+
 def _recent_counterexample(state: DebateState, speaker: str) -> str | None:
     prop_records, _ = _control_records(state)
     for record in reversed(prop_records):
         pid = record.get("proposition_id")
         proposition = next((p for p in state.propositions if p.id == pid), None)
         if proposition and proposition.speaker != speaker and record.get("semantic_kind") == "NEW_COUNTEREXAMPLE":
-            # Once the current speaker has made a later move, this counterexample is no longer a fresh obligation.
             if not any(p.speaker == speaker and p.turn > proposition.turn for p in state.propositions):
                 return proposition.id
     return None
@@ -241,17 +288,15 @@ def _recent_stagnation(view: DebateControlView) -> bool:
     turns = sorted(view.progress_by_turn)
     if len(turns) < 4:
         return False
-    last_two = turns[-2:]
-    return all(not view.meaningful_progress(turn) for turn in last_two)
+    return all(not view.meaningful_progress(turn) for turn in turns[-2:])
 
 
 def _question_pressure_on_facet(view: DebateControlView, state: DebateState, speaker: str, facet_id: str) -> int:
-    """Count resolved/open probes by this speaker against the same semantic facet."""
     count = 0
-    for question in state.questions:
-        if question.asker != speaker or not question.target_proposition_id:
+    for group in view.question_groups:
+        if group.asker != speaker or not group.target_proposition_id:
             continue
-        if view.proposition_to_facet.get(question.target_proposition_id) == facet_id:
+        if view.proposition_to_facet.get(group.target_proposition_id) == facet_id:
             count += 1
     return count
 
@@ -272,15 +317,20 @@ def plan_turn_task(
     if phase == "opening":
         return TurnTask(TurnTaskKind.INTRODUCE_UNCOVERED_FACET, (), "입장을 지지하는 핵심 이유 1~2개를 처음 제시하세요.")
 
-    open_question = next((q for q in reversed(state.questions) if q.asker != speaker and q.resolution == "OPEN"), None)
-    if open_question is not None:
-        return TurnTask(TurnTaskKind.ANSWER_OPEN_QUESTION, (open_question.id,), f"상대의 열린 질문에 먼저 직접 답하세요: {open_question.core_proposition}")
+    view = build_control_view(state)
+    qud = immediate_qud(view, state, speaker)
+    if qud is not None:
+        return TurnTask(
+            TurnTaskKind.ANSWER_OPEN_QUESTION,
+            (qud.current_question_id,),
+            f"현재 핵심 질문에 먼저 직접 답하세요: {qud.core_proposition}",
+            qud.id,
+        )
 
     counterexample = _recent_counterexample(state, speaker)
     if counterexample:
         return TurnTask(TurnTaskKind.ADDRESS_COUNTEREXAMPLE, (counterexample,), "상대가 새로 제시한 반례를 수용·한정·반박 중 하나로 처리하세요.")
 
-    view = build_control_view(state)
     opponent_target = _latest_facet_target(view, state, speaker, opponent=True)
     own_target = _latest_facet_target(view, state, speaker, opponent=False)
 
@@ -297,7 +347,7 @@ def plan_turn_task(
             return TurnTask(
                 TurnTaskKind.WEIGH_COMPETING_REASONS,
                 (opponent_target, own_target),
-                "같은 상대 쟁점을 이미 두 차례 질문으로 검토했습니다. 새 질문을 반복하지 말고 양측 이유를 같은 기준에서 비교하세요.",
+                "같은 상대 쟁점을 이미 두 차례 QUD로 검토했습니다. 새 질문을 반복하지 말고 양측 이유를 같은 기준에서 비교하세요.",
                 facet_id,
             )
         return TurnTask(TurnTaskKind.TEST_UNRESOLVED_REASON, (opponent_target,), "아직 해결되지 않은 상대 핵심 이유 하나를 검증하거나 범위를 좁히세요.")

@@ -15,7 +15,7 @@ from .debate_harness import ConfigError, load_config, select_debaters
 from .provider_adapter import CURRENT_PROVIDER, ProviderAdapter, ProviderOutputError
 from .provider_transport import request_completion
 from .question_extraction_guard import explicit_question_candidates
-from .debate_control import build_control_view
+from .debate_control import build_control_view, immediate_qud
 
 
 ADAPTER = ProviderAdapter(CURRENT_PROVIDER)
@@ -38,7 +38,8 @@ PATCH_INSTRUCTIONS = (
     "각 ADD_PROPOSITION에는 semantic_kind를 반드시 판단하세요: NEW_REASON은 기존에 없던 독립 이유, SAME_POINT는 같은 논지의 말바꿈, REFINEMENT는 같은 논지의 표현/정교화, "
     "NEW_COUNTEREXAMPLE은 기존 주장에 대한 새 반례, QUALIFICATION은 범위·조건·정도를 실제로 제한, RELATED_DISTINCT는 관련 있지만 별개의 논지입니다. "
     "SAME_POINT/REFINEMENT/QUALIFICATION은 semantic_anchor_ref에 가장 가까운 기존 C 또는 이번 Patch의 P를 넣으세요. 단순 단어 유사성만으로 SAME_POINT로 합치지 마세요. "
-    "ASK_QUESTION에는 semantic_kind를 NEW_QUESTION/SAME_QUESTION/REFINEMENT 중 선택하세요. 표현만 바뀐 같은 질문이면 SAME_QUESTION과 기존 anchor_question_id를 사용하세요. "
+    "ASK_QUESTION에는 semantic_kind를 NEW_QUESTION/SAME_QUESTION/REFINEMENT 중 선택하세요. 표현만 바뀐 같은 질문이면 SAME_QUESTION과 기존 anchor_question_id를 사용하세요. "    "한 발화에 의문문이 여러 개 있어도 같은 target과 같은 쟁점을 연속해서 묻고 하나에 답하면 나머지도 실질적으로 해결되는 경우에는 하나의 Immediate QUD로 보고 ASK_QUESTION 하나만 만드세요. core_proposition에는 여러 표면 질문을 포괄하는 핵심 질문을 적으세요. " +
+    "서로 다른 target을 묻거나 하나에 답해도 다른 질문이 남는 경우에만 ASK_QUESTION을 분리하세요. 질문표('?') 개수만으로 Q 노드를 늘리지 마세요. "
     "turn.selected_target_ids에 기존 C target이 있고 새 질문이 그 주장을 직접 검증한다면 ASK_QUESTION.target_proposition_id에 그 C ID를 기록하세요. 관련 없는 target을 억지로 연결하지 마세요. "
     "이미 RESOLVED된 질문을 새 근거나 새 범위 없이 다시 묻는 것은 SAME_QUESTION입니다. "
     "입력 relations에 같은 from/to/type이 이미 있으면 ADD_RELATION을 다시 만들지 마세요. extract_patch 도구를 호출하세요."
@@ -46,29 +47,79 @@ PATCH_INSTRUCTIONS = (
 
 
 def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
-    """Build a bounded reconciliation view instead of replaying the full raw graph.
+    """Select an adaptive working set for State reconciliation.
 
-    Each semantic facet contributes its current proposition; the most recent raw
-    propositions and the current Action targets are also retained. Open questions
-    stay visible so answer/resolution state remains authoritative.
+    Selection is graph-aware rather than fixed-k: current Action/QUD targets and
+    explicit [[...]] references are seeds, then their facet anchors and one-hop
+    relations are added. A small recent-per-speaker fallback preserves local context.
     """
     turn = turn or {}
     control = build_control_view(state)
     prop_by_id = {p.id: p for p in state.propositions}
     question_by_id = {q.id: q for q in state.questions}
+    relation_list = list(state.relations)
     target_ids = {str(x) for x in turn.get("target_ids", [])}
+    reference_ids = {str(x) for x in turn.get("reference_ids", [])}
+    all_refs = target_ids | reference_ids
 
-    current_ids = {facet.current_id for facet in control.facets}
-    representative_ids = {facet.representative_id for facet in control.facets}
-    recent_ids = {p.id for p in state.propositions[-8:]}
-    proposition_target_ids = {x for x in target_ids if x.startswith("C")}
-    include_prop_ids = current_ids | recent_ids | proposition_target_ids
+    scores: dict[str, int] = {}
+    reasons: dict[str, set[str]] = {}
 
-    # Keep the representative too when a refinement/qualification changed the current
-    # wording; this gives the extractor a stable semantic anchor without every member.
+    def include(pid: str | None, score: int, reason: str) -> None:
+        if not pid or pid not in prop_by_id:
+            return
+        scores[pid] = max(scores.get(pid, 0), score)
+        reasons.setdefault(pid, set()).add(reason)
+
+    for ref_id in all_refs:
+        if ref_id.startswith("C"):
+            include(ref_id, 100, "explicit_target_or_reference")
+        elif ref_id.startswith("Q") and ref_id in question_by_id:
+            include(question_by_id[ref_id].target_proposition_id, 95, "question_target")
+
+    speaker = str(turn.get("speaker", ""))
+    qud = immediate_qud(control, state, speaker) if speaker else None
+    if qud is not None:
+        include(qud.target_proposition_id, 95, "immediate_qud_target")
+
+    # Preserve the semantic anchor/current wording for every selected facet.
+    selected_facets = {
+        control.proposition_to_facet[pid]
+        for pid in list(scores)
+        if pid in control.proposition_to_facet
+    }
     for facet in control.facets:
-        if facet.current_id != facet.representative_id and facet.current_id in include_prop_ids:
-            include_prop_ids.add(facet.representative_id)
+        if facet.id in selected_facets:
+            include(facet.current_id, 85, "facet_current")
+            include(facet.representative_id, 75, "facet_representative")
+
+    # One-hop argumentative neighbors are useful to reconcile SUPPORT/ATTACK/QUALIFY.
+    seed_ids = set(scores)
+    for relation in relation_list:
+        if relation.from_proposition_id in seed_ids:
+            include(relation.to_proposition_id, 65, "one_hop_relation")
+        if relation.to_proposition_id in seed_ids:
+            include(relation.from_proposition_id, 65, "one_hop_relation")
+
+    # Keep at most two recent propositions per speaker. This is a fallback, not the
+    # primary retrieval mechanism.
+    recent_per_speaker: dict[str, int] = {}
+    for proposition in reversed(state.propositions):
+        count = recent_per_speaker.get(proposition.speaker, 0)
+        if count >= 2:
+            continue
+        include(proposition.id, 40, "recent")
+        recent_per_speaker[proposition.speaker] = count + 1
+        if len(recent_per_speaker) >= 2 and all(value >= 2 for value in recent_per_speaker.values()):
+            break
+
+    # Cap by relevance and recency so growing State does not imply growing prompt.
+    ranked = sorted(
+        scores,
+        key=lambda pid: (scores[pid], prop_by_id[pid].turn, int(pid[1:])),
+        reverse=True,
+    )
+    include_prop_ids = set(ranked[:10])
 
     propositions = [
         {"id": p.id, "text": p.text, "speaker": p.speaker}
@@ -77,23 +128,25 @@ def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
     ]
     relations = [
         {"id": r.id, "from": r.from_proposition_id, "to": r.to_proposition_id, "type": r.relation_type}
-        for r in state.relations
+        for r in relation_list
         if r.from_proposition_id in include_prop_ids and r.to_proposition_id in include_prop_ids
     ]
 
-    open_question_ids = {q.id for q in state.questions if q.resolution == "OPEN"}
-    recent_question_ids = {q.id for q in state.questions[-4:]}
-    question_target_ids = {x for x in target_ids if x.startswith("Q")}
-    include_question_ids = open_question_ids | recent_question_ids | question_target_ids
+    include_question_ids = {x for x in all_refs if x.startswith("Q") and x in question_by_id}
+    if qud is not None:
+        include_question_ids.update(qud.member_ids)
+    include_question_ids.update(q.id for q in state.questions[-2:])
     questions = [question_by_id[qid].model_dump() for qid in question_by_id if qid in include_question_ids]
 
-    facets = []
+    included_facets = []
     for facet in control.facets:
+        if not set(facet.member_ids).intersection(include_prop_ids):
+            continue
         current = prop_by_id.get(facet.current_id)
         representative = prop_by_id.get(facet.representative_id)
         if current is None or representative is None:
             continue
-        facets.append({
+        included_facets.append({
             "id": facet.id,
             "representative_id": facet.representative_id,
             "representative_text": representative.text,
@@ -108,9 +161,15 @@ def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
         "propositions": propositions,
         "relations": relations,
         "questions": questions,
-        "facets": facets,
+        "facets": included_facets,
         "selected_action": turn.get("action"),
         "selected_target_ids": list(turn.get("target_ids", [])),
+        "selected_reference_ids": list(turn.get("reference_ids", [])),
+        "working_set": {
+            "proposition_ids": [pid for pid in ranked[:10]],
+            "reasons": {pid: sorted(reasons.get(pid, ())) for pid in ranked[:10]},
+            "immediate_qud_id": qud.id if qud else None,
+        },
     }
 
 def call_patch(provider: dict, turn: dict, state: DebateState, timeout: float, feedback: list[dict] | None = None) -> tuple[PatchEnvelope, dict]:

@@ -163,17 +163,19 @@ def _failure_codes(semantic: CombinedComplianceAssessment, stance: StanceLabel, 
     elif stance == StanceLabel.AMBIGUOUS:
         failures.append(FailureCode.STANCE_AMBIGUOUS.value)
 
-    if semantic.action_fidelity in (ActionFidelityLabel.MISALIGNED, ActionFidelityLabel.UNCLEAR):
-        failures.append(FailureCode.ACTION_NOT_PERFORMED.value)
-    elif semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and not task_primary:
-        if not semantic.primary_action_performed:
+    task_satisfied = semantic.task_fidelity in (TaskFidelityLabel.ADVANCES_TASK, TaskFidelityLabel.PARTIAL)
+    if not (task_primary and task_satisfied):
+        if semantic.action_fidelity in (ActionFidelityLabel.MISALIGNED, ActionFidelityLabel.UNCLEAR):
             failures.append(FailureCode.ACTION_NOT_PERFORMED.value)
-        if not semantic.target_used:
-            failures.append(FailureCode.TARGET_NOT_USED.value)
-        if not semantic.action_is_core_function:
-            failures.append(FailureCode.ACTION_NOT_CORE.value)
-        if not semantic.additional_move_protocol_compliant:
-            failures.append(FailureCode.ACTION_PROTOCOL_VIOLATION.value)
+        elif semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED:
+            if not semantic.primary_action_performed:
+                failures.append(FailureCode.ACTION_NOT_PERFORMED.value)
+            if not semantic.target_used:
+                failures.append(FailureCode.TARGET_NOT_USED.value)
+            if not semantic.action_is_core_function:
+                failures.append(FailureCode.ACTION_NOT_CORE.value)
+            if not semantic.additional_move_protocol_compliant:
+                failures.append(FailureCode.ACTION_PROTOCOL_VIOLATION.value)
 
     if turn_task is not None:
         if semantic.task_fidelity == TaskFidelityLabel.REPHRASES_ONLY:
@@ -203,6 +205,60 @@ def _retry_strategy(failures: list[str], *, attempt: int, can_replan: bool) -> R
     return RetryStrategy.TARGETED_REPAIR
 
 
+def _repair_guidance(code: str, check: dict) -> tuple[str, str, str]:
+    action_reason = str(check.get("action_reason", ""))
+    stance_reason = str(check.get("stance_reason", ""))
+    task_reason = str(check.get("task_reason", ""))
+    mapping = {
+        FailureCode.STANCE_REVERSAL.value: (
+            "assigned_stance",
+            stance_reason,
+            "국소 양보나 사실 설명은 유지하되 결론과 이유를 Assigned Stance에 다시 정렬하세요.",
+        ),
+        FailureCode.STANCE_AMBIGUOUS.value: (
+            "assigned_stance",
+            stance_reason,
+            "새 논거를 추가하지 말고 어느 입장을 지지하는지 결론을 명확하게 만드세요.",
+        ),
+        FailureCode.ACTION_NOT_PERFORMED.value: (
+            "action_execution",
+            action_reason,
+            "현재 target에 선택 Action의 핵심 효과가 드러나는 문장 하나를 최소 수정으로 추가하세요.",
+        ),
+        FailureCode.TARGET_NOT_USED.value: (
+            "action_target",
+            action_reason,
+            "다른 쟁점으로 이동하지 말고 current target을 직접 언급해 Action을 수행하세요.",
+        ),
+        FailureCode.ACTION_NOT_CORE.value: (
+            "action_execution",
+            action_reason,
+            "이미 잘한 TurnTask 부분은 유지하고 선택 Action이 부수적 장식이 아니라 핵심 기능이 되도록 최소한만 보강하세요.",
+        ),
+        FailureCode.ACTION_PROTOCOL_VIOLATION.value: (
+            "action_protocol",
+            action_reason,
+            "Action contract에서 허용된 realization만 남기고 추가 전략을 줄이세요.",
+        ),
+        FailureCode.TASK_OFF_TASK.value: (
+            "turn_task",
+            task_reason,
+            "현재 TurnTask에 먼저 직접 답하고 다른 새 쟁점은 제거하세요.",
+        ),
+        FailureCode.REPHRASE_ONLY.value: (
+            "turn_task_progress",
+            task_reason,
+            "같은 주장을 말만 바꾸지 말고 요청된 비교·한정·반례 처리 중 실제 진전을 하나 만드세요.",
+        ),
+        FailureCode.TASK_ACTION_CONFLICT.value: (
+            "plan",
+            f"task={task_reason}; action={action_reason}",
+            "이미 성공한 TurnTask는 보존하세요. Action을 억지로 끼워 넣지 말고, 다음 단계에서 Planner가 호환 Action/Target으로 재계획할 수 있습니다.",
+        ),
+    }
+    return mapping.get(code, ("surface_or_semantic", "", "해당 violation만 최소 수정으로 고치세요."))
+
+
 def _repair_prompt(
     previous_draft: str,
     check: dict,
@@ -214,13 +270,25 @@ def _repair_prompt(
     strategy: RetryStrategy,
 ) -> str:
     failure_lines = []
+    alternatives = []
     for code in check.get("failure_codes", []):
-        failure_lines.append(f'<violation code="{escape(code)}" />')
-    for issue in check.get("surface_issues", []):
+        location, observed, allowed = _repair_guidance(code, check)
         failure_lines.append(
-            f'<violation code="{escape(str(issue.get("code", "SURFACE")))}">'
-            f'{escape(str(issue.get("message", "")))}</violation>'
+            f'<violation code="{escape(code)}" location="{escape(location)}">'
+            f'<observed>{escape(observed)}</observed></violation>'
         )
+        alternatives.append(f'<repair for="{escape(code)}">{escape(allowed)}</repair>')
+    for issue in check.get("surface_issues", []):
+        code = str(issue.get("code", "SURFACE"))
+        message = str(issue.get("message", ""))
+        failure_lines.append(
+            f'<violation code="{escape(code)}" location="surface_format">'
+            f'<observed>{escape(message)}</observed></violation>'
+        )
+        alternatives.append(
+            f'<repair for="{escape(code)}">내용과 입장은 유지하고 해당 표면 형식 위반만 수정하세요.</repair>'
+        )
+
     preserve = []
     if check.get("stance_compliance") in (StanceLabel.SUPPORTS_ASSIGNED.value, StanceLabel.COMPATIBLE_WITH_ASSIGNED.value):
         preserve.append("현재 Assigned Stance와 일치하는 부분")
@@ -228,7 +296,7 @@ def _repair_prompt(
         preserve.append("이미 수행한 직접 답변 또는 Turn Task 진전")
     if check.get("action_fidelity") == ActionFidelityLabel.ALIGNED.value:
         preserve.append("이미 올바르게 수행한 Action의 핵심")
-    preserve.append("현재 단계의 길이와 자연스러운 말투")
+    preserve.append("현재 단계의 길이, 자연스러운 말투, 유효한 [[State reference]]")
 
     return (
         f'<repair_request attempt="{int(check.get("attempt", 1)) + 1}" max_attempts="3">'
@@ -236,14 +304,16 @@ def _repair_prompt(
         f'<previous_draft>{escape(previous_draft)}</previous_draft>'
         f'<violations>{"".join(failure_lines)}</violations>'
         f'<preserve>{"; ".join(escape(item) for item in preserve)}</preserve>'
+        f'<allowed_repairs>{"".join(alternatives)}</allowed_repairs>'
         f'<current_contract>'
         f'<assigned_stance>{escape(assignment.assigned_thesis)}</assigned_stance>'
         f'<turn_task>{escape(turn_task or "(없음)")}</turn_task>'
         f'<action>{escape(action)}</action>'
         f'<target>{escape(target_text or "(없음)")}</target>'
         f'</current_contract>'
+        f'<forbidden>새 쟁점 추가, 잘 된 부분의 불필요한 재작성, 존재하지 않는 State ID 생성</forbidden>'
         f'<instruction>'
-        f'previous_draft 전체를 무시하고 처음부터 임의로 바꾸지 마세요. preserve 항목은 유지하고 violations만 고치세요. '
+        f'previous_draft 전체를 새로 쓰지 말고 preserve 항목은 유지한 채 violations만 최소 수정하세요. '
         f'{("전략이 재계획되었습니다. current_contract의 새 Action/Target을 기준으로 다시 작성하세요. " if strategy == RetryStrategy.REPLAN_AND_REGENERATE else "")}'
         f'출력은 수정된 토론 발언만 반환하세요.'
         f'</instruction>'
@@ -314,11 +384,11 @@ def finalize_compliant_utterance(
             semantic.action_is_core_function,
             semantic.additional_move_protocol_compliant,
         ))
-        action_ok = semantic.action_fidelity == ActionFidelityLabel.ALIGNED or (
-            semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and (partial_ok or task_primary)
-        )
         stance_ok = stance in (StanceLabel.SUPPORTS_ASSIGNED, StanceLabel.COMPATIBLE_WITH_ASSIGNED)
         task_ok = turn_task is None or semantic.task_fidelity in (TaskFidelityLabel.ADVANCES_TASK, TaskFidelityLabel.PARTIAL)
+        action_ok = semantic.action_fidelity == ActionFidelityLabel.ALIGNED or (
+            semantic.action_fidelity == ActionFidelityLabel.PARTIALLY_ALIGNED and partial_ok
+        ) or (task_primary and task_ok)
         accepted = not surface_issues and action_ok and stance_ok and task_ok
         strategy = RetryStrategy.HARD_FAILURE if accepted else _retry_strategy(
             failures, attempt=attempt, can_replan=on_replan is not None
