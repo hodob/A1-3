@@ -35,15 +35,15 @@ class SurfaceContractTests(unittest.TestCase):
         self.assertEqual([x.code for x in issues], ["UNKNOWN_STATE_REFERENCE"])
 
     def test_readability_markdown_is_allowed(self):
-        utterance = "**핵심 기준**은 두 가지입니다.\\n\\n- 첫째\\n- 둘째\\n\\n> 상대가 말한 기준"
+        utterance = "**핵심 기준**은 두 가지입니다.\n\n- 첫째\n- 둘째\n\n> 상대가 말한 기준"
         self.assertEqual(validate_surface(utterance, phase="rebuttal", allowed_reference_ids=self.ids), [])
 
     def test_document_style_markdown_is_rejected(self):
         cases = [
-            "# 제목\\n내용",
-            "\`\`\`text\\ncode\\n\`\`\`",
+            "# 제목\n내용",
+            "```text\ncode\n```",
             "[외부 링크](https://example.com)",
-            "| A | B |\\n|---|---|\\n|1|2|",
+            "| A | B |\n|---|---|\n|1|2|",
             "<div>html</div>",
         ]
         for utterance in cases:
@@ -52,7 +52,7 @@ class SurfaceContractTests(unittest.TestCase):
                 self.assertIn("MARKDOWN_DISALLOWED_ELEMENT", [x.code for x in issues])
 
     def test_final_focus_is_stricter_than_other_phases(self):
-        issues = validate_surface("- 하나\\n- 둘", phase="final_focus", allowed_reference_ids=self.ids)
+        issues = validate_surface("- 하나\n- 둘", phase="final_focus", allowed_reference_ids=self.ids)
         self.assertIn("FINAL_FOCUS_FORMAT", [x.code for x in issues])
         issues = validate_surface("하나입니다. 둘입니다. 셋입니다.", phase="final_focus", allowed_reference_ids=self.ids)
         self.assertIn("FINAL_FOCUS_LENGTH", [x.code for x in issues])
