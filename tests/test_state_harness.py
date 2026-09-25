@@ -2,7 +2,7 @@ import unittest
 
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError, apply_patch
 from src.debate_engine.provider_adapter import ProviderOutputError
-from src.debate_engine.state_harness import PATCH_INSTRUCTIONS, extract_and_apply
+from src.debate_engine.state_harness import PATCH_INSTRUCTIONS, extract_and_apply, extraction_context
 
 
 class StateHarnessTests(unittest.TestCase):
@@ -12,6 +12,34 @@ class StateHarnessTests(unittest.TestCase):
         self.assertIn("합치지", PATCH_INSTRUCTIONS)
         self.assertIn("ASK_QUESTION", PATCH_INSTRUCTIONS)
         self.assertIn("빠뜨리지", PATCH_INSTRUCTIONS)
+
+    def test_extraction_prompt_understands_state_reference_markers(self):
+        self.assertIn("[[C24]]", PATCH_INSTRUCTIONS)
+        self.assertIn("citation marker", PATCH_INSTRUCTIONS)
+        self.assertIn("selected_target_ids", PATCH_INSTRUCTIONS)
+
+    def test_extraction_context_is_bounded_but_keeps_current_facets_and_targets(self):
+        state = DebateState()
+        state = apply_patch(state, {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A root", "semantic_kind": "NEW_REASON"},
+            {"op": "ADD_PROPOSITION", "text": "B root", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        for turn in range(2, 14):
+            state = apply_patch(state, {"operations": [
+                {
+                    "op": "ADD_PROPOSITION",
+                    "text": f"A refinement {turn}",
+                    "semantic_kind": "REFINEMENT",
+                    "semantic_anchor_ref": "C1",
+                }
+            ]}, speaker="A", turn=turn)
+        context = extraction_context(state, {"action": "DEFEND_CLAIM", "target_ids": ["C2"]})
+        ids = {item["id"] for item in context["propositions"]}
+        self.assertIn("C2", ids)
+        self.assertIn("C1", ids)
+        self.assertLess(len(context["propositions"]), len(state.propositions))
+        self.assertEqual(context["selected_action"], "DEFEND_CLAIM")
+        self.assertEqual(context["selected_target_ids"], ["C2"])
 
     def test_invalid_model_patch_gets_one_validated_retry(self):
         state = apply_patch(DebateState(), {"operations": [{"op": "ADD_PROPOSITION", "text": "기존 주장"}]}, speaker="A", turn=1)
