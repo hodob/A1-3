@@ -89,13 +89,18 @@ def select_action(options: list[ActionCandidate], previous: list[tuple[str, tupl
     return next((candidate for candidate in options if (candidate.name, candidate.target_ids) not in used), None)
 
 
-def select_action_for_speaker(options: list[ActionCandidate], previous: list[tuple[str, str, tuple[str, ...]]], speaker: str, *, state: DebateState | None = None, current_turn: int | None = None, persona: str | None = None) -> ActionCandidate | None:
+def select_action_for_speaker(options: list[ActionCandidate], previous: list[tuple[str, str, tuple[str, ...]]], speaker: str, *, state: DebateState | None = None, current_turn: int | None = None, persona: str | None = None, turn_task: TurnTask | None = None) -> ActionCandidate | None:
     remaining = list(options)
     if state is None or current_turn is None:
         speaker_previous = {(action, targets) for owner, action, targets in previous if owner == speaker}
         remaining = [candidate for candidate in remaining if (candidate.name, candidate.target_ids) not in speaker_previous]
         return max(remaining, key=lambda candidate: preference_level(persona, candidate.name), default=None)
-    remaining = filter_available_pairs(state, speaker, remaining, previous, current_turn=current_turn)
+    task_primary = turn_task is not None and turn_task.kind in {
+        TurnTaskKind.ANSWER_OPEN_QUESTION,
+        TurnTaskKind.ADDRESS_AUDIENCE,
+    }
+    if not task_primary:
+        remaining = filter_available_pairs(state, speaker, remaining, previous, current_turn=current_turn)
 
     # Prevent semantic duplicate proposition IDs from bypassing Action×Target exhaustion.
     # Raw proposition IDs remain authoritative, but the control plane treats members of
@@ -109,20 +114,21 @@ def select_action_for_speaker(options: list[ActionCandidate], previous: list[tup
         facet_id = control.proposition_to_facet.get(first)
         if facet_id:
             used_semantic_pairs.add((action, facet_id))
-    semantic_filtered = []
-    for candidate in remaining:
-        if not candidate.target_ids:
+    if not task_primary:
+        semantic_filtered = []
+        for candidate in remaining:
+            if not candidate.target_ids:
+                semantic_filtered.append(candidate)
+                continue
+            facet_id = control.proposition_to_facet.get(candidate.target_ids[0])
+            if facet_id and (candidate.name, facet_id) in used_semantic_pairs:
+                continue
+            if facet_id in control.agreed_facet_ids and candidate.name in {
+                "CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CHECK_CONSISTENCY", "REFUTE_CLAIM", "CLARIFY_CLAIM", "SEEK_COMMITMENT"
+            }:
+                continue
             semantic_filtered.append(candidate)
-            continue
-        facet_id = control.proposition_to_facet.get(candidate.target_ids[0])
-        if facet_id and (candidate.name, facet_id) in used_semantic_pairs:
-            continue
-        if facet_id in control.agreed_facet_ids and candidate.name in {
-            "CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CHECK_CONSISTENCY", "REFUTE_CLAIM", "CLARIFY_CLAIM", "SEEK_COMMITMENT"
-        }:
-            continue
-        semantic_filtered.append(candidate)
-    remaining = semantic_filtered
+        remaining = semantic_filtered
 
     def candidate_key(candidate: ActionCandidate) -> tuple:
         if candidate.target_ids and candidate.target_ids[0].startswith("Q"):
