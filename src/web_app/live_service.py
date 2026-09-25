@@ -213,6 +213,7 @@ class LiveDebateWebService:
             state=state,
             current_turn=turn_number,
             persona=session.personas[0 if speaker == "A" else 1],
+            turn_task=task,
         )
         if selected is None:
             raise NoValuableMove(TurnTask(TurnTaskKind.NO_VALUABLE_MOVE, (), f"{task.kind.value}를 수행할 적법한 Action×Target 후보가 없습니다."))
@@ -460,6 +461,7 @@ class LiveDebateWebService:
                 state=state,
                 current_turn=turn_number,
                 persona=turn["persona"],
+                turn_task=task,
             )
             if candidate is None or (candidate.name, candidate.target_ids) == (selected.name, selected.target_ids):
                 return None
