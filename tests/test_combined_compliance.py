@@ -26,7 +26,7 @@ class CombinedComplianceTests(unittest.TestCase):
         result = finalize_compliant_utterance(lambda feedback: (prompts.append(feedback), "발언")[1], self.assignment, "CHALLENGE_PREMISE", "target", "crossfire", lambda *_: next(verdicts))
         self.assertTrue(result.committed)
         self.assertEqual(result.attempts, 2)
-        self.assertIn("MISALIGNED", prompts[1])
+        self.assertIn("ACTION_NOT_PERFORMED", prompts[1])
 
     def test_repeated_action_failure_is_safe(self):
         bad = CombinedComplianceAssessment(ActionFidelityLabel.MISALIGNED, StanceLabel.SUPPORTS_ASSIGNED, "target 지지", "유지")
