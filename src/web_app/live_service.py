@@ -584,8 +584,8 @@ class LiveDebateWebService:
         if session.audience_status == "ASKED" and session.audience_response_index < 2:
             phase, speaker = "AUDIENCE_RESPONSE", ("A" if session.audience_response_index == 0 else "B")
             task = plan_turn_task(state, speaker=speaker, phase="audience_response", audience_question=session.audience_question)
-            utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
-            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
+            utterance, state, history, task, references = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
+            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance, references=references)
             session.transcript.append(item)
             session.audience_response_index += 1
             if session.audience_response_index == 2:
@@ -615,7 +615,7 @@ class LiveDebateWebService:
                     continue
 
             try:
-                utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
+                utterance, state, history, task, references = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
             except NoValuableMove:
                 if phase == "CROSSFIRE":
                     session.next_index = 8
@@ -628,7 +628,7 @@ class LiveDebateWebService:
                     continue
                 raise
 
-            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
+            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance, references=references)
             session.transcript.append(item)
             session.next_index += 1
             if session.next_index >= len(self._base_schedule):
