@@ -75,6 +75,10 @@
       "destination": "/public/markdown_renderer.js"
     },
     {
+      "source": "/debate_moderator.js",
+      "destination": "/public/debate_moderator.js"
+    },
+    {
       "source": "/debate_stream.js",
       "destination": "/public/debate_stream.js"
     },
