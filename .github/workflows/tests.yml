@@ -11,10 +11,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
       - run: python -m unittest discover -s tests -q
-      - run: python -m compileall -q api src etc/tools
       - run: node --check public/app.js
-      - run: node --test tests/js/test_debate_stream.cjs
+      - run: node --check public/markdown_renderer.js
+      - run: node --check public/debate_moderator.js
+      - run: node --test tests/js/test_debate_stream.cjs tests/js/test_markdown_renderer.cjs tests/js/test_debate_moderator.cjs

@@ -153,6 +153,8 @@ class MockDebateWebService:
 
     def debate_step(self, request: DebateStepRequest) -> DebateStepResponse:
         session = request.session.model_copy(deep=True)
+        if not session.debater_models:
+            session.debater_models = {"A": "mock-debater-a", "B": "mock-debater-b"}
         if session.completed:
             return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
 

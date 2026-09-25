@@ -32,7 +32,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         }
       ]
     }
@@ -69,6 +69,14 @@
     {
       "source": "/app.js",
       "destination": "/public/app.js"
+    },
+    {
+      "source": "/markdown_renderer.js",
+      "destination": "/public/markdown_renderer.js"
+    },
+    {
+      "source": "/debate_moderator.js",
+      "destination": "/public/debate_moderator.js"
     },
     {
       "source": "/debate_stream.js",

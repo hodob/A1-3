@@ -34,3 +34,13 @@ test('error after a draft rejects without commit', async () => {
 test('closed stream without commit is rejected', async () => {
   await assert.rejects(readDebateStream(response(['event: draft_delta\ndata: {"text":"미완"}\n\n']), () => {}), error => error.code === 'INCOMPLETE_STREAM');
 });
+
+
+test('debug events are forwarded before commit', async () => {
+  const seen = [];
+  const result = await readDebateStream(response([
+    'event: debug\ndata: {"event":"draft_reset","attempt":2}\n\nevent: commit\ndata: {"utterance":"ok","session":{}}\n\n',
+  ]), (kind, data) => seen.push([kind, data]));
+  assert.equal(result.utterance, 'ok');
+  assert.deepEqual(seen[0], ['debug', {event: 'draft_reset', attempt: 2}]);
+});

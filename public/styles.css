@@ -233,3 +233,69 @@ legend { width: 100%; margin-bottom: 16px; font-size: 22px; font-weight: 750; }
   .option:has(input:checked) { outline: 2px solid Highlight; }
   :focus-visible { outline-color: Highlight; }
 }
+
+
+/* Latest spectator UX: persistent status, compact stage, moderator, Markdown and final actions. */
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+
+.feedback-stack { position: relative; z-index: 40; }
+.status-line { min-height: 0; margin: 0; padding: 0; color: white; }
+.status-line:not(:empty) { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 90; width: min(calc(100vw - 32px), 560px); margin: 0; padding: 14px 18px 14px 48px; border: 1px solid rgba(255,255,255,.16); border-radius: 16px; background: rgba(38,62,52,.97); color: white; box-shadow: 0 14px 36px rgba(23,42,34,.22); transform: translateX(-50%); font-weight: 700; line-height: 1.5; }
+.status-line:not(:empty)::before { content: ""; position: absolute; left: 18px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border: 2px solid rgba(255,255,255,.38); border-top-color: white; border-radius: 50%; animation: status-spin .8s linear infinite; }
+@keyframes status-spin { to { transform: rotate(360deg); } }
+
+.button { min-height: 54px; padding: 13px 22px; border-radius: 14px; box-shadow: 0 5px 14px rgba(23,42,34,.14); font-weight: 800; transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease; }
+.button:hover { box-shadow: 0 7px 18px rgba(23,42,34,.18); transform: translateY(-1px); }
+.button:active { box-shadow: 0 3px 9px rgba(23,42,34,.14); transform: translateY(0); }
+.button.secondary { box-shadow: none; }
+.button.secondary:hover { box-shadow: none; }
+
+.current-stage { position: sticky; top: 12px; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 58px; margin: 0 0 18px; padding: 10px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: rgba(246,245,241,.96); box-shadow: 0 5px 18px rgba(32,40,36,.05); backdrop-filter: blur(8px); }
+.stage-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; min-width: 0; }
+.stage-kicker { color: var(--color-muted); font-size: 12px; font-weight: 800; }
+.stage-description { color: var(--color-muted); font-size: 13px; }
+.current-stage details { position: relative; flex: none; text-align: right; }
+.current-stage summary { cursor: pointer; white-space: nowrap; }
+.current-stage .phase-steps { position: absolute; right: 0; width: min(310px, calc(100vw - 40px)); padding: 16px 16px 16px 36px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-surface); box-shadow: var(--shadow-card); text-align: left; }
+
+.moderator-card { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; max-width: 600px; margin: 8px auto; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-surface-muted); color: var(--color-muted); box-shadow: none; }
+.moderator-mark { display: grid; place-items: start center; padding-top: 2px; color: var(--color-primary); font-weight: 900; }
+.moderator-copy h2 { margin: 0 0 3px; color: var(--color-text); font-size: 15px; line-height: 1.45; }
+.moderator-copy p { margin: 0; font-size: 14px; line-height: 1.55; }
+.moderator-label { margin-bottom: 2px !important; color: var(--color-primary) !important; font-size: 12px !important; font-weight: 800; }
+
+.final-runtime { margin: 22px auto 0; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-surface-muted); text-align: left; }
+.final-runtime h2 { margin: 0 0 5px; font-size: 14px; }
+.final-runtime .session-note { margin: 0; }
+.done-actions { display: grid; gap: 10px; width: min(100%, 360px); margin: 20px auto 0; }
+.done-actions .button, .done-actions .button.full { width: 100%; min-width: 0; }
+
+.markdown-body { white-space: normal; }
+.markdown-body.markdown-fallback { white-space: pre-wrap; }
+.markdown-body > :first-child, .markdown-inline > :first-child { margin-top: 0; }
+.markdown-body > :last-child, .markdown-inline > :last-child { margin-bottom: 0; }
+.markdown-body p { margin: 0 0 .8em; }
+.markdown-body ul, .markdown-body ol { margin: .65em 0 .85em; padding-left: 1.4em; }
+.markdown-body li + li { margin-top: .28em; }
+.markdown-body blockquote { margin: .9em 0; padding: .1em 0 .1em 1em; border-left: 3px solid var(--color-border); color: var(--color-muted); }
+.markdown-body code, .markdown-inline code { padding: .12em .34em; border-radius: 5px; background: var(--color-surface-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }
+.markdown-body pre { overflow-x: auto; margin: .9em 0; padding: 12px 14px; border-radius: var(--radius-medium); background: var(--color-surface-muted); }
+.markdown-body pre code { padding: 0; background: transparent; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin: 1em 0 .45em; font-size: 1.05em; line-height: 1.4; }
+.markdown-body a, .markdown-inline a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.markdown-body hr { margin: 1em 0; border: 0; border-top: 1px solid var(--color-border); }
+.markdown-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: .9em 0; }
+.markdown-body th, .markdown-body td { padding: 7px 9px; border: 1px solid var(--color-border); text-align: left; vertical-align: top; }
+.markdown-inline > p { display: inline; margin: 0; }
+
+@media (max-width: 420px) {
+  .status-line:not(:empty) { width: calc(100vw - 24px); bottom: max(12px, env(safe-area-inset-bottom)); padding: 13px 14px 13px 44px; border-radius: 14px; font-size: 14px; }
+  .status-line:not(:empty)::before { left: 16px; }
+  .current-stage { min-height: 52px; gap: 8px; padding: 8px 10px; }
+  .current-stage .stage-copy { flex-wrap: nowrap; align-items: center; gap: 6px; }
+  .current-stage .stage-kicker { display: none; }
+  .current-stage strong { white-space: nowrap; }
+  .current-stage .stage-description { display: none; }
+  .current-stage details { flex: none; font-size: 13px; }
+  .current-stage summary { white-space: nowrap; }
+}

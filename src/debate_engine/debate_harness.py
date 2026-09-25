@@ -153,7 +153,7 @@ def speech_messages(scenario: dict, turn: dict, transcript: list[dict]) -> list[
         "opening": "짧게 핵심 주장과 이유 1~2개를 제시하세요.",
         "crossfire": "직전 상대 발언의 한 핵심 지점에 직접 반응하고 새 반박 또는 질문 하나를 추가하세요.",
         "rebuttal": "드러난 핵심 충돌을 직접 해결하세요.",
-        "final_focus": "새 핵심 근거 없이 가장 중요한 이유 1~2개만 남기세요.",
+        "final_focus": "새 핵심 근거 없이 가장 중요한 이유 하나만 남기세요. 반드시 2문장 이내의 한 문단으로 끝내고 상대에게 질문하지 마세요.",
         "audience_response": "관객 질문에 직접 답하고 필요하면 자신의 핵심 주장을 한정하세요.",
     }[phase]
     tone = scenario.get("tone", "SERIOUS")
@@ -167,7 +167,7 @@ def speech_messages(scenario: dict, turn: dict, transcript: list[dict]) -> list[
         "crossfire": "1~2문장" if tone == "PLAYFUL" else "1~3문장",
         "audience_response": "1~2문장",
         "rebuttal": "2~3문장",
-        "final_focus": "2문장 안팎",
+        "final_focus": "2문장",
     }[phase]
     system = (
         "당신은 관전형 토론의 참가자입니다. 실제 사용자 사건, 통계, 연구, 인용을 지어내지 마세요. "

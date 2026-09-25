@@ -97,7 +97,7 @@ def judge_combined(provider: dict, *, action: str, target_id: str | None, target
 def finalize_compliant_utterance(
     generate: Callable[[str], str], assignment: StanceAssignment, action: str, target_text: str | None, phase: str,
     semantic_check: Callable[[str, StanceAssignment, str, str, str | None], CombinedComplianceAssessment],
-    *, turn_task: str | None = None,
+    *, turn_task: str | None = None, on_check: Callable[[dict], None] | None = None,
 ) -> GuardedUtterance:
     checks = []
     first = None

@@ -54,6 +54,8 @@ const state = {
   operationSequence: 0,
   activeController: null,
   operationTimers: [],
+  debugLog: [],
+  moderatorEvents: [],
 };
 
 class AppError extends Error {
@@ -440,6 +442,8 @@ function createSession(motion) {
     audience_question: null,
     audience_response_index: 0,
     completed: false,
+    debater_models: {},
+    debug_enabled: false,
     engine_token: null,
   };
 }
@@ -447,6 +451,8 @@ function createSession(motion) {
 async function startDebate() {
   if (!state.motion || state.pendingOperation) return;
   state.session = createSession(state.motion);
+  state.debugLog = [];
+  state.moderatorEvents = [];
   state.summary = null;
   state.choice = null;
   renderDebateShell();
@@ -465,9 +471,8 @@ function renderPhase(phase) {
   const index = Math.max(0, PHASES.findIndex(item => item.id === info.id));
   $('#phase-number').textContent = String(index + 1).padStart(2, '0');
   $('#phase-name').textContent = info.name;
-  $('#phase-eyebrow').textContent = info.name;
   $('#debate-heading').textContent = info.title;
-  $('#phase-description').textContent = info.description;
+  $('#stage-description').textContent = info.description;
   const buildSteps = () => PHASES.map((item, itemIndex) => {
     const li = element('li', '', `${itemIndex < index ? '완료 · ' : ''}${item.name}`);
     if (itemIndex === index) li.setAttribute('aria-current', 'step');
@@ -505,14 +510,47 @@ function turnCard(item, isLatest) {
   identityText.append(document.createTextNode(item.side_label), element('div', 'speaker-meta', `발언 ${item.turn} · ${phaseInfo(item.phase).name}`));
   identity.append(identityText);
   article.append(identity);
-  article.append(element('p', 'utterance', item.utterance));
+  const utterance = element('div', 'utterance markdown-body');
+  SaiMarkdown.renderBlock(utterance, item.utterance);
+  article.append(utterance);
   li.append(article);
   return li;
 }
 
+function moderatorCard(item) {
+  const li = element('li', `moderator-card moderator-${String(item.kind || '').toLowerCase()}`);
+  li.dataset.moderatorKey = item.key || item.kind || '';
+  const marker = element('span', 'moderator-mark', '◇');
+  marker.setAttribute('aria-hidden', 'true');
+  const copy = element('div', 'moderator-copy');
+  copy.append(element('p', 'moderator-label', '사회자'), element('h2', '', item.title || '토론 흐름을 정리합니다.'), element('p', '', item.body || ''));
+  li.append(marker, copy);
+  return li;
+}
+
+function recordModeratorEvents(previousSession, data, context = {}) {
+  if (!window.SaiModerator?.eventsForStep) return;
+  const incoming = SaiModerator.eventsForStep(previousSession, data, context);
+  incoming.forEach(item => {
+    if (!state.moderatorEvents.some(existing => existing.key === item.key)) state.moderatorEvents.push(item);
+  });
+}
+
 function renderTranscript() {
   const transcript = state.session?.transcript || [];
-  replaceChildren($('#debate-log'), transcript.map((item, index) => turnCard(item, index === transcript.length - 1)));
+  const eventsByTurn = new Map();
+  state.moderatorEvents.forEach(item => {
+    const key = Number(item.afterTurn || 0);
+    if (!eventsByTurn.has(key)) eventsByTurn.set(key, []);
+    eventsByTurn.get(key).push(item);
+  });
+  const children = [];
+  (eventsByTurn.get(0) || []).forEach(item => children.push(moderatorCard(item)));
+  transcript.forEach((item, index) => {
+    children.push(turnCard(item, index === transcript.length - 1));
+    (eventsByTurn.get(Number(item.turn)) || []).forEach(event => children.push(moderatorCard(event)));
+  });
+  replaceChildren($('#debate-log'), children);
 }
 
 function nextButtonLabel() {
@@ -524,7 +562,7 @@ function nextButtonLabel() {
 
 function updateDebateAfterStep(data, wasNearBottom) {
   state.session = data.session;
-  const currentPhase = data.completed ? (state.session.transcript.at(-1)?.phase || 'FINAL_FOCUS') : data.phase;
+  const currentPhase = data.completed ? 'COMPLETE' : data.phase;
   renderPhase(currentPhase);
   renderTranscript();
   $('#next-turn').textContent = nextButtonLabel();
@@ -549,8 +587,13 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
   const wasNearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 180;
   const retry = () => runStep(command, audienceQuestion);
   let draftNode = null;
-  const clearDraft = () => { draftNode?.remove(); draftNode = null; };
+  let draftMarkdown = '';
+  const clearDraft = () => { draftNode?.remove(); draftNode = null; draftMarkdown = ''; };
   const onDraft = (kind, payload) => {
+    if (kind === 'debug') {
+      state.debugLog.push({...payload, received_at: new Date().toISOString()});
+      return;
+    }
     if (kind === 'draft_reset') {
       clearDraft();
       draftNode = element('li', `turn draft-turn ${payload.speaker === 'B' ? 'b' : ''}`);
@@ -559,13 +602,15 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
       const identity = element('div', 'identity');
       identity.append(element('span', `side-badge ${payload.speaker === 'B' ? 'side-b' : 'side-a'}`, payload.speaker));
       identity.append(element('span', '', payload.side_label || '발언자'));
-      card.append(identity, element('p', 'draft-label', '작성 중 · 아직 확정되지 않았어요'), element('p', 'utterance'));
+      const draftUtterance = element('div', 'utterance markdown-body');
+      card.append(identity, element('p', 'draft-label', '작성 중 · 아직 확정되지 않았어요'), draftUtterance);
       draftNode.append(card);
       $('#debate-log').append(draftNode);
       if (wasNearBottom) draftNode.scrollIntoView({block: 'nearest'});
     } else if (kind === 'draft_delta') {
       if (!draftNode || typeof payload.text !== 'string') throw new AppError('INVALID_RESPONSE', '임시 발언 순서가 올바르지 않습니다.');
-      $('.utterance', draftNode).textContent += payload.text;
+      draftMarkdown += payload.text;
+      SaiMarkdown.renderBlock($('.utterance', draftNode), draftMarkdown);
     }
   };
   const data = await performOperation('debate', command === 'AUDIENCE_QUESTION' ? '질문을 전달하고 있어요.' : '다음 발언을 준비하고 있어요.', retry, async id => {
@@ -576,6 +621,7 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
     }
   });
   if (!data) return false;
+  recordModeratorEvents(snapshot, data, {command, audienceQuestion});
   updateDebateAfterStep(data, wasNearBottom);
   return true;
 }
@@ -600,12 +646,71 @@ async function skipAudience() {
 function listOrEmpty(items) {
   if (!items?.length) return element('p', 'hint', '정리된 항목이 없어요.');
   const list = element('ul', 'summary-list');
-  items.forEach(item => list.append(element('li', '', item)));
+  items.forEach(item => {
+    const li = element('li', 'markdown-inline');
+    SaiMarkdown.renderInline(li, item);
+    list.append(li);
+  });
   return list;
+}
+
+function renderFinalMetadata() {
+  const node = $('#final-models');
+  const models = state.session?.debater_models || {};
+  const personas = state.session?.personas || [];
+  const parts = [];
+  if (models.A) parts.push(`A · ${personas[0] || 'Persona'} · ${models.A}`);
+  if (models.B) parts.push(`B · ${personas[1] || 'Persona'} · ${models.B}`);
+  const modelText = parts.join(' / ');
+  node.textContent = modelText;
+  node.hidden = parts.length === 0;
+  const summaryNode = $('#summary-models');
+  summaryNode.textContent = modelText ? `사용 모델 · ${modelText}` : '';
+  summaryNode.hidden = parts.length === 0;
+  const button = $('#download-debug');
+  button.hidden = !(state.session?.debug_enabled && state.debugLog.length);
+}
+
+function debugExportPayload() {
+  const session = state.session ? {...state.session} : null;
+  if (session) delete session.engine_token;
+  const retryEvents = state.debugLog.filter(item => item.event === 'draft_reset' && Number(item.attempt) > 1);
+  const rejectedChecks = state.debugLog.filter(item => item.event === 'compliance' && item.accepted === false);
+  return {
+    exported_at: new Date().toISOString(),
+    app: '사이',
+    debug_summary: {
+      event_count: state.debugLog.length,
+      draft_retry_count: retryEvents.length,
+      compliance_rejection_count: rejectedChecks.length,
+    },
+    motion: state.session?.motion || null,
+    side_labels: state.session?.side_labels || null,
+    personas: state.session?.personas || null,
+    debater_models: state.session?.debater_models || null,
+    transcript: state.session?.transcript || [],
+    moderator_events: state.moderatorEvents,
+    debug_events: state.debugLog,
+    session: session ? {completed: session.completed, audience_status: session.audience_status, debug_enabled: session.debug_enabled} : null,
+  };
+}
+
+function downloadDebugLog() {
+  if (!state.session?.debug_enabled || !state.debugLog.length) return;
+  const blob = new Blob([JSON.stringify(debugExportPayload(), null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sai-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function renderSummary() {
   $('#summary-motion').textContent = state.session.motion;
+  renderFinalMetadata();
   replaceChildren($('#summary-clashes'), [listOrEmpty(state.summary.key_clashes)]);
   const makeSide = (side, points) => {
     const section = element('section', `summary-side ${side.toLowerCase()}`);
@@ -623,7 +728,7 @@ function renderSummary() {
 
 async function loadSummary() {
   const retry = loadSummary;
-  const data = await performOperation('summary', '서로의 논점을 정리하고 있어요.', retry, id => api('/api/neutral-summary', {
+  const data = await performOperation('summary', '토론 정리를 준비하고 있어요.', retry, id => api('/api/neutral-summary', {
     motion: state.session.motion,
     transcript: state.session.transcript,
   }, id));
@@ -657,13 +762,14 @@ function finishChoice(event) {
   state.choice = selected.value;
   const display = selected.value === 'A' ? `A · ${state.session.side_labels[0]}` : selected.value === 'B' ? `B · ${state.session.side_labels[1]}` : '아직 모르겠다';
   $('#done-choice').textContent = `‘${display}’.`;
+  renderFinalMetadata();
   setStatus('');
   showDebateView('done-view');
 }
 
 function resetDebate() {
   state.view = 'topic-view'; state.analysis = null; state.confirmedContextAnswers = []; state.contextQuestion = null;
-  state.contextSummary = null; state.motion = null; state.session = null; state.summary = null; state.choice = null; state.lastRetry = null;
+  state.contextSummary = null; state.motion = null; state.session = null; state.summary = null; state.choice = null; state.lastRetry = null; state.debugLog = []; state.moderatorEvents = [];
   $('#topic-input').value = '';
   updateCount($('#topic-input'), $('#topic-count'), 2000);
   replaceChildren($('#debate-log'), []);
@@ -698,6 +804,7 @@ function bindEvents() {
   $('#back-to-summary').addEventListener('click', () => showDebateView('summary-view'));
   $('#choice-form').addEventListener('submit', finishChoice);
   $('#restart').addEventListener('click', resetDebate);
+  $('#download-debug').addEventListener('click', downloadDebugLog);
   $('#reread-debate').addEventListener('click', () => showDebateView('debate-arena'));
   $('#new-turn-link').addEventListener('click', () => { $('#new-turn-link').hidden = true; });
   $('#dismiss-error').addEventListener('click', clearError);

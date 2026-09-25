@@ -27,7 +27,7 @@ async function readDebateStream(response, onDraft) {
     if (kind === 'commit') {
       if (commit !== null) throw streamError('INVALID_RESPONSE', '확정 발언이 중복되었습니다.');
       commit = data;
-    } else if (kind === 'draft_reset' || kind === 'draft_delta') {
+    } else if (kind === 'draft_reset' || kind === 'draft_delta' || kind === 'debug') {
       if (commit !== null) throw streamError('INVALID_RESPONSE', '확정 뒤 임시 발언이 도착했습니다.');
       onDraft(kind, data);
     }

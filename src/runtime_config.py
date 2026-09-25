@@ -42,6 +42,7 @@ class ProviderRuntimeConfig(BaseModel):
 class RuntimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     web_mode: Literal["mock", "live"]
+    debug_mode: bool = False
     provider: ProviderRuntimeConfig
 
 
