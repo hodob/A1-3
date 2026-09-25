@@ -341,6 +341,81 @@ class LiveWebServiceTests(unittest.TestCase):
         self.assertEqual(references[0]["speaker"], "B")
         self.assertEqual(references[0]["turn"], 1)
 
+    def test_recent_transcript_reference_is_available_in_final_focus(self):
+        from src.debate_engine.debate_contracts import DebateState, apply_patch
+        from src.web_app.contracts import StateReference, TranscriptItem
+
+        state = apply_patch(
+            DebateState(),
+            {"operations": [{"op": "ADD_PROPOSITION", "text": "앞선 핵심 주장", "semantic_kind": "NEW_REASON"}]},
+            speaker="A",
+            turn=1,
+        )
+        session = DebateSession(
+            motion="논제",
+            side_labels=("A입장", "B입장"),
+            personas=("Socratic", "Falsifier"),
+            tone="SERIOUS",
+            transcript=[
+                TranscriptItem(
+                    turn=1,
+                    phase="REBUTTAL",
+                    speaker="A",
+                    side_label="A입장",
+                    utterance="앞서 [[C1]]을 강조합니다.",
+                    references=[StateReference(id="C1", kind="CLAIM", speaker="A", turn=1, excerpt="앞선 핵심 주장")],
+                )
+            ],
+        )
+        self.service._commit_generated_turn(
+            session,
+            state,
+            [],
+            {"A": "gemini-test", "B": "claude-test"},
+            "FINAL_FOCUS",
+            "B",
+        )
+        prompt = self.deps.generated[-1][-1]["content"]
+        self.assertIn('<available_references>', prompt)
+        self.assertIn('id="C1"', prompt)
+
+    def test_debug_turn_plan_records_qud_and_reference_working_set(self):
+        from src.debate_engine.debate_contracts import DebateState, apply_patch
+
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "근거는?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="B", turn=2)
+        events = []
+        service = LiveDebateWebService(
+            provider={"url": "https://example.invalid", "api_key": "secret", "model": "gpt-test"},
+            debater_models=(
+                {"company": "GOOGLE", "id": "gemini-test"},
+                {"company": "ANTHROPIC", "id": "claude-test"},
+            ),
+            codec=SessionTokenCodec("unit-test-session-secret-123456789"),
+            deps=self.deps,
+            debug_mode=True,
+        )
+        session = DebateSession(motion="논제", side_labels=("A입장", "B입장"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        service._commit_generated_turn(
+            session,
+            state,
+            [],
+            {"A": "gemini-test", "B": "claude-test"},
+            "CROSSFIRE",
+            "A",
+            on_event=lambda kind, data: events.append((kind, data)),
+        )
+        plan = next(data for kind, data in events if kind == "debug" and data.get("event") == "turn_plan")
+        self.assertEqual(plan["qud_id"], "QG-Q1")
+        self.assertIn("Q1", plan["available_reference_ids"])
+        self.assertIn("C1", plan["available_reference_ids"])
+        self.assertEqual(plan["prompt_version"], "speech-v5-qud")
+        self.assertEqual(plan["retry_policy_version"], "typed-repair-v2")
+
     def test_debug_mode_records_typed_compliance_rejection(self):
         class RetryDeps(FakeDeps):
             def __init__(self):
