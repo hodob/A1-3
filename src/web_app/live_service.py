@@ -72,7 +72,7 @@ class LiveDebateWebService:
         ("FINAL_FOCUS", "A"), ("FINAL_FOCUS", "B"),
     ]
 
-    def __init__(self, provider: dict, debater_models: tuple[DebaterModelConfig, ...], codec: SessionTokenCodec, deps: LiveRuntimeDependencies | None = None, *, timeout: float = 90, rng: random.Random | None = None):
+    def __init__(self, provider: dict, debater_models: tuple[DebaterModelConfig, ...], codec: SessionTokenCodec, deps: LiveRuntimeDependencies | None = None, *, timeout: float = 90, rng: random.Random | None = None, debug_mode: bool = False):
         self.provider = provider
         self.debater_models = tuple(DebaterModelConfig.model_validate(item) for item in debater_models)
         if len(self.debater_models) < 2 or len({item.company for item in self.debater_models}) != len(self.debater_models) or len({item.id for item in self.debater_models}) != len(self.debater_models):
@@ -81,6 +81,11 @@ class LiveDebateWebService:
         self.deps = deps or LiveRuntimeDependencies()
         self.timeout = timeout
         self.rng = rng or random.SystemRandom()
+        self.debug_mode = bool(debug_mode)
+
+    def _debug(self, on_event: Callable[[str, dict], None] | None, event: str, **payload) -> None:
+        if self.debug_mode and on_event is not None:
+            on_event("debug", {"event": event, **payload})
 
     def _select_debater_models(self) -> dict[str, str]:
         selected = self.rng.sample(self.debater_models, 2)
@@ -143,8 +148,9 @@ class LiveDebateWebService:
         return result
 
     def _new_engine(self, session: DebateSession) -> dict:
-        clean = session.model_copy(update={"engine_token": None})
-        return {"session": clean.model_dump(mode="json"), "debate_state": DebateState().model_dump(mode="json"), "action_history": [], "debater_models": self._select_debater_models()}
+        selected_models = self._select_debater_models()
+        clean = session.model_copy(update={"engine_token": None, "debater_models": selected_models, "debug_enabled": self.debug_mode})
+        return {"session": clean.model_dump(mode="json"), "debate_state": DebateState().model_dump(mode="json"), "action_history": [], "debater_models": selected_models}
 
     def _load_engine(self, public: DebateSession) -> tuple[DebateSession, DebateState, list[tuple[str, str, tuple[str, ...]]], dict[str, str]]:
         if not public.engine_token:
@@ -158,10 +164,11 @@ class LiveDebateWebService:
         state = DebateState.model_validate(payload["debate_state"])
         history = [(x[0], x[1], tuple(x[2])) for x in payload.get("action_history", [])]
         selected_models = self._validate_debater_models(payload.get("debater_models", {}))
+        session = session.model_copy(update={"debater_models": selected_models, "debug_enabled": self.debug_mode})
         return session, state, history, selected_models
 
     def _save_engine(self, session: DebateSession, state: DebateState, history: list[tuple[str, str, tuple[str, ...]]], selected_models: dict[str, str]) -> DebateSession:
-        clean = session.model_copy(update={"engine_token": None})
+        clean = session.model_copy(update={"engine_token": None, "debater_models": selected_models, "debug_enabled": self.debug_mode})
         token = self.codec.encode({"session": clean.model_dump(mode="json"), "debate_state": state.model_dump(mode="json"), "action_history": [[a, b, list(c)] for a, b, c in history], "debater_models": selected_models})
         return clean.model_copy(update={"engine_token": token})
 
@@ -233,6 +240,12 @@ class LiveDebateWebService:
             if open_question is not None:
                 messages[1]["content"] += f"\n먼저 이 열린 질문의 핵심에 직접 답하세요: {open_question.core_proposition}"
 
+        self._debug(
+            on_event, "turn_plan", turn=turn_number, phase=phase, speaker=speaker,
+            persona=turn["persona"], model=selected_models[speaker], control_model=self.provider.get("model"),
+            turn_task=task.kind.value, task_description=task.description,
+            action=selected.name, target_ids=list(selected.target_ids), target_text=target_text,
+        )
         generation_attempt = 0
 
         def generate(feedback: str):
@@ -240,27 +253,38 @@ class LiveDebateWebService:
             generation_attempt += 1
             current = messages if not feedback else [*messages, {"role": "user", "content": feedback}]
             debater_provider = {**self.provider, "model": selected_models[speaker], "stream": True}
+            reason = "INITIAL_DRAFT" if not feedback else "COMPLIANCE_RETRY"
+            self._debug(on_event, "draft_reset", turn=turn_number, speaker=speaker, phase=phase, attempt=generation_attempt, reason=reason, feedback=feedback or None, model=selected_models[speaker])
             if on_event is None:
-                return self.deps.generate_text(debater_provider, current, self.timeout)[0]
-            on_event("draft_reset", {"speaker": speaker, "phase": phase, "side_label": turn["side"], "attempt": generation_attempt})
-            return self.deps.generate_text(
-                debater_provider, current, self.timeout,
-                on_delta=lambda piece: on_event("draft_delta", {"text": piece}),
-            )[0]
+                utterance, metadata = self.deps.generate_text(debater_provider, current, self.timeout)
+            else:
+                on_event("draft_reset", {"speaker": speaker, "phase": phase, "side_label": turn["side"], "attempt": generation_attempt})
+                utterance, metadata = self.deps.generate_text(
+                    debater_provider, current, self.timeout,
+                    on_delta=lambda piece: on_event("draft_delta", {"text": piece}),
+                )
+            self._debug(on_event, "draft_completed", turn=turn_number, speaker=speaker, attempt=generation_attempt, model=selected_models[speaker], utterance=utterance, usage=(metadata or {}).get("usage"), finish_reason=(metadata or {}).get("finish_reason"))
+            return utterance
 
         assignment = StanceAssignment(turn["side"], session.side_labels[1 if speaker == "A" else 0])
 
+        compliance_metadata: list[dict] = []
         def semantic_check(utterance, assigned, current_phase, action, checked_target_text):
-            result, _ = self.deps.check_compliance(
+            result, metadata = self.deps.check_compliance(
                 self.provider, action=action, target_id=target_id, target_text=checked_target_text,
                 utterance=utterance, assignment=assigned, phase=current_phase, timeout=self.timeout,
                 turn_task=f"{task.kind.value}: {task.description}",
             )
+            compliance_metadata.append(metadata or {})
             return result
+
+        def on_check(check: dict):
+            metadata = compliance_metadata[len(compliance_metadata) - 1] if compliance_metadata else {}
+            self._debug(on_event, "compliance", turn=turn_number, speaker=speaker, model=self.provider.get("model"), usage=metadata.get("usage"), **check)
 
         checked = finalize_compliant_utterance(
             generate, assignment, selected.name, target_text, phase_lower, semantic_check,
-            turn_task=task.kind.value,
+            turn_task=task.kind.value, on_check=on_check,
         )
         if not checked.committed:
             raise SafeFailure("utterance compliance rejected")
@@ -273,10 +297,29 @@ class LiveDebateWebService:
             )
 
         try:
-            candidate, _ = extract_and_apply(state, speaker, turn_number, extractor, utterance=checked.utterance)
+            candidate, patch_attempts = extract_and_apply(state, speaker, turn_number, extractor, utterance=checked.utterance)
         except PatchValidationError as exc:
+            self._debug(on_event, "state_patch_failed", turn=turn_number, speaker=speaker, issues=[issue.as_dict() for issue in exc.issues])
             raise SafeFailure("state patch rejected") from exc
+        compact_attempts = []
+        for attempt in patch_attempts:
+            item = {"valid": bool(attempt.get("valid"))}
+            if attempt.get("patch") is not None:
+                item["patch"] = attempt["patch"]
+            if attempt.get("issues") is not None:
+                item["issues"] = attempt["issues"]
+            metadata = attempt.get("metadata") or {}
+            if metadata.get("usage") is not None:
+                item["usage"] = metadata.get("usage")
+            compact_attempts.append(item)
+        self._debug(
+            on_event, "state_patch", turn=turn_number, speaker=speaker, model=self.provider.get("model"),
+            attempts=compact_attempts,
+            state_counts_before={"propositions": len(state.propositions), "relations": len(state.relations), "questions": len(state.questions), "commitment_events": len(state.commitment_events)},
+            state_counts_after={"propositions": len(candidate.propositions), "relations": len(candidate.relations), "questions": len(candidate.questions), "commitment_events": len(candidate.commitment_events)},
+        )
         history = [*history, (speaker, selected.name, selected.target_ids)]
+        self._debug(on_event, "turn_committed", turn=turn_number, speaker=speaker, model=selected_models[speaker], attempts=checked.attempts, diagnostic_flag=checked.diagnostic_flag, action=selected.name, target_ids=list(selected.target_ids), turn_task=task.kind.value)
         return checked.utterance, candidate, history, task
 
     def debate_step(self, request: DebateStepRequest, on_event: Callable[[str, dict], None] | None = None) -> DebateStepResponse:
