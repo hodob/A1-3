@@ -50,7 +50,7 @@ def eligible_actions(state: DebateState, speaker: str, phase: str, *, turn_task:
                             ActionCandidate("REVISE_CLAIM", (current_id,)),
                         ]
                     return [ActionCandidate("CONCEDE_LOCAL", (current_id,))]
-            return [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[:2])] or [ActionCandidate("EXTEND_ARGUMENT")]
+            return [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])] or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.ADDRESS_AUDIENCE:
             options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])]
             comparative = any(token in turn_task.description for token in ("비교", "차이", "어느", "더 낫", "더 중요", "우선"))
