@@ -135,6 +135,7 @@ def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
     include_question_ids = {x for x in all_refs if x.startswith("Q") and x in question_by_id}
     if qud is not None:
         include_question_ids.update(qud.member_ids)
+    include_question_ids.update(q.id for q in state.questions[-2:])
     questions = [question_by_id[qid].model_dump() for qid in question_by_id if qid in include_question_ids]
 
     included_facets = []
