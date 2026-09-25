@@ -23,6 +23,15 @@ const PERSONA_DESCRIPTIONS = {
   Synthesist: '양쪽의 타당한 부분과 조정점을 찾아요.',
 };
 
+const PERSONA_LABELS = {
+  Auditor: '근거 검증형',
+  Socratic: '전제 탐구형',
+  Falsifier: '반례 탐색형',
+  Pragmatist: '현실 실용형',
+  Principlist: '원칙 중심형',
+  Synthesist: '조정 통합형',
+};
+
 async function loadBuildVersion() {
   try {
     const response = await fetch('/api/health', {cache: 'no-store'});
@@ -668,19 +677,36 @@ function listOrEmpty(items) {
   return list;
 }
 
-function renderFinalMetadata() {
-  const node = $('#final-models');
+function runtimePersonaCard(side, persona, model) {
+  const card = element('article', `runtime-persona ${side === 'B' ? 'b' : 'a'}`);
+  const heading = element('div', 'runtime-persona-heading');
+  heading.append(
+    element('span', `side-badge ${side === 'B' ? 'side-b' : 'side-a'}`, side),
+    element('strong', '', PERSONA_LABELS[persona] || persona || '토론자'),
+  );
+  card.append(
+    heading,
+    element('p', 'runtime-persona-description', PERSONA_DESCRIPTIONS[persona] || '주제에 맞는 관점으로 살펴요.'),
+  );
+  if (model) card.append(element('p', 'runtime-model', model));
+  return card;
+}
+
+function renderRuntimePersonas(node, wrapper) {
   const models = state.session?.debater_models || {};
   const personas = state.session?.personas || [];
-  const parts = [];
-  if (models.A) parts.push(`A · ${personas[0] || 'Persona'} · ${models.A}`);
-  if (models.B) parts.push(`B · ${personas[1] || 'Persona'} · ${models.B}`);
-  const modelText = parts.join(' / ');
-  node.textContent = modelText;
-  node.hidden = parts.length === 0;
-  const summaryNode = $('#summary-models');
-  summaryNode.textContent = modelText ? `사용 모델 · ${modelText}` : '';
-  summaryNode.hidden = parts.length === 0;
+  const cards = [];
+  if (models.A) cards.push(runtimePersonaCard('A', personas[0], models.A));
+  if (models.B) cards.push(runtimePersonaCard('B', personas[1], models.B));
+  replaceChildren(node, cards);
+  const hidden = cards.length === 0;
+  node.hidden = hidden;
+  if (wrapper) wrapper.hidden = hidden;
+}
+
+function renderFinalMetadata() {
+  renderRuntimePersonas($('#final-models'), $('#final-runtime'));
+  renderRuntimePersonas($('#summary-models'), $('#summary-runtime'));
   const button = $('#download-debug');
   button.hidden = !(state.session?.debug_enabled && state.debugLog.length);
 }

@@ -190,7 +190,7 @@ legend { width: 100%; margin-bottom: 16px; font-size: 22px; font-weight: 750; }
   .route { min-height: calc(100vh - 72px); padding-block: 48px 80px; }
   h1 { font-size: 40px; }
   .card { padding: 24px; }
-  .side-grid, .summary-sides { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .side-grid, .summary-sides, .runtime-personas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .summary-rest { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .choice-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .how-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -264,9 +264,15 @@ legend { width: 100%; margin-bottom: 16px; font-size: 22px; font-weight: 750; }
 .moderator-copy p { margin: 0; font-size: 14px; line-height: 1.55; }
 .moderator-label { margin-bottom: 2px !important; color: var(--color-primary) !important; font-size: 12px !important; font-weight: 800; }
 
-.final-runtime { margin: 22px auto 0; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-surface-muted); text-align: left; }
-.final-runtime h2 { margin: 0 0 5px; font-size: 14px; }
-.final-runtime .session-note { margin: 0; }
+.runtime-panel, .final-runtime { margin: 22px auto 0; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-surface-muted); text-align: left; }
+.runtime-panel h2, .final-runtime h2 { margin: 0; font-size: 14px; }
+.runtime-personas { display: grid; gap: 10px; margin-top: 10px; }
+.runtime-persona { padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-medium); background: var(--color-a-soft); }
+.runtime-persona.b { background: var(--color-b-soft); }
+.runtime-persona-heading { display: flex; align-items: center; gap: 9px; }
+.runtime-persona-heading strong { font-size: 15px; }
+.runtime-persona-description { margin: 7px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.55; }
+.runtime-model { margin: 7px 0 0; color: var(--color-muted); font-size: 12px; overflow-wrap: anywhere; }
 .done-actions { display: grid; gap: 10px; width: min(100%, 360px); margin: 20px auto 0; }
 .done-actions .button, .done-actions .button.full { width: 100%; min-width: 0; }
 

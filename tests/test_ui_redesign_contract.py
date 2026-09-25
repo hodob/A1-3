@@ -97,8 +97,20 @@ class UiRedesignContractTests(unittest.TestCase):
     def test_user_facing_phase_and_persona_copy_is_localized(self):
         for phase in ("첫 입장", "주고받기", "함께 답하기", "쟁점 되짚기", "마지막 한마디", "토론 정리"):
             self.assertIn(phase, self.js + self.html)
-        for persona in ("Auditor", "Socratic", "Falsifier", "Pragmatist", "Principlist", "Synthesist"):
+        persona_copy = {
+            "Auditor": ("근거 검증형", "근거와 결론의 연결을 확인해요."),
+            "Socratic": ("전제 탐구형", "말의 뜻과 숨은 전제를 확인해요."),
+            "Falsifier": ("반례 탐색형", "반례와 예외를 찾아요."),
+            "Pragmatist": ("현실 실용형", "결과와 현실적인 선택을 비교해요."),
+            "Principlist": ("원칙 중심형", "원칙과 기준의 일관성을 살펴요."),
+            "Synthesist": ("조정 통합형", "양쪽의 타당한 부분과 조정점을 찾아요."),
+        }
+        for persona, (label, description) in persona_copy.items():
             self.assertIn(persona, self.js)
+            self.assertIn(label, self.js)
+            self.assertIn(description, self.js)
+        self.assertIn('id="summary-runtime"', self.html)
+        self.assertIn('id="final-runtime"', self.html)
 
     def test_mobile_first_tokens_and_accessibility_media_rules_exist(self):
         for token in ("--color-bg", "--color-text", "--color-a", "--color-b", "--width-site"):
