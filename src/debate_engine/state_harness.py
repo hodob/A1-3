@@ -71,7 +71,7 @@ def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
             include_prop_ids.add(facet.representative_id)
 
     propositions = [
-        {"id": p.id, "text": p.text, "speaker": p.speaker, "turn": p.turn}
+        {"id": p.id, "text": p.text, "speaker": p.speaker}
         for p in state.propositions
         if p.id in include_prop_ids
     ]
