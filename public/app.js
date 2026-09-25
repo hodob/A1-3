@@ -1,218 +1,662 @@
-const $ = (selector) => document.querySelector(selector);
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-const state = {
-  analysis: null,
-  motion: null,
-  session: null,
-  contextAnswers: [],
-  contextSummary: null,
+const HOME_VIEWS = ['topic-view', 'context-view', 'context-review-view', 'motion-view'];
+const DEBATE_VIEWS = ['debate-empty', 'debate-arena', 'summary-view', 'choice-view', 'done-view'];
+const ROUTES = ['home', 'debate', 'how-it-works'];
+
+const PHASES = [
+  {id: 'OPENING', name: '첫 입장', title: '먼저 각자의 생각을 들어보세요.', description: '두 입장이 어디서 출발하는지 살펴보세요.'},
+  {id: 'CROSSFIRE', name: '주고받기', title: '상대의 말을 어떻게 받아칠까요?', description: '앞선 말을 되짚으며 두 입장을 따라가 보세요.'},
+  {id: 'AUDIENCE_RESPONSE', name: '함께 답하기', title: '같은 질문, 두 가지 답변.', description: '같은 질문에 각 입장이 어떻게 답하는지 비교해 보세요.'},
+  {id: 'REBUTTAL', name: '쟁점 되짚기', title: '부딪혔던 쟁점을 다시 짚어요.', description: '서로의 반박 뒤에도 남은 이유를 살펴보세요.'},
+  {id: 'FINAL_FOCUS', name: '마지막 한마디', title: '끝으로 남길 가장 중요한 이유.', description: '마지막으로 남길 이유를 들어보세요.'},
+  {id: 'COMPLETE', name: '토론 정리', title: '이제 토론을 되짚어볼까요?', description: '판단할 재료를 정리할 차례예요.'},
+];
+
+const PERSONA_DESCRIPTIONS = {
+  Auditor: '근거와 결론의 연결을 확인해요.',
+  Socratic: '말의 뜻과 숨은 전제를 확인해요.',
+  Falsifier: '반례와 예외를 찾아요.',
+  Pragmatist: '결과와 현실적인 선택을 비교해요.',
+  Principlist: '원칙과 기준의 일관성을 살펴요.',
+  Synthesist: '양쪽의 타당한 부분과 조정점을 찾아요.',
 };
 
-const topicInput = $('#topic-input');
-const topicForm = $('#topic-form');
-const topicSubmit = $('#topic-submit');
-const homeStatus = $('#home-status');
-const motionCard = $('#motion-card');
-const debateLog = $('#debate-log');
-const debateEmpty = $('#debate-empty');
-const debateStatus = $('#debate-status');
-const debateControls = $('#debate-controls');
-const nextTurn = $('#next-turn');
-const phasePill = $('#phase-pill');
-const audiencePanel = $('#audience-panel');
-const contextPanel = $('#context-panel');
-const summaryPanel = $('#summary-panel');
-const choicePanel = $('#choice-panel');
+const state = {
+  route: 'home',
+  view: 'topic-view',
+  pendingOperation: null,
+  analysis: null,
+  confirmedContextAnswers: [],
+  contextQuestion: null,
+  contextSummary: null,
+  motion: null,
+  session: null,
+  summary: null,
+  choice: null,
+  lastRetry: null,
+  operationSequence: 0,
+  activeController: null,
+  operationTimers: [],
+};
 
-function setStatus(node, message, error = false) {
-  node.textContent = message;
-  node.classList.toggle('error', error);
+class AppError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
 }
 
-async function api(path, body) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180000);
+function element(tag, className = '', text = '') {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== '') node.textContent = text;
+  return node;
+}
+
+function replaceChildren(node, children) {
+  node.replaceChildren(...children.filter(Boolean));
+}
+
+function codePointLength(value) {
+  return Array.from(String(value || '')).length;
+}
+
+function setStatus(message = '') {
+  $('#app-status').textContent = message;
+}
+
+function clearError() {
+  $('#app-error').hidden = true;
+}
+
+function friendlyError(operation, error) {
+  if (error.code === 'SAFE_FAILURE') {
+    return ['다음 발언을 이어가지 못했어요.', '여기까지의 토론은 그대로예요. 이 발언을 다시 준비할 수 있어요.'];
+  }
+  if (error.code === 'CONFIG_ERROR') {
+    return ['지금은 토론을 준비할 수 없어요.', '입력은 그대로예요. 잠시 후 다시 시도해 주세요.'];
+  }
+  if (error.code === 'TIMEOUT' || error.code === 'STOPPED') {
+    return ['응답을 기다리는 시간이 길어져 멈췄어요.', '입력과 여기까지의 토론은 그대로예요. 다시 시도할 수 있어요.'];
+  }
+  if (operation === 'summary') {
+    return ['토론 정리를 불러오지 못했어요.', '토론 내용은 그대로 읽을 수 있어요. 정리만 다시 불러올 수 있어요.'];
+  }
+  if (operation === 'debate') {
+    return ['다음 발언을 불러오지 못했어요.', '여기까지의 토론은 그대로예요.'];
+  }
+  return ['준비를 마치지 못했어요.', '입력한 내용은 그대로 있어요. 다시 시도해 주세요.'];
+}
+
+function showError(operation, error) {
+  const [title, message] = friendlyError(operation, error);
+  $('#error-title').textContent = title;
+  $('#error-message').textContent = message;
+  $('#retry-action').hidden = !state.lastRetry;
+  $('#app-error').hidden = false;
+}
+
+function setFieldError(input, errorNode, message) {
+  input.setAttribute('aria-invalid', message ? 'true' : 'false');
+  errorNode.textContent = message || '';
+  errorNode.hidden = !message;
+}
+
+function showRoute(route, {focus = false} = {}) {
+  const validRoute = ROUTES.includes(route) ? route : 'home';
+  state.route = validRoute;
+  $$('[data-route]').forEach(node => { node.hidden = node.dataset.route !== validRoute; });
+  $$('[data-route-link]').forEach(link => {
+    if (link.dataset.routeLink === validRoute) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  if (validRoute === 'debate' && !state.session) showDebateView('debate-empty');
+  if (focus) focusActiveHeading();
+}
+
+function showHomeView(viewId, focus = true) {
+  state.view = viewId;
+  HOME_VIEWS.forEach(id => { $(`#${id}`).hidden = id !== viewId; });
+  showRoute('home');
+  if (focus) focusActiveHeading();
+}
+
+function showDebateView(viewId, focus = true) {
+  state.view = viewId;
+  DEBATE_VIEWS.forEach(id => { $(`#${id}`).hidden = id !== viewId; });
+  if (focus) focusActiveHeading();
+}
+
+function focusActiveHeading() {
+  requestAnimationFrame(() => {
+    const activeRoute = $(`[data-route="${state.route}"]`);
+    const heading = activeRoute?.querySelector('.view:not([hidden]) h1, :scope > .page-intro h1');
+    if (heading) {
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      heading.focus({preventScroll: true});
+    }
+  });
+}
+
+function routeFromHash() {
+  const route = location.hash.slice(1);
+  showRoute(ROUTES.includes(route) ? route : 'home', {focus: true});
+}
+
+function clearOperationTimers() {
+  state.operationTimers.forEach(clearTimeout);
+  state.operationTimers = [];
+}
+
+function beginOperation(name, message, retry) {
+  if (state.pendingOperation) return null;
+  clearError();
+  const operationId = `${Date.now()}-${++state.operationSequence}`;
+  state.pendingOperation = {id: operationId, name};
+  state.lastRetry = retry;
+  state.activeController = new AbortController();
+  $('#loading-turn').hidden = name !== 'debate';
+  $('#loading-message').textContent = message;
+  $('#stop-waiting').hidden = true;
+  setStatus(message);
+  $$('button', $(`[data-route="${state.route}"]`)).forEach(button => { button.disabled = true; });
+  state.operationTimers = [
+    setTimeout(() => {
+      if (state.pendingOperation?.id === operationId) setStatus('평소보다 오래 걸리고 있어요.');
+    }, 15000),
+    setTimeout(() => {
+      if (state.pendingOperation?.id === operationId) {
+        setStatus('응답을 기다리고 있어요. 기다리기를 중단한 뒤 다시 시도할 수 있어요.');
+        $('#stop-waiting').hidden = false;
+        $('#stop-waiting').disabled = false;
+      }
+    }, 60000),
+    setTimeout(() => {
+      if (state.pendingOperation?.id === operationId) state.activeController?.abort('timeout');
+    }, 180000),
+  ];
+  return operationId;
+}
+
+function endOperation(operationId) {
+  if (state.pendingOperation?.id !== operationId) return;
+  clearOperationTimers();
+  state.pendingOperation = null;
+  state.activeController = null;
+  $('#loading-turn').hidden = true;
+  $('#stop-waiting').hidden = true;
+  $$('button').forEach(button => { button.disabled = false; });
+  if (state.motion?.edit_count >= 1) $('#motion-edit-details').hidden = true;
+  setStatus('');
+}
+
+async function api(path, body, operationId) {
   try {
     const response = await fetch(path, {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal: controller.signal,
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+      signal: state.activeController?.signal,
     });
-    const payload = await response.json().catch(() => ({ok:false,error:{code:'INVALID_RESPONSE',message:'잘못된 응답'}}));
-    if (!response.ok || !payload.ok) throw new Error(payload.error?.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.');
+    const payload = await response.json().catch(() => ({ok: false, error: {code: 'INVALID_RESPONSE'}}));
+    if (state.pendingOperation?.id !== operationId) throw new AppError('STALE_OPERATION', 'stale response');
+    if (!response.ok || !payload.ok) throw new AppError(payload.error?.code || 'API_ERROR', payload.error?.message || 'request failed');
     return payload.data;
   } catch (error) {
-    if (error?.name === 'AbortError') throw new Error('응답이 지연되고 있습니다. 다시 시도해주세요.');
+    if (error?.name === 'AbortError') throw new AppError('TIMEOUT', 'request timed out');
     throw error;
-  } finally { clearTimeout(timer); }
+  }
 }
 
-function renderMotion(data) {
-  state.motion = data;
-  motionCard.classList.remove('hidden');
-  motionCard.innerHTML = `<p class="eyebrow">MOTION PREVIEW</p><h3>${escapeHtml(data.motion)}</h3><p class="versus">${escapeHtml(data.side_labels[0])} VS ${escapeHtml(data.side_labels[1])}</p><div class="motion-actions"><button id="start-debate" type="button">이 논제로 시작</button><button id="edit-motion" class="secondary" type="button">1회 수정</button></div>`;
-  $('#start-debate').addEventListener('click', createMotionAndStart);
-  $('#edit-motion').addEventListener('click', editMotion);
+async function performOperation(name, message, retry, task) {
+  const operationId = beginOperation(name, message, retry);
+  if (!operationId) return null;
+  try {
+    return await task(operationId);
+  } catch (error) {
+    if (error.code !== 'STALE_OPERATION') showError(name, error);
+    return null;
+  } finally {
+    endOperation(operationId);
+  }
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function sideCard(side, label, persona) {
+  const card = element('div', `person ${side === 'B' ? 'b' : ''}`);
+  const identity = element('div', 'identity');
+  identity.append(element('span', `side-badge ${side === 'B' ? 'side-b' : 'side-a'}`, side), element('span', '', label));
+  card.append(identity, element('p', '', PERSONA_DESCRIPTIONS[persona] || '주제에 맞는 관점으로 살펴요.'));
+  return card;
 }
 
-async function prepareMotion(contextSummary = null) {
-  const data = await api('/api/create-motion', {analysis: state.analysis, context_summary: contextSummary, edit_count: 0});
-  state.contextSummary = contextSummary;
-  renderMotion(data);
-  return data;
+function updateCount(input, output, limit) {
+  const length = codePointLength(input.value);
+  output.textContent = `${length} / ${limit}`;
+  return length;
 }
 
 async function analyzeTopic(event) {
   event.preventDefault();
-  const topic = topicInput.value.trim();
-  if (!topic) return setStatus(homeStatus, '토론할 주제를 입력해주세요.', true);
-  topicSubmit.disabled = true;
-  setStatus(homeStatus, '주제를 분석하고 있습니다...');
-  try {
-    const data = await api('/api/analyze-topic', {topic});
-    state.analysis = data;
-    if (data.interaction_state === 'CONTEXT_REQUIRED') {
-      state.contextAnswers = [];
-      await nextContextQuestion();
-      document.querySelector('#debate').scrollIntoView({behavior:'smooth'});
-    } else if (data.interaction_state === 'INFORMATIONAL_FIRST') {
-      setStatus(homeStatus, data.confirmation_reason || '정보 질문은 바로 토론으로 바꾸지 않습니다.', true);
-    } else {
-      await prepareMotion();
-      setStatus(homeStatus, '논제를 확인해주세요.');
-    }
-  } catch (error) {
-    setStatus(homeStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true);
-  } finally { topicSubmit.disabled = false; }
+  const input = $('#topic-input');
+  const error = $('#topic-error');
+  const topic = input.value.trim();
+  const length = codePointLength(topic);
+  if (!topic) return setFieldError(input, error, '토론할 이야기를 한 줄 적어주세요.');
+  if (length > 2000) return setFieldError(input, error, '2000자까지 적을 수 있어요. 내용을 줄이면 더 적을 수 있어요.');
+  setFieldError(input, error, '');
+  const retry = () => analyzeTopic(new Event('submit'));
+  const data = await performOperation('prepare', '주제를 살펴보고 있어요.', retry, id => api('/api/analyze-topic', {topic}, id));
+  if (!data) return;
+  state.analysis = data;
+  state.confirmedContextAnswers = [];
+  state.contextSummary = null;
+  if (data.interaction_state === 'CONTEXT_REQUIRED') {
+    await requestContextStep();
+    return;
+  }
+  if (data.interaction_state === 'INFORMATIONAL_FIRST') {
+    setFieldError(input, error, '이 질문은 먼저 사실이나 설명을 확인해야 해요. 서로 다른 생각을 비교할 수 있는 주제로 바꿔 적어주세요.');
+    return;
+  }
+  await prepareMotion(null, data.interaction_state === 'CONFIRMATION_REQUIRED' ? data.confirmation_reason : null);
 }
 
-function renderContextSummary(summary, completeness) {
+function renderContextQuestion(data) {
+  const question = data.question;
+  state.contextQuestion = question;
+  $('#context-progress').textContent = `답변한 질문 ${state.confirmedContextAnswers.length}개`;
+  $('#context-question').textContent = question.text;
+  const options = [...question.options];
+  if (question.allow_unknown && !options.includes('잘 모르겠다')) options.push('잘 모르겠다');
+  replaceChildren($('#context-options'), options.map((option, index) => {
+    const label = element('label', 'option');
+    const input = element('input');
+    input.type = 'radio'; input.name = 'context-answer'; input.value = option; input.id = `context-option-${index}`;
+    label.append(input, document.createTextNode(option));
+    return label;
+  }));
+  $('#context-free-details').hidden = !question.allow_free_text;
+  $('#context-free-input').value = '';
+  updateCount($('#context-free-input'), $('#context-free-count'), 1000);
+  showHomeView('context-view');
+}
+
+function renderContextReview(summary) {
   const groups = [
-    ['USER_OBSERVATION', '직접 확인'],
-    ['REPORTED_CLAIM', '전달된 주장'],
-    ['USER_ASSUMPTION', '사용자의 해석'],
-    ['UNKNOWN', '확인되지 않은 내용'],
+    ['USER_OBSERVATION', '직접 본 일'],
+    ['REPORTED_CLAIM', '전해 들은 이야기'],
+    ['USER_ASSUMPTION', '내 해석'],
+    ['UNKNOWN', '모르는 부분'],
   ];
-  const cards = groups.map(([key, label]) => {
+  replaceChildren($('#context-review-groups'), groups.map(([key, label]) => {
+    const section = element('section', 'context-group');
+    section.append(element('h2', '', label));
     const items = summary?.[key] || [];
-    const content = items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<p>없음</p>';
-    return `<article><h4>${label}</h4>${content}</article>`;
-  }).join('');
-  contextPanel.innerHTML = `<strong>상황 파악 ${completeness}%</strong><p>토론에 사용할 맥락을 확인해주세요.</p><div class="context-review">${cards}</div>`;
-}
-
-async function submitContextAnswer(questionId, answer) {
-  const normalized = String(answer || '').trim();
-  if (!normalized) return setStatus(debateStatus, '답변을 입력해주세요.', true);
-  state.contextAnswers.push({question_id:questionId, answer:normalized});
-  await nextContextQuestion();
-}
-
-async function nextContextQuestion() {
-  setStatus(debateStatus, '상황을 파악하고 있습니다...');
-  try {
-    const data = await api('/api/context-step', {topic: state.analysis.original_topic, answers: state.contextAnswers});
-    contextPanel.classList.remove('hidden');
-    if (data.debate_ready) {
-      renderContextSummary(data.context_summary, data.context_completeness);
-      await prepareMotion(data.context_summary);
-      setStatus(debateStatus, '논제를 확인해주세요.');
-      return;
+    if (!items.length) section.append(element('p', 'hint', '해당 내용이 없어요.'));
+    else {
+      const list = element('ul');
+      items.forEach(item => list.append(element('li', '', item)));
+      section.append(list);
     }
-    const q = data.question;
-    const options = [...q.options];
-    if (q.allow_unknown && !options.includes('잘 모르겠다')) options.push('잘 모르겠다');
-    const freeText = q.allow_free_text ? `<div class="context-free-text"><textarea id="context-free-input" maxlength="1000" rows="2" placeholder="직접 입력"></textarea><button type="button" id="context-free-submit" class="secondary">직접 입력</button></div>` : '';
-    contextPanel.innerHTML = `<strong>상황 파악 ${data.context_completeness}%</strong><p>${escapeHtml(q.text)}</p><div class="motion-actions">${options.map(o=>`<button type="button" class="context-option secondary" data-answer="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join('')}</div>${freeText}`;
-    contextPanel.querySelectorAll('.context-option').forEach(btn => btn.addEventListener('click', () => submitContextAnswer(q.id, btn.dataset.answer)));
-    const freeSubmit = $('#context-free-submit');
-    if (freeSubmit) freeSubmit.addEventListener('click', () => submitContextAnswer(q.id, $('#context-free-input').value));
-    setStatus(debateStatus, '');
-  } catch (error) { setStatus(debateStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true); }
+    return section;
+  }));
+  showHomeView('context-review-view');
 }
 
-async function editMotion() {
-  if (state.motion?.edit_count >= 1) return setStatus(homeStatus, '논제 수정은 한 번만 가능합니다.', true);
-  const edited = window.prompt('수정할 논제를 입력하세요.', state.motion.motion);
-  if (!edited?.trim()) return;
-  try {
-    const data = await api('/api/create-motion', {analysis:state.analysis, context_summary:state.contextSummary, edited_motion:edited.trim(), edit_count:state.motion?.edit_count || 0});
-    state.motion = data;
-    motionCard.querySelector('h3').textContent = data.motion;
-    motionCard.querySelector('#edit-motion').disabled = true;
-  } catch (error) { setStatus(homeStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true); }
+async function requestContextStep(candidateAnswer = null) {
+  const candidateAnswers = candidateAnswer
+    ? [...state.confirmedContextAnswers, candidateAnswer]
+    : [...state.confirmedContextAnswers];
+  const retry = () => requestContextStep(candidateAnswer);
+  const data = await performOperation('prepare', '다음에 확인할 내용을 준비하고 있어요.', retry, id => api('/api/context-step', {
+    topic: state.analysis.original_topic,
+    answers: candidateAnswers,
+  }, id));
+  if (!data) return;
+  state.confirmedContextAnswers = candidateAnswers;
+  if (data.debate_ready) {
+    state.contextSummary = data.context_summary;
+    renderContextReview(data.context_summary);
+  } else {
+    renderContextQuestion(data);
+  }
 }
 
-async function createMotionAndStart() {
-  try {
-    const motion = state.motion;
-    if (!motion?.motion) throw new Error('논제가 준비되지 않았습니다.');
-    state.session = {motion:motion.motion, side_labels:motion.side_labels, personas:motion.personas, tone:motion.tone, context_summary:motion.context_summary, fact_anchor:motion.fact_anchor, truth_mode:motion.truth_mode, next_index:0, transcript:[], audience_status:'PENDING', audience_question:null, audience_response_index:0, completed:false, engine_token:null};
-    debateEmpty.classList.add('hidden');
-    debateControls.classList.remove('hidden');
-    motionCard.classList.add('hidden');
-    document.querySelector('#debate').scrollIntoView({behavior:'smooth'});
-    setStatus(debateStatus, '준비되었습니다. 다음 발언을 눌러 토론을 진행하세요.');
-  } catch (error) { setStatus(homeStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true); }
+async function submitContext(event) {
+  event.preventDefault();
+  const selected = $('input[name="context-answer"]:checked');
+  const free = $('#context-free-input').value.trim();
+  const answer = free || selected?.value || '';
+  const length = codePointLength(answer);
+  if (!answer) return setFieldError($('#context-free-input'), $('#context-error'), '답변을 하나 고르거나 직접 적어주세요.');
+  if (length > 1000) return setFieldError($('#context-free-input'), $('#context-error'), '답변은 1000자까지 적을 수 있어요.');
+  setFieldError($('#context-free-input'), $('#context-error'), '');
+  await requestContextStep({question_id: state.contextQuestion.id, answer});
 }
 
-function appendTurn(data) {
-  if (!data.utterance) return;
-  const article = document.createElement('article');
-  article.className = `turn ${data.speaker === 'B' ? 'b' : 'a'}`;
-  article.innerHTML = `<div class="turn-head"><span class="side">${escapeHtml(data.side_label)}</span><span>${escapeHtml(data.phase)}</span></div><div>${escapeHtml(data.utterance)}</div>`;
-  debateLog.appendChild(article);
-  article.scrollIntoView({behavior:'smooth', block:'nearest'});
+async function prepareMotion(contextSummary = state.contextSummary, confirmationReason = null) {
+  const retry = () => prepareMotion(contextSummary, confirmationReason);
+  const data = await performOperation('prepare', '토론할 문장을 정리하고 있어요.', retry, id => api('/api/create-motion', {
+    analysis: state.analysis,
+    context_summary: contextSummary,
+    edit_count: 0,
+  }, id));
+  if (!data) return;
+  state.contextSummary = contextSummary;
+  state.motion = data;
+  renderMotion(confirmationReason);
 }
 
-function renderAudiencePrompt() {
-  audiencePanel.classList.remove('hidden');
-  audiencePanel.innerHTML = `<strong>관객 질문이 있나요?</strong><p>같은 질문을 양측 모두에게 던집니다.</p><textarea id="audience-input" maxlength="500" rows="2" placeholder="질문을 입력하세요"></textarea><div class="motion-actions"><button id="send-audience" type="button">질문하기</button><button id="skip-audience" class="secondary" type="button">계속 보기</button></div>`;
-  $('#send-audience').addEventListener('click', async () => {
-    const value = $('#audience-input').value.trim();
-    if (!value) return setStatus(debateStatus, '관객 질문을 입력해주세요.', true);
-    await runStep('AUDIENCE_QUESTION', value);
-    audiencePanel.classList.add('hidden');
+function renderMotion(confirmationReason = null) {
+  $('#motion-title').textContent = state.motion.motion;
+  $('#motion-edit-input').value = state.motion.motion;
+  updateCount($('#motion-edit-input'), $('#motion-edit-count'), 1200);
+  replaceChildren($('#motion-sides'), [
+    sideCard('A', state.motion.side_labels[0], state.motion.personas[0]),
+    sideCard('B', state.motion.side_labels[1], state.motion.personas[1]),
+  ]);
+  $('#confirmation-reason').textContent = confirmationReason ? `토론 전에 확인할 점이 있어요. ${confirmationReason}` : '';
+  $('#confirmation-reason').hidden = !confirmationReason;
+  const edited = state.motion.edit_count >= 1;
+  $('#motion-edit-details').hidden = edited;
+  $('#motion-edit-used').hidden = !edited;
+  showHomeView('motion-view');
+}
+
+async function saveMotionEdit(event) {
+  event.preventDefault();
+  const input = $('#motion-edit-input');
+  const value = input.value.trim();
+  const length = codePointLength(value);
+  if (!value) return setFieldError(input, $('#motion-edit-error'), '토론할 문장을 적어주세요.');
+  if (length > 1200) return setFieldError(input, $('#motion-edit-error'), '문장은 1200자까지 적을 수 있어요.');
+  setFieldError(input, $('#motion-edit-error'), '');
+  const retry = () => saveMotionEdit(new Event('submit'));
+  const data = await performOperation('prepare', '수정한 문장을 적용하고 있어요.', retry, id => api('/api/create-motion', {
+    analysis: state.analysis,
+    context_summary: state.contextSummary,
+    edited_motion: value,
+    edit_count: state.motion.edit_count,
+  }, id));
+  if (!data) return;
+  state.motion = data;
+  renderMotion();
+}
+
+function createSession(motion) {
+  return {
+    motion: motion.motion,
+    side_labels: motion.side_labels,
+    personas: motion.personas,
+    tone: motion.tone,
+    context_summary: motion.context_summary,
+    fact_anchor: motion.fact_anchor,
+    truth_mode: motion.truth_mode,
+    next_index: 0,
+    transcript: [],
+    audience_status: 'PENDING',
+    audience_question: null,
+    audience_response_index: 0,
+    completed: false,
+    engine_token: null,
+  };
+}
+
+async function startDebate() {
+  if (!state.motion || state.pendingOperation) return;
+  state.session = createSession(state.motion);
+  state.summary = null;
+  state.choice = null;
+  renderDebateShell();
+  showRoute('debate');
+  showDebateView('debate-arena');
+  history.pushState(null, '', '#debate');
+  await runStep('NEXT');
+}
+
+function phaseInfo(phase) {
+  return PHASES.find(item => item.id === phase) || PHASES[0];
+}
+
+function renderPhase(phase) {
+  const info = phaseInfo(phase);
+  const index = Math.max(0, PHASES.findIndex(item => item.id === info.id));
+  $('#phase-number').textContent = String(index + 1).padStart(2, '0');
+  $('#phase-name').textContent = info.name;
+  $('#phase-eyebrow').textContent = info.name;
+  $('#debate-heading').textContent = info.title;
+  $('#phase-description').textContent = info.description;
+  const buildSteps = () => PHASES.map((item, itemIndex) => {
+    const li = element('li', '', `${itemIndex < index ? '완료 · ' : ''}${item.name}`);
+    if (itemIndex === index) li.setAttribute('aria-current', 'step');
+    return li;
   });
-  $('#skip-audience').addEventListener('click', async () => {
-    await runStep('SKIP_AUDIENCE');
-    audiencePanel.classList.add('hidden');
+  replaceChildren($('#rail-steps'), buildSteps());
+  replaceChildren($('#mobile-steps'), buildSteps());
+}
+
+function renderDebateShell() {
+  const {motion, side_labels: labels, personas} = state.session;
+  $('#rail-motion').textContent = motion;
+  $('#mobile-motion').textContent = motion;
+  $('#mobile-motion-detail').textContent = `토론할 문장: ${motion}`;
+  replaceChildren($('#rail-sides'), [sideCard('A', labels[0], personas[0]), sideCard('B', labels[1], personas[1])]);
+  replaceChildren($('#mobile-sides'), [sideCard('A', labels[0], personas[0]), sideCard('B', labels[1], personas[1])]);
+  renderPhase(state.session.transcript.at(-1)?.phase || 'OPENING');
+  renderTranscript();
+  $('#audience-panel').hidden = true;
+  $('#next-turn').hidden = false;
+  $('#show-summary').hidden = true;
+}
+
+function turnCard(item, isLatest) {
+  const li = element('li', `turn ${item.speaker === 'B' ? 'b' : 'a'} ${isLatest ? 'new' : ''}`);
+  li.id = isLatest ? 'latest-turn' : `turn-${item.turn}`;
+  const article = element('article');
+  const headingId = `turn-${item.turn}-heading`;
+  article.setAttribute('aria-labelledby', headingId);
+  const identity = element('div', 'identity');
+  identity.id = headingId;
+  identity.setAttribute('tabindex', '-1');
+  identity.append(element('span', `side-badge ${item.speaker === 'B' ? 'side-b' : 'side-a'}`, item.speaker));
+  const identityText = element('div');
+  identityText.append(document.createTextNode(item.side_label), element('div', 'speaker-meta', `발언 ${item.turn} · ${phaseInfo(item.phase).name}`));
+  identity.append(identityText);
+  article.append(identity);
+  article.append(element('p', 'utterance', item.utterance));
+  li.append(article);
+  return li;
+}
+
+function renderTranscript() {
+  const transcript = state.session?.transcript || [];
+  replaceChildren($('#debate-log'), transcript.map((item, index) => turnCard(item, index === transcript.length - 1)));
+}
+
+function nextButtonLabel() {
+  if (state.session.audience_status === 'ASKED') {
+    return state.session.audience_response_index === 0 ? '첫 번째 답변 보기 →' : '다른 쪽 답변 보기 →';
+  }
+  return '다음 발언 보기 →';
+}
+
+function updateDebateAfterStep(data, wasNearBottom) {
+  state.session = data.session;
+  const currentPhase = data.completed ? (state.session.transcript.at(-1)?.phase || 'FINAL_FOCUS') : data.phase;
+  renderPhase(currentPhase);
+  renderTranscript();
+  $('#next-turn').textContent = nextButtonLabel();
+  if (data.awaiting_audience_question) {
+    $('#audience-panel').hidden = false;
+    $('#next-turn').hidden = true;
+    $('#audience-panel h2').focus({preventScroll: false});
+  } else {
+    $('#audience-panel').hidden = true;
+    $('#next-turn').hidden = Boolean(data.completed);
+  }
+  if (data.completed) $('#show-summary').hidden = false;
+  if (data.utterance) {
+    if (wasNearBottom) $('#latest-turn .identity')?.focus({preventScroll: false});
+    else $('#new-turn-link').hidden = false;
+  }
+}
+
+async function runStep(command = 'NEXT', audienceQuestion = null) {
+  if (!state.session || state.pendingOperation) return false;
+  const snapshot = state.session;
+  const wasNearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 180;
+  const retry = () => runStep(command, audienceQuestion);
+  const data = await performOperation('debate', command === 'AUDIENCE_QUESTION' ? '질문을 전달하고 있어요.' : '다음 발언을 준비하고 있어요.', retry, id => api('/api/debate-step', {
+    session: snapshot,
+    command,
+    audience_question: audienceQuestion,
+  }, id));
+  if (!data) return false;
+  updateDebateAfterStep(data, wasNearBottom);
+  return true;
+}
+
+async function submitAudience(event) {
+  event.preventDefault();
+  const input = $('#audience-input');
+  const question = input.value.trim();
+  const length = codePointLength(question);
+  if (!question) return setFieldError(input, $('#audience-error'), '두 AI에게 물어볼 내용을 적어주세요.');
+  if (length > 500) return setFieldError(input, $('#audience-error'), '질문은 500자까지 적을 수 있어요.');
+  setFieldError(input, $('#audience-error'), '');
+  const registered = await runStep('AUDIENCE_QUESTION', question);
+  if (registered) await runStep('NEXT');
+}
+
+async function skipAudience() {
+  const skipped = await runStep('SKIP_AUDIENCE');
+  if (skipped) await runStep('NEXT');
+}
+
+function listOrEmpty(items) {
+  if (!items?.length) return element('p', 'hint', '정리된 항목이 없어요.');
+  const list = element('ul', 'summary-list');
+  items.forEach(item => list.append(element('li', '', item)));
+  return list;
+}
+
+function renderSummary() {
+  $('#summary-motion').textContent = state.session.motion;
+  replaceChildren($('#summary-clashes'), [listOrEmpty(state.summary.key_clashes)]);
+  const makeSide = (side, points) => {
+    const section = element('section', `summary-side ${side.toLowerCase()}`);
+    const heading = element('h2', 'identity');
+    const index = side === 'A' ? 0 : 1;
+    heading.append(element('span', `side-badge ${side === 'B' ? 'side-b' : 'side-a'}`, side), element('span', '', state.session.side_labels[index]));
+    section.append(heading, element('h3', '', '강한 논점'), listOrEmpty(points));
+    return section;
+  };
+  replaceChildren($('#summary-sides'), [makeSide('A', state.summary.side_a_strong_points), makeSide('B', state.summary.side_b_strong_points)]);
+  replaceChildren($('#summary-agreements'), [listOrEmpty(state.summary.agreements)]);
+  replaceChildren($('#summary-unresolved'), [listOrEmpty(state.summary.unresolved)]);
+  showDebateView('summary-view');
+}
+
+async function loadSummary() {
+  const retry = loadSummary;
+  const data = await performOperation('summary', '서로의 논점을 정리하고 있어요.', retry, id => api('/api/neutral-summary', {
+    motion: state.session.motion,
+    transcript: state.session.transcript,
+  }, id));
+  if (!data) return;
+  state.summary = data;
+  renderSummary();
+}
+
+function renderChoice() {
+  const labels = [
+    ['A', `A · ${state.session.side_labels[0]}`],
+    ['UNSURE', '아직 모르겠다'],
+    ['B', `B · ${state.session.side_labels[1]}`],
+  ];
+  replaceChildren($('#choice-options'), labels.map(([value, labelText]) => {
+    const label = element('label', 'option');
+    const input = element('input'); input.type = 'radio'; input.name = 'choice'; input.value = value;
+    label.append(input, document.createTextNode(labelText));
+    return label;
+  }));
+  showDebateView('choice-view');
+}
+
+function finishChoice(event) {
+  event.preventDefault();
+  const selected = $('input[name="choice"]:checked');
+  if (!selected) {
+    setStatus('선택지를 하나 고른 뒤 마쳐주세요.');
+    return;
+  }
+  state.choice = selected.value;
+  const display = selected.value === 'A' ? `A · ${state.session.side_labels[0]}` : selected.value === 'B' ? `B · ${state.session.side_labels[1]}` : '아직 모르겠다';
+  $('#done-choice').textContent = `‘${display}’.`;
+  setStatus('');
+  showDebateView('done-view');
+}
+
+function resetDebate() {
+  state.view = 'topic-view'; state.analysis = null; state.confirmedContextAnswers = []; state.contextQuestion = null;
+  state.contextSummary = null; state.motion = null; state.session = null; state.summary = null; state.choice = null; state.lastRetry = null;
+  $('#topic-input').value = '';
+  updateCount($('#topic-input'), $('#topic-count'), 2000);
+  replaceChildren($('#debate-log'), []);
+  clearError(); setStatus(''); showHomeView('topic-view');
+  history.pushState(null, '', '#home');
+  $('#topic-input').focus();
+}
+
+function bindEvents() {
+  window.addEventListener('hashchange', routeFromHash);
+  $('#topic-form').addEventListener('submit', analyzeTopic);
+  $('#topic-input').addEventListener('input', event => updateCount(event.target, $('#topic-count'), 2000));
+  $$('.suggestion').forEach(button => button.addEventListener('click', () => {
+    $('#topic-input').value = button.dataset.topic;
+    updateCount($('#topic-input'), $('#topic-count'), 2000);
+    $('#topic-input').focus();
+  }));
+  $('#context-form').addEventListener('submit', submitContext);
+  $('#context-free-input').addEventListener('input', event => updateCount(event.target, $('#context-free-count'), 1000));
+  $('#context-review-submit').addEventListener('click', () => prepareMotion(state.contextSummary));
+  $('#motion-edit-form').addEventListener('submit', saveMotionEdit);
+  $('#motion-edit-input').addEventListener('input', event => updateCount(event.target, $('#motion-edit-count'), 1200));
+  $('#motion-edit-cancel').addEventListener('click', () => { $('#motion-edit-details').open = false; $('#motion-edit-input').value = state.motion.motion; });
+  $('#start-debate').addEventListener('click', startDebate);
+  $('#next-turn').addEventListener('click', () => runStep('NEXT'));
+  $('#audience-form').addEventListener('submit', submitAudience);
+  $('#audience-input').addEventListener('input', event => updateCount(event.target, $('#audience-count'), 500));
+  $('#skip-audience').addEventListener('click', skipAudience);
+  $('#show-summary').addEventListener('click', loadSummary);
+  $('#open-choice').addEventListener('click', renderChoice);
+  $('#back-to-debate').addEventListener('click', () => showDebateView('debate-arena'));
+  $('#back-to-summary').addEventListener('click', () => showDebateView('summary-view'));
+  $('#choice-form').addEventListener('submit', finishChoice);
+  $('#restart').addEventListener('click', resetDebate);
+  $('#reread-debate').addEventListener('click', () => showDebateView('debate-arena'));
+  $('#new-turn-link').addEventListener('click', () => { $('#new-turn-link').hidden = true; });
+  $('#dismiss-error').addEventListener('click', clearError);
+  $('#retry-action').addEventListener('click', () => { const retry = state.lastRetry; clearError(); retry?.(); });
+  $('#stop-waiting').addEventListener('click', () => {
+    const operation = state.pendingOperation;
+    if (!operation) return;
+    state.pendingOperation = {id: `stopped-${operation.id}`, name: operation.name};
+    state.activeController?.abort('stopped');
+    clearOperationTimers();
+    state.pendingOperation = null;
+    state.activeController = null;
+    $('#loading-turn').hidden = true;
+    $$('button').forEach(button => { button.disabled = false; });
+    showError(operation.name, new AppError('STOPPED', 'stopped'));
+  });
+  window.addEventListener('beforeunload', event => {
+    if (state.session && state.view !== 'done-view') { event.preventDefault(); event.returnValue = ''; }
   });
 }
 
-async function runStep(command='NEXT', audienceQuestion=null) {
-  if (!state.session) return;
-  nextTurn.disabled = true;
-  setStatus(debateStatus, '토론자가 생각하고 있습니다...');
-  try {
-    const data = await api('/api/debate-step', {session:state.session, command, audience_question:audienceQuestion});
-    state.session = data.session;
-    phasePill.textContent = data.phase;
-    appendTurn(data);
-    if (data.awaiting_audience_question) renderAudiencePrompt();
-    if (data.completed) await finishDebate();
-    else setStatus(debateStatus, '');
-  } catch (error) {
-    setStatus(debateStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true);
-  } finally { nextTurn.disabled = false; }
-}
-
-async function finishDebate() {
-  debateControls.classList.add('hidden');
-  setStatus(debateStatus, '토론을 정리하고 있습니다...');
-  try {
-    const data = await api('/api/neutral-summary', {motion:state.session.motion, transcript:state.session.transcript});
-    summaryPanel.classList.remove('hidden');
-    summaryPanel.innerHTML = `<p class="eyebrow">NEUTRAL SUMMARY</p><div class="summary-grid"><article><h3>핵심 쟁점</h3><ul>${data.key_clashes.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></article><article><h3>A의 강한 논점</h3><ul>${data.side_a_strong_points.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></article><article><h3>B의 강한 논점</h3><ul>${data.side_b_strong_points.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></article><article><h3>합의한 부분</h3><ul>${data.agreements.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></article><article><h3>남은 쟁점</h3><ul>${data.unresolved.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></article></div>`;
-    choicePanel.classList.remove('hidden');
-    choicePanel.innerHTML = `<h3>어느 쪽이 더 설득력 있었나요?</h3><div class="choice-buttons"><button data-choice="A">${escapeHtml(state.session.side_labels[0])}</button><button data-choice="UNSURE">아직 모르겠다</button><button data-choice="B">${escapeHtml(state.session.side_labels[1])}</button></div><p id="choice-result"></p>`;
-    choicePanel.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { $('#choice-result').textContent = `선택: ${btn.textContent}`; }));
-    setStatus(debateStatus, '토론이 끝났습니다.');
-  } catch (error) { setStatus(debateStatus, error.message || '응답을 생성하지 못했습니다. 다시 시도해주세요.', true); }
-}
-
-topicInput.addEventListener('input', () => { $('#topic-count').textContent = `${topicInput.value.length} / 2000`; });
-topicForm.addEventListener('submit', analyzeTopic);
-nextTurn.addEventListener('click', () => runStep('NEXT'));
+bindEvents();
+showHomeView('topic-view', false);
+routeFromHash();

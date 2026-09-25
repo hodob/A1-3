@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +20,7 @@ class FrontendContractTests(unittest.TestCase):
 
     def test_loading_error_and_empty_input_copy_exist(self):
         js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
-        for phrase in ("주제를 분석하고 있습니다", "토론할 주제를 입력해주세요", "응답을 생성하지 못했습니다"):
+        for phrase in ("주제를 살펴보고 있어요", "토론할 이야기를 한 줄 적어주세요", "준비를 마치지 못했어요"):
             self.assertIn(phrase, js)
 
     def test_context_summary_is_sent_to_motion_endpoint(self):
@@ -31,23 +30,21 @@ class FrontendContractTests(unittest.TestCase):
 
     def test_context_review_and_free_text_controls_exist(self):
         js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("직접 확인", js)
-        self.assertIn("전달된 주장", js)
-        self.assertIn("사용자의 해석", js)
-        self.assertIn("직접 입력", js)
+        self.assertIn("직접 본 일", js)
+        self.assertIn("전해 들은 이야기", js)
+        self.assertIn("내 해석", js)
+        self.assertIn("알려주고 싶은 상황", (ROOT / "public" / "index.html").read_text(encoding="utf-8"))
 
     def test_summary_displays_agreements(self):
         js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("합의한 부분", js)
-        self.assertIn("data.agreements", js)
+        self.assertIn("함께 인정한 부분", (ROOT / "public" / "index.html").read_text(encoding="utf-8"))
+        self.assertIn("state.summary.agreements", js)
 
     def test_frontend_has_timeout_abort_path(self):
         js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
         self.assertIn("AbortController", js)
-        self.assertIn("응답이 지연되고 있습니다", js)
-        match = re.search(r"setTimeout\(\(\) => controller\.abort\(\),\s*(\d+)\)", js)
-        self.assertIsNotNone(match)
-        self.assertGreaterEqual(int(match.group(1)), 120_000)
+        self.assertIn("응답을 기다리는 시간이 길어져 멈췄어요", js)
+        self.assertIn("180000", js)
 
     def test_css_has_mobile_breakpoint(self):
         css = (ROOT / "public" / "styles.css").read_text(encoding="utf-8")

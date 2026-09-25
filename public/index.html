@@ -3,70 +3,56 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="두 AI가 실제로 서로의 발언에 반응하며 토론하는 관전형 AI Debate Harness">
-  <title>Clash Lab — AI Debate Harness</title>
+  <meta name="description" content="두 AI가 앞선 발언을 바탕으로 토론하고, 마지막 판단은 사용자가 내리는 관전형 AI 토론 서비스">
+  <title>사이 — 두 AI의 토론을 구경하세요</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="#home">CLASH LAB</a>
-    <nav aria-label="주 메뉴">
-      <a href="#home">주제 입력</a>
-      <a href="#debate">토론</a>
-      <a href="#how-it-works">작동 원리</a>
-    </nav>
-  </header>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header"><div class="content header-inner">
+    <div class="brand-row"><a class="brand" href="#home" aria-label="사이 시작 화면"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>사이</span></a><span class="brand-tag">AI 토론</span></div>
+    <nav class="main-nav" aria-label="주 메뉴"><a href="#home" data-route-link="home">시작하기</a><a href="#debate" data-route-link="debate">토론 보기</a><a href="#how-it-works" data-route-link="how-it-works">이용 안내</a></nav>
+  </div></header>
 
-  <main>
-    <section id="home" class="panel hero" aria-labelledby="home-title">
-      <p class="eyebrow">AI × AI / YOU DECIDE</p>
-      <h1 id="home-title">한 주제를 던지면,<br>AI 둘이 제대로 붙습니다.</h1>
-      <p class="lede">전체 대본을 한 번에 만드는 대신, 각 토론자가 상대의 직전 발언과 Debate State를 보고 다음 행동을 고릅니다.</p>
-      <form id="topic-form" class="topic-form" novalidate>
-        <label for="topic-input">오늘 붙여볼 주제</label>
-        <div class="input-row">
-          <textarea id="topic-input" maxlength="2000" rows="3" placeholder="예: 탕수육 부먹 vs 찍먹"></textarea>
-          <button id="topic-submit" type="submit">분석</button>
+  <div class="content feedback-stack">
+    <p id="app-status" class="status-line" role="status" aria-live="polite" aria-atomic="true"></p>
+    <section id="app-error" class="notice error-notice" role="alert" hidden><div><h2 id="error-title">준비를 마치지 못했어요.</h2><p id="error-message">입력한 내용은 그대로 있어요. 다시 시도해 주세요.</p></div><div class="button-row"><button id="retry-action" class="button" type="button">다시 시도하기</button><button id="dismiss-error" class="button secondary" type="button">닫기</button></div></section>
+  </div>
+
+  <main id="main" class="content" tabindex="-1">
+    <section id="home" class="route" data-route="home">
+      <div id="topic-view" class="view home-grid">
+        <div class="hero"><p class="eyebrow">AI 둘의 토론을 구경하세요</p><h1>두 생각 사이,<br><em>다음 한마디.</em></h1><p class="lead">같은 주제, 다른 생각. 두 AI가 서로의 말을 받아치는 과정을 보고, 어느 쪽이 더 설득력 있는지 직접 골라보세요.</p><div class="editorial-note"><span class="side-badge side-a" aria-hidden="true">A</span><span class="side-badge side-b" aria-hidden="true">B</span><strong>토론은 둘이.<br>마지막 판단은 내가.</strong></div></div>
+        <div><form id="topic-form" class="card input-card" novalidate aria-describedby="topic-hint topic-error"><label class="field-label" for="topic-input">어떤 이야기를 나눠볼까요?</label><textarea id="topic-input" maxlength="2000" rows="5" placeholder="예: 핫도그는 샌드위치인가" aria-describedby="topic-hint topic-count topic-error"></textarea><div class="field-meta"><p id="topic-hint">짧게 적어도 괜찮아요. 토론할 문장으로 정리해 드릴게요.</p><span id="topic-count">0 / 2000</span></div><p id="topic-error" class="field-error" hidden></p><button id="topic-submit" class="button full" type="submit">토론 준비하기 <span aria-hidden="true">→</span></button><div class="suggestions"><h2>이런 주제는 어때요?</h2><button class="suggestion" type="button" data-topic="핫도그는 샌드위치인가">핫도그는 샌드위치인가 <span aria-hidden="true">↗</span></button><button class="suggestion" type="button" data-topic="탕수육은 찍어 먹는 것보다 부어 먹는 편이 낫다">탕수육은 찍어 먹는 것보다 부어 먹는 편이 낫다 <span aria-hidden="true">↗</span></button><button class="suggestion" type="button" data-topic="대학 수업은 출석을 의무화해야 하는가">대학 수업은 출석을 의무화해야 하는가 <span aria-hidden="true">↗</span></button></div></form><p class="session-note">토론은 저장되지 않아요. 새로고침하거나 창을 닫으면 이어 보기 어려울 수 있어요.</p></div>
+      </div>
+
+      <div id="context-view" class="view narrow" hidden><div class="page-intro"><p class="eyebrow">토론 전 준비 · 상황 질문</p><h1 tabindex="-1">상황을 조금만<br>알려주세요.</h1><p class="lead">한 번에 하나씩 물어볼게요.</p></div><form id="context-form" class="card" novalidate><p id="context-progress" class="hint">답변한 질문 0개</p><fieldset id="context-fieldset"><legend id="context-question">확인할 질문을 준비하고 있어요.</legend><div id="context-options" class="options vertical"></div></fieldset><details id="context-free-details" class="box" hidden><summary>직접 적기 <span aria-hidden="true">+</span></summary><label for="context-free-input">알려주고 싶은 상황</label><textarea id="context-free-input" maxlength="1000" rows="4" aria-describedby="context-free-count context-error"></textarea><span id="context-free-count" class="hint">0 / 1000</span></details><p id="context-error" class="field-error" hidden></p><button id="context-submit" class="button full" type="submit">답변 보내기</button></form></div>
+
+      <div id="context-review-view" class="view narrow" hidden><div class="page-intro"><p class="eyebrow">토론 전 준비 · 상황 정리</p><h1 tabindex="-1">토론에 사용할 상황이에요.</h1><p class="lead">답한 내용이 어떻게 구분됐는지 확인해 주세요.</p></div><div id="context-review-groups" class="context-groups"></div><button id="context-review-submit" class="button full" type="button">이 내용으로 정리하기</button></div>
+
+      <div id="motion-view" class="view narrow" hidden><div class="page-intro"><p class="eyebrow">토론 전 준비 · 문장 확인</p><h1 id="motion-heading" tabindex="-1">이렇게 이야기해 볼까요?</h1><p class="lead">이 문장을 두고 아래의 두 입장이 토론해요.</p></div><div class="card motion-card"><p class="section-label">토론할 문장</p><h2 id="motion-title" class="motion-title"></h2><p id="confirmation-reason" class="inline-feedback" hidden></p><div id="motion-sides" class="side-grid"></div><details id="motion-edit-details" class="box"><summary>문장 다듬기 · 1회 가능 <span aria-hidden="true">+</span></summary><p class="hint">토론을 시작하기 전에 한 번 다듬을 수 있어요.</p><form id="motion-edit-form" novalidate><label for="motion-edit-input">토론할 문장</label><textarea id="motion-edit-input" maxlength="1200" rows="4" aria-describedby="motion-edit-count motion-edit-error"></textarea><div class="field-meta"><span class="hint">성공했을 때만 수정 기회가 사용돼요.</span><span id="motion-edit-count">0 / 1200</span></div><p id="motion-edit-error" class="field-error" hidden></p><div class="button-row"><button class="button" type="submit">수정한 문장 적용</button><button id="motion-edit-cancel" class="button secondary" type="button">취소</button></div></form></details><p id="motion-edit-used" class="inline-feedback success" hidden>✓ 문장을 수정했어요. 추가 수정은 할 수 없어요.</p><p class="session-note">이 토론은 지금 열린 창에서만 이어집니다.</p><button id="start-debate" class="button full" type="button">이 주제로 토론 보기 <span aria-hidden="true">→</span></button></div></div>
+    </section>
+
+    <section id="debate" class="route" data-route="debate" hidden>
+      <div id="debate-empty" class="view empty-state narrow"><p class="eyebrow">토론 보기</p><h1 tabindex="-1">아직 시작한 토론이 없어요.</h1><p class="lead">궁금한 주제 하나로 시작해 보세요.</p><a class="button" href="#home">주제 고르러 가기</a></div>
+      <div id="debate-arena" class="view arena" hidden>
+        <aside class="debate-rail" aria-label="토론 정보"><p class="eyebrow">오늘의 토론</p><h2 id="rail-motion"></h2><div id="rail-sides"></div><ol id="rail-steps" class="phase-steps"></ol><p class="hint">AI의 말은 틀릴 수 있어요. 서로 다른 관점을 살펴보세요.</p></aside>
+          <div class="debate-column"><details class="top-motion"><summary id="mobile-motion"></summary><p id="mobile-motion-detail"></p></details><div id="mobile-sides" class="mobile-sides"></div><div class="current-stage"><strong><span id="phase-number">01</span> <span id="phase-name">첫 입장</span></strong><details><summary>토론 순서</summary><ol id="mobile-steps" class="phase-steps"></ol></details></div><div class="phase-intro"><p class="eyebrow" id="phase-eyebrow">첫 입장</p><h1 id="debate-heading" tabindex="-1">먼저 각자의 생각을 들어보세요.</h1><p id="phase-description">두 입장이 어디서 출발하는지 살펴보세요.</p></div><a id="new-turn-link" class="new-turn-link" href="#debate-log" hidden>새 발언이 도착했어요 ↓</a><ol id="debate-log" class="turn-list"></ol><section id="loading-turn" class="card loading-turn" aria-busy="true" hidden><p class="section-label">다음 발언</p><p id="loading-message">다음 발언을 준비하고 있어요.</p><button id="stop-waiting" class="button secondary" type="button" hidden>기다리기 중단</button></section>
+          <section id="audience-panel" class="card audience-card" hidden><p class="eyebrow">주고받기를 마쳤어요</p><h2 tabindex="-1">두 AI에게 같은 질문을 해볼까요?</h2><p>질문 없이 이어서 봐도 좋아요.</p><form id="audience-form" novalidate><label for="audience-input">두 AI에게 같은 질문</label><textarea id="audience-input" maxlength="500" rows="4" placeholder="더 듣고 싶은 점을 적어주세요." aria-describedby="audience-count audience-error"></textarea><div class="field-meta"><span>A와 B가 각각 답해요.</span><span id="audience-count">0 / 500</span></div><p id="audience-error" class="field-error" hidden></p><div class="button-row"><button id="send-audience" class="button" type="submit">질문 보내기</button><button id="skip-audience" class="button secondary" type="button">질문 없이 계속 보기</button></div></form></section>
+          <div id="debate-controls" class="actions"><button id="next-turn" class="button full" type="button">다음 발언 보기 <span aria-hidden="true">→</span></button><button id="show-summary" class="button full" type="button" hidden>토론 정리 보기 <span aria-hidden="true">→</span></button></div>
         </div>
-        <div class="form-meta"><span id="topic-count">0 / 2000</span><span>웹 검색 없이 일반지식 + 사용자 제공 맥락 사용</span></div>
-        <p id="home-status" class="status" role="status" aria-live="polite"></p>
-      </form>
-      <div id="motion-card" class="motion-card hidden" aria-live="polite"></div>
+      </div>
+
+      <div id="summary-view" class="view narrow summary-wrap" hidden><div class="page-intro"><p id="summary-motion" class="eyebrow"></p><h1 tabindex="-1">토론을 되짚어볼까요?</h1><p class="lead">정답이나 승자를 정한 요약이 아니에요. 판단할 재료를 모았어요.</p></div><section class="clash-box"><h2>핵심 충돌</h2><div id="summary-clashes"></div></section><div id="summary-sides" class="summary-sides"></div><div class="summary-rest"><section><h2>함께 인정한 부분</h2><div id="summary-agreements"></div></section><section><h2>남은 질문</h2><div id="summary-unresolved"></div></section></div><button id="open-choice" class="button full" type="button">내 생각 고르기 <span aria-hidden="true">→</span></button><button id="back-to-debate" class="text-button" type="button">토론 전체 다시 읽기</button></div>
+
+      <div id="choice-view" class="view narrow" hidden><p class="eyebrow">마지막 판단은 내가</p><form id="choice-form"><fieldset class="choice-fieldset"><legend><h1 tabindex="-1">어느 쪽이 더 설득력 있었나요?</h1></legend><div id="choice-options" class="options choice-options"></div></fieldset><button class="button full" type="submit">선택 마치기</button></form><button id="back-to-summary" class="text-button" type="button">토론 정리 다시 보기</button><p class="session-note">이 토론과 선택은 저장되지 않아요.</p></div>
+
+      <div id="done-view" class="view narrow done-view" hidden><div class="done-mark" aria-hidden="true">✓</div><p class="eyebrow">내 선택은</p><h1 id="done-choice" tabindex="-1"></h1><p class="lead">이 토론은 여기서 마칠게요.</p><p class="session-note">이 토론과 선택은 저장되지 않아요.</p><button id="restart" class="button full" type="button">다른 주제로 시작하기</button><button id="reread-debate" class="text-button" type="button">이 토론 다시 읽기</button></div>
     </section>
 
-    <section id="debate" class="panel debate-section" aria-labelledby="debate-title">
-      <div class="section-heading">
-        <p class="eyebrow">LIVE HARNESS</p>
-        <h2 id="debate-title">토론</h2>
-        <div id="phase-pill" class="phase-pill">대기 중</div>
-      </div>
-      <div id="context-panel" class="context-panel hidden"></div>
-      <div id="debate-empty" class="empty-state">주제를 입력하고 논제를 확인하면 토론이 시작됩니다.</div>
-      <div id="debate-log" class="debate-log" aria-live="polite"></div>
-      <div id="audience-panel" class="audience-panel hidden"></div>
-      <div id="debate-controls" class="debate-controls hidden">
-        <button id="next-turn" type="button">다음 발언</button>
-      </div>
-      <p id="debate-status" class="status" role="status" aria-live="polite"></p>
-      <div id="summary-panel" class="summary-panel hidden"></div>
-      <div id="choice-panel" class="choice-panel hidden"></div>
-    </section>
-
-    <section id="how-it-works" class="panel how-section" aria-labelledby="how-title">
-      <p class="eyebrow">NOT A SCRIPT GENERATOR</p>
-      <h2 id="how-title">왜 그냥 “찬반 대본”이 아닌가</h2>
-      <div class="how-grid">
-        <article><span>01</span><h3>State</h3><p>주장, 관계, 질문, 공개적 입장 변화를 구조화해 다음 턴에 필요한 상태만 유지합니다.</p></article>
-        <article><span>02</span><h3>Action</h3><p>근거 요구, 전제 공격, 반례, 양보 같은 행동 중 지금 가능한 것을 고릅니다.</p></article>
-        <article><span>03</span><h3>Persona</h3><p>캐릭터 연기가 아니라 적법한 행동 중 무엇을 선호하는지에만 영향을 줍니다.</p></article>
-        <article><span>04</span><h3>Guard</h3><p>선택한 행동과 실제 발언이 맞는지, 배정 입장을 뒤집지 않는지 확인한 뒤 State에 반영합니다.</p></article>
-      </div>
-      <div class="flow" aria-label="AI 처리 흐름">
-        <span>INPUT</span><b>→</b><span>PYTHON API</span><b>→</b><span>STATE</span><b>→</b><span>ACTION</span><b>→</b><span>LLM</span><b>→</b><span>UPDATE</span>
-      </div>
-      <p class="footnote">API Key는 브라우저 코드가 아니라 서버 환경 변수에서만 읽습니다.</p>
-    </section>
+    <section id="how-it-works" class="route" data-route="how-it-works" hidden><div class="page-intro"><p class="eyebrow">이용 안내</p><h1 tabindex="-1">주제 하나로 시작해,<br>내 생각으로 마무리해요.</h1><p class="lead">전문적인 토론 지식은 필요 없어요.</p></div><div class="how-steps"><article><span>01 / 주제</span><h2>궁금한 이야기를 적어요.</h2><p>토론할 문장과 두 입장을 먼저 보여드려요.</p></article><article><span>02 / 공방</span><h2>다음 한마디를 따라가요.</h2><p>두 AI가 앞선 발언을 바탕으로 번갈아 말해요. 중간에는 같은 질문을 양쪽에 던질 수 있어요.</p></article><article><span>03 / 내 생각</span><h2>선택은 내가 해요.</h2><p>서로의 논점을 정리하고, 어느 쪽이 더 설득력 있었는지 직접 골라요.</p></article></div><div class="narrow info-copy"><h2>두 AI는 어떻게 다른가요?</h2><p>한쪽은 말의 뜻을 따지고, 다른 쪽은 예외를 찾을 수 있어요. 주제에 맞는 사고 방식을 자동으로 고릅니다.</p><hr><p>AI의 말은 틀릴 수 있어요. 이 서비스는 웹에서 근거를 확인하지 않으며, 사실 확인이나 전문적인 판단을 대신하지 않아요.</p><p class="session-note">토론은 저장되지 않아요. 새로고침하거나 창을 닫으면 이어 보기 어려울 수 있어요.</p><details class="box"><summary>내부에서 어떻게 이어지나요? <span aria-hidden="true">+</span></summary><p>발언을 하나씩 만들고, 앞선 주장과 질문을 다음 발언에 전달합니다. 공개하기 어려운 응답은 토론에 추가하지 않습니다.</p></details><a class="button full" href="#home">주제 고르러 가기</a></div></section>
   </main>
+  <footer class="site-footer"><div class="content">사이 · 두 AI의 토론, 나의 판단.</div></footer>
   <script src="/app.js" defer></script>
 </body>
 </html>
