@@ -1,6 +1,9 @@
 """Pure API dispatcher. Vercel handlers are thin HTTP adapters around this module."""
 from __future__ import annotations
 
+import os
+import re
+
 from pydantic import ValidationError
 
 from .contracts import AnalyzeTopicRequest, ContextStepRequest, CreateMotionRequest, DebateStepRequest, NeutralSummaryRequest
@@ -22,7 +25,9 @@ def dispatch(path: str, body: dict, service=None):
         service = service or get_default_service()
         if path == "/api/health":
             mode = load_runtime_config().web_mode
-            return 200, {"ok": True, "data": {"status": "ready", "mode": mode, "provider_call": False}}
+            sha = os.getenv("VERCEL_GIT_COMMIT_SHA", "").lower()
+            version = sha[:7] if re.fullmatch(r"[0-9a-f]{40,64}", sha) else None
+            return 200, {"ok": True, "data": {"status": "ready", "mode": mode, "provider_call": False, "version": version}}
         if path == "/api/analyze-topic":
             return _success(service.analyze_topic(AnalyzeTopicRequest.model_validate(body)))
         if path == "/api/context-step":

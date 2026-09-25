@@ -46,7 +46,11 @@ def build_service(*, config_path: Path | str = DEFAULT_CONFIG_PATH):
         "api_key": required["DEBATER_API_KEY"],
         "model": config.provider.model,
     }
-    return LiveDebateWebService(provider=provider, codec=SessionTokenCodec(required["SESSION_SECRET"]))
+    return LiveDebateWebService(
+        provider=provider,
+        debater_models=config.provider.debater_models,
+        codec=SessionTokenCodec(required["SESSION_SECRET"]),
+    )
 
 
 @lru_cache(maxsize=1)

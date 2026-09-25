@@ -9,7 +9,7 @@
 - `config.json`: `provider.url`, `provider.model`, `web_mode`처럼 Git에 커밋 가능한 비밀이 아닌 설정
 - `.env`: `DEBATER_API_KEY`, `SESSION_SECRET` 같은 서버 전용 비밀값만 저장
 
-Provider URL은 OpenAI 호환 Chat Completions의 `/v1` 기본 주소 또는 `/chat/completions` 전체 주소를 사용한다. CLI 실험에서 `--model`을 명시하면 해당 실행 모델을 선택하며, Web MVP는 `config.json`의 `provider.model`을 사용한다.
+Provider URL은 OpenAI 호환 Chat Completions의 `/v1` 기본 주소 또는 `/chat/completions` 전체 주소를 사용한다. CLI 실험에서 `--model`을 명시하면 해당 실행 모델을 선택한다. Web MVP는 `provider.model`을 토론 외 판단·추출에 사용하고, `provider.debater_models` 배열에서 서로 다른 회사의 모델 두 개를 A/B 발언 생성에 배정한다.
 
 `.env`는 Git에서 제외한다. 실제 키를 문서, 시나리오, 결과 폴더에 넣지 않는다. API 호출은 비용 또는 쿼터를 소모한다.
 

@@ -91,6 +91,10 @@ class LiveWebServiceTests(unittest.TestCase):
         self.deps = FakeDeps()
         self.service = LiveDebateWebService(
             provider={"url": "https://example.invalid", "api_key": "secret", "model": "gpt-test"},
+            debater_models=(
+                {"company": "GOOGLE", "id": "gemini-test"},
+                {"company": "ANTHROPIC", "id": "claude-test"},
+            ),
             codec=SessionTokenCodec("unit-test-session-secret-123456789"),
             deps=self.deps,
         )

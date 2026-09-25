@@ -178,6 +178,7 @@ legend { width: 100%; margin-bottom: 16px; font-size: 22px; font-weight: 750; }
 .info-copy { padding-block: 16px 40px; }
 .info-copy hr { margin-block: 28px; border: 0; border-top: 1px solid var(--color-border); }
 .site-footer { padding-block: 28px; border-top: 1px solid var(--color-border); color: var(--color-muted); font-size: 14px; }
+.build-version { margin-left: 8px; font-size: 12px; }
 
 @keyframes turn-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 

@@ -17,7 +17,10 @@ class ConfigSplitTests(unittest.TestCase):
         path = root / "config.json"
         path.write_text(json.dumps({
             "web_mode": mode,
-            "provider": {"url": url, "model": model},
+            "provider": {"url": url, "model": model, "debater_models": [
+                {"company": "GOOGLE", "id": "gemini-test"},
+                {"company": "ANTHROPIC", "id": "claude-test"},
+            ]},
         }), encoding="utf-8")
         return path
 
@@ -26,6 +29,7 @@ class ConfigSplitTests(unittest.TestCase):
         self.assertIn(data["web_mode"], ("mock", "live"))
         self.assertTrue(data["provider"]["url"].startswith("https://"))
         self.assertTrue(data["provider"]["model"])
+        self.assertGreaterEqual(len(data["provider"]["debater_models"]), 2)
         dumped = json.dumps(data).lower()
         self.assertNotIn("api_key", dumped)
         self.assertNotIn("session_secret", dumped)
@@ -87,7 +91,10 @@ class ConfigSplitTests(unittest.TestCase):
             path = Path(tmp) / "config.json"
             path.write_text(json.dumps({
                 "web_mode": "live",
-                "provider": {"url": "https://example.test/v1", "model": "gpt-test", "api_key": "bad"},
+                "provider": {"url": "https://example.test/v1", "model": "gpt-test", "debater_models": [
+                    {"company": "GOOGLE", "id": "gemini-test"},
+                    {"company": "ANTHROPIC", "id": "claude-test"},
+                ], "api_key": "bad"},
             }), encoding="utf-8")
             with patch.dict(os.environ, {
                 "DEBATER_API_KEY": "key",

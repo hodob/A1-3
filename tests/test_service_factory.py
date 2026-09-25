@@ -13,7 +13,10 @@ from src.web_app.live_service import LiveDebateWebService
 class ServiceFactoryTests(unittest.TestCase):
     def _config(self, folder: str, *, mode: str = "mock", url: str = "https://example.com/v1", model: str = "gpt-test") -> Path:
         path = Path(folder) / "config.json"
-        path.write_text(json.dumps({"web_mode": mode, "provider": {"url": url, "model": model}}), encoding="utf-8")
+        path.write_text(json.dumps({"web_mode": mode, "provider": {"url": url, "model": model, "debater_models": [
+            {"company": "GOOGLE", "id": "gemini-test"},
+            {"company": "ANTHROPIC", "id": "claude-test"},
+        ]}}), encoding="utf-8")
         return path
 
     def test_mock_config_is_safe_without_credentials(self):
@@ -41,6 +44,7 @@ class ServiceFactoryTests(unittest.TestCase):
             self.assertIsInstance(service, LiveDebateWebService)
             self.assertEqual(service.provider["url"], "https://example.com/v1/chat/completions")
             self.assertEqual(service.provider["model"], "gpt-test")
+            self.assertEqual([item.id for item in service.debater_models], ["gemini-test", "claude-test"])
 
     def test_invalid_mode_in_config_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:

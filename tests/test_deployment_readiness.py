@@ -74,6 +74,10 @@ class DeploymentReadinessTests(unittest.TestCase):
                 shutil.copytree(ROOT / name, root / name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
             for name in ("pyproject.toml", "requirements.txt", "vercel.json", "config.json"):
                 shutil.copy2(ROOT / name, root / name)
+            # Bundle import is verified with mock service so this test never needs live credentials.
+            runtime = json.loads((root / "config.json").read_text(encoding="utf-8"))
+            runtime["web_mode"] = "mock"
+            (root / "config.json").write_text(json.dumps(runtime), encoding="utf-8")
             code = (
                 "from src.web_app.api import dispatch; "
                 "status,payload=dispatch('/api/analyze-topic', {'topic':'탕수육 부먹 vs 찍먹'}); "

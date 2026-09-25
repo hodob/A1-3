@@ -69,12 +69,26 @@ class LiveSmokeTests(unittest.TestCase):
         deps = MeteredDependencies(DeterministicDeps(), max_total_tokens=5000)
         service = LiveDebateWebService(
             provider={"url": "https://example.invalid", "api_key": "secret", "model": "gpt-test"},
+            debater_models=(
+                {"company": "GOOGLE", "id": "gemini-test"},
+                {"company": "ANTHROPIC", "id": "claude-test"},
+            ),
             codec=codec, deps=deps,
         )
         report = run_smoke(service, codec, deps, SmokePlan(topic="핫도그는 샌드위치인가?", debate_turns=2, max_total_tokens=5000))
         self.assertEqual(report["status"], "PASS")
         self.assertEqual(report["debate_turns"], 2)
         self.assertEqual(report["speakers"], ["A", "B"])
+        selected = report["debater_models"]
+        self.assertNotEqual(selected["A"], selected["B"])
+        self.assertEqual(
+            [call["model"] for call in report["calls"] if call["purpose"] == "utterance_generation"],
+            [selected["A"], selected["B"]],
+        )
+        self.assertEqual(
+            {call["model"] for call in report["calls"] if call["purpose"] != "utterance_generation"},
+            {"gpt-test"},
+        )
         self.assertGreaterEqual(report["state_counts"]["propositions"], 3)
         self.assertGreaterEqual(report["state_counts"]["relations"], 2)
         self.assertGreaterEqual(report["state_counts"]["questions"], 1)

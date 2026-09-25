@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Literal, Mapping
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.json"
@@ -18,10 +18,25 @@ class RuntimeConfigError(ValueError):
     pass
 
 
+class DebaterModelConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    company: Literal["GOOGLE", "ANTHROPIC", "OPENAI"]
+    id: str = Field(min_length=1)
+
+
 class ProviderRuntimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     url: str = Field(min_length=1)
     model: str = Field(min_length=1)
+    debater_models: tuple[DebaterModelConfig, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def distinct_debaters(self):
+        companies = [item.company for item in self.debater_models]
+        models = [item.id for item in self.debater_models]
+        if len(companies) != len(set(companies)) or len(models) != len(set(models)):
+            raise ValueError("debater_models must have distinct companies and model IDs")
+        return self
 
 
 class RuntimeConfig(BaseModel):

@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .action_execution_contracts import CONTRACTS
 from .action_fidelity import ActionFidelityLabel
 from .provider_adapter import CURRENT_PROVIDER, ProviderAdapter
+from .provider_transport import request_completion
 from .stance_compliance import StanceAssignment, StanceLabel, validate_utterance
 
 
@@ -67,11 +68,9 @@ def judge_combined(provider: dict, *, action: str, target_id: str | None, target
     }
     adapter = ProviderAdapter(CURRENT_PROVIDER)
     body = adapter.build_structured_body(provider["model"], [{"role": "system", "content": instructions}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], CombinedComplianceWireVerdict, "compliance_verdict")
-    request = urllib.request.Request(provider["url"], data=json.dumps(body, ensure_ascii=False).encode("utf-8"), headers={"Authorization": f"Bearer {provider['api_key']}", "Content-Type": "application/json"}, method="POST")
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            response_payload = json.load(response)
+        response_payload = request_completion(provider, body, timeout=timeout)
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:

@@ -5,6 +5,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FrontendContractTests(unittest.TestCase):
+    def test_footer_displays_deployment_version_from_health(self):
+        html = (ROOT / "public" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('id="build-version"', html)
+        self.assertIn("'/api/health'", js)
+        self.assertIn("#build-version", js)
+
     def test_three_navigable_sections_exist(self):
         html = (ROOT / "public" / "index.html").read_text(encoding="utf-8")
         for section_id in ("home", "debate", "how-it-works"):

@@ -62,7 +62,7 @@ node --check public/app.js
 
 ## Mock 웹 실행 — Provider tokens 0
 
-기본값은 `mock` 모드다.
+로컬 개발 서버는 배포 설정이 `live`여도 항상 `mock` 서비스를 사용한다.
 
 ```bash
 python -m etc.tools.web_dev_server
@@ -78,10 +78,15 @@ Topic → Motion → Debate → Audience Question → Neutral Summary → User C
 
 ```json
 {
-  "web_mode": "mock",
+  "web_mode": "live",
   "provider": {
     "url": "https://copa.codyssey.kr/v1",
-    "model": "gpt-5.4"
+    "model": "gpt-5.4",
+    "debater_models": [
+      {"company": "GOOGLE", "id": "gemini-3-flash"},
+      {"company": "ANTHROPIC", "id": "claude-haiku-4"},
+      {"company": "OPENAI", "id": "gpt-5.4-mini"}
+    ]
   }
 }
 ```
@@ -93,7 +98,11 @@ Topic → Motion → Debate → Audience Question → Neutral Summary → User C
 
 로컬 비밀값 형식은 `.env.example`을 참고한다. `.env`에 URL/model/mode를 넣지 않는다.
 
-배포 직전 `config.json`의 `web_mode`를 `live`로 변경한다. 로컬 `web_dev_server`는 Provider 호출 없이 Mock 서비스를 사용한다.
+`provider.model`은 주제 파악, 의미 검사, State 추출, 요약을 담당한다. `debater_models` 중 서로 다른 회사의 모델 두 개를 토론 시작 시 뽑아 A/B 발언 생성에 배정하고 서명된 세션에 고정한다. 현재 배포 설정은 `live`다. 로컬 `web_dev_server`는 이 설정과 무관하게 Provider 호출 없이 Mock 서비스를 사용한다.
+
+모든 live Provider 요청은 streaming으로 전송한다. 발언과 Tool Calling 청크를 서버에서 완성한 뒤 기존 로컬 검증을 거쳐 확정하므로, 현재 웹 화면에는 확정 발언이 한 번에 표시된다.
+
+배포 화면 하단의 짧은 버전은 Vercel의 `VERCEL_GIT_COMMIT_SHA`가 제공될 때만 표시한다. 이 System Environment Variable이 비활성화된 환경에서는 버전을 숨긴다.
 
 
 ## 배포 전 0-token Preflight

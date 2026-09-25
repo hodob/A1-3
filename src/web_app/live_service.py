@@ -6,6 +6,7 @@ TDD-tested without spending provider tokens.
 from __future__ import annotations
 
 import json
+import random
 import time
 import urllib.error
 import urllib.request
@@ -25,8 +26,10 @@ from src.debate_engine.combined_compliance import finalize_compliant_utterance, 
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError
 from src.debate_engine.debate_harness import call_model, speech_messages
 from src.debate_engine.provider_adapter import CURRENT_PROVIDER, ProviderAdapter
+from src.debate_engine.provider_transport import request_completion
 from src.debate_engine.stance_compliance import StanceAssignment
 from src.debate_engine.state_harness import call_patch, extract_and_apply
+from src.runtime_config import DebaterModelConfig
 
 
 class LiveRuntimeDependencies:
@@ -42,14 +45,9 @@ class LiveRuntimeDependencies:
     def structured(self, provider, messages, contract, tool_name, timeout=90):
         adapter = ProviderAdapter(CURRENT_PROVIDER)
         body = adapter.build_structured_body(provider["model"], messages, contract, tool_name)
-        request = urllib.request.Request(
-            provider["url"], data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-            headers={"Authorization": f"Bearer {provider['api_key']}", "Content-Type": "application/json"}, method="POST",
-        )
         started = time.monotonic()
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                payload = json.load(response)
+            payload = request_completion(provider, body, timeout=timeout)
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"LLM HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
@@ -66,11 +64,25 @@ class LiveDebateWebService:
         ("FINAL_FOCUS", "A"), ("FINAL_FOCUS", "B"),
     ]
 
-    def __init__(self, provider: dict, codec: SessionTokenCodec, deps: LiveRuntimeDependencies | None = None, *, timeout: float = 90):
+    def __init__(self, provider: dict, debater_models: tuple[DebaterModelConfig, ...], codec: SessionTokenCodec, deps: LiveRuntimeDependencies | None = None, *, timeout: float = 90, rng: random.Random | None = None):
         self.provider = provider
+        self.debater_models = tuple(DebaterModelConfig.model_validate(item) for item in debater_models)
+        if len(self.debater_models) < 2 or len({item.company for item in self.debater_models}) != len(self.debater_models) or len({item.id for item in self.debater_models}) != len(self.debater_models):
+            raise ValueError("debater_models must contain distinct companies and models")
         self.codec = codec
         self.deps = deps or LiveRuntimeDependencies()
         self.timeout = timeout
+        self.rng = rng or random.SystemRandom()
+
+    def _select_debater_models(self) -> dict[str, str]:
+        selected = self.rng.sample(self.debater_models, 2)
+        return {"A": selected[0].id, "B": selected[1].id}
+
+    def _validate_debater_models(self, selected: dict) -> dict[str, str]:
+        by_id = {item.id: item.company for item in self.debater_models}
+        if set(selected) != {"A", "B"} or any(not isinstance(value, str) or value not in by_id for value in selected.values()) or by_id[selected["A"]] == by_id[selected["B"]]:
+            raise ValueError("세션 모델 검증에 실패했습니다. 토론을 다시 시작해주세요.")
+        return selected
 
     def analyze_topic(self, request: AnalyzeTopicRequest) -> TopicAnalysis:
         system = (
@@ -124,9 +136,9 @@ class LiveDebateWebService:
 
     def _new_engine(self, session: DebateSession) -> dict:
         clean = session.model_copy(update={"engine_token": None})
-        return {"session": clean.model_dump(mode="json"), "debate_state": DebateState().model_dump(mode="json"), "action_history": []}
+        return {"session": clean.model_dump(mode="json"), "debate_state": DebateState().model_dump(mode="json"), "action_history": [], "debater_models": self._select_debater_models()}
 
-    def _load_engine(self, public: DebateSession) -> tuple[DebateSession, DebateState, list[tuple[str, str, tuple[str, ...]]]]:
+    def _load_engine(self, public: DebateSession) -> tuple[DebateSession, DebateState, list[tuple[str, str, tuple[str, ...]]], dict[str, str]]:
         if not public.engine_token:
             payload = self._new_engine(public)
         else:
@@ -137,11 +149,12 @@ class LiveDebateWebService:
         session = DebateSession.model_validate(payload["session"]).model_copy(update={"engine_token": public.engine_token})
         state = DebateState.model_validate(payload["debate_state"])
         history = [(x[0], x[1], tuple(x[2])) for x in payload.get("action_history", [])]
-        return session, state, history
+        selected_models = self._validate_debater_models(payload.get("debater_models", {}))
+        return session, state, history, selected_models
 
-    def _save_engine(self, session: DebateSession, state: DebateState, history: list[tuple[str, str, tuple[str, ...]]]) -> DebateSession:
+    def _save_engine(self, session: DebateSession, state: DebateState, history: list[tuple[str, str, tuple[str, ...]]], selected_models: dict[str, str]) -> DebateSession:
         clean = session.model_copy(update={"engine_token": None})
-        token = self.codec.encode({"session": clean.model_dump(mode="json"), "debate_state": state.model_dump(mode="json"), "action_history": [[a, b, list(c)] for a, b, c in history]})
+        token = self.codec.encode({"session": clean.model_dump(mode="json"), "debate_state": state.model_dump(mode="json"), "action_history": [[a, b, list(c)] for a, b, c in history], "debater_models": selected_models})
         return clean.model_copy(update={"engine_token": token})
 
     @staticmethod
@@ -162,7 +175,7 @@ class LiveDebateWebService:
     def _transcript_for_prompt(session: DebateSession) -> list[dict]:
         return [{"speaker": x.speaker, "side": x.side_label, "speech": x.utterance} for x in session.transcript]
 
-    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, phase: str, speaker: str) -> tuple[str, DebateState, list]:
+    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str) -> tuple[str, DebateState, list]:
         phase_lower = phase.lower()
         turn_number = len(session.transcript) + 1
         raw_options = eligible_actions(state, speaker, phase_lower)
@@ -183,7 +196,8 @@ class LiveDebateWebService:
 
         def generate(feedback: str):
             current = messages if not feedback else [*messages, {"role": "user", "content": feedback}]
-            return self.deps.generate_text(self.provider, current, self.timeout)[0]
+            debater_provider = {**self.provider, "model": selected_models[speaker], "stream": True}
+            return self.deps.generate_text(debater_provider, current, self.timeout)[0]
 
         assignment = StanceAssignment(turn["side"], session.side_labels[1 if speaker == "A" else 0])
 
@@ -209,19 +223,19 @@ class LiveDebateWebService:
         return checked.utterance, candidate, history
 
     def debate_step(self, request: DebateStepRequest) -> DebateStepResponse:
-        session, state, history = self._load_engine(request.session)
+        session, state, history, selected_models = self._load_engine(request.session)
         if session.completed:
-            session = self._save_engine(session, state, history)
+            session = self._save_engine(session, state, history, selected_models)
             return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
 
         gate = session.next_index == 8 and session.audience_status == "PENDING"
         if gate:
             if request.command == "NEXT":
-                session = self._save_engine(session, state, history)
+                session = self._save_engine(session, state, history, selected_models)
                 return DebateStepResponse(session=session, phase="CROSSFIRE", awaiting_audience_question=True)
             if request.command == "SKIP_AUDIENCE":
                 session.audience_status = "SKIPPED"
-                session = self._save_engine(session, state, history)
+                session = self._save_engine(session, state, history, selected_models)
                 return DebateStepResponse(session=session, phase="CROSSFIRE")
             if request.command == "AUDIENCE_QUESTION":
                 if not request.audience_question:
@@ -229,31 +243,31 @@ class LiveDebateWebService:
                 session.audience_status = "ASKED"
                 session.audience_question = request.audience_question
                 session.audience_response_index = 0
-                session = self._save_engine(session, state, history)
+                session = self._save_engine(session, state, history, selected_models)
                 return DebateStepResponse(session=session, phase="CROSSFIRE")
 
         if session.audience_status == "ASKED" and session.audience_response_index < 2:
             phase, speaker = "AUDIENCE_RESPONSE", ("A" if session.audience_response_index == 0 else "B")
-            utterance, state, history = self._commit_generated_turn(session, state, history, phase, speaker)
+            utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker)
             item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
             session.transcript.append(item)
             session.audience_response_index += 1
             if session.audience_response_index == 2:
                 session.audience_status = "DONE"
-            session = self._save_engine(session, state, history)
+            session = self._save_engine(session, state, history, selected_models)
             return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance)
 
         if session.next_index >= len(self._base_schedule):
             session.completed = True
-            session = self._save_engine(session, state, history)
+            session = self._save_engine(session, state, history, selected_models)
             return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
 
         phase, speaker = self._base_schedule[session.next_index]
-        utterance, state, history = self._commit_generated_turn(session, state, history, phase, speaker)
+        utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker)
         item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
         session.transcript.append(item)
         session.next_index += 1
         if session.next_index >= len(self._base_schedule):
             session.completed = True
-        session = self._save_engine(session, state, history)
+        session = self._save_engine(session, state, history, selected_models)
         return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance, completed=session.completed)

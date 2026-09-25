@@ -1,7 +1,12 @@
 {
-  "web_mode": "mock",
+  "web_mode": "live",
   "provider": {
     "url": "https://copa.codyssey.kr/v1",
-    "model": "gpt-5.4"
+    "model": "gpt-5.4",
+    "debater_models": [
+      {"company": "GOOGLE", "id": "gemini-3-flash"},
+      {"company": "ANTHROPIC", "id": "claude-haiku-4"},
+      {"company": "OPENAI", "id": "gpt-5.4-mini"}
+    ]
   }
 }

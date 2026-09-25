@@ -118,6 +118,7 @@ Browser 코드에는 Provider 설정이나 비밀값을 하드코딩하지 않�
 
 - `provider.url`
 - `provider.model`
+- `provider.debater_models` (회사와 모델 ID의 배열)
 - `web_mode`
 
 이 값들은 Git에 커밋할 수 있지만 Frontend가 직접 Provider를 호출하는 데 사용하지 않는다. Python Serverless Function이 읽는다.
@@ -144,7 +145,9 @@ Browser 코드에는 Provider 설정이나 비밀값을 하드코딩하지 않�
 `config.json`의 `web_mode=live`
 
 - 실제 Provider 사용
-- `config.json`의 URL/model + 환경 변수의 API key/session secret이 필요
+- `config.json`의 URL, coordinator model, debater model array + 환경 변수의 API key/session secret이 필요
+- A/B 발언 생성은 서로 다른 회사의 모델을 한 번 뽑아 서명된 세션에 고정한다. 주제 파악, 의미 검사, State 추출, 중립 요약은 `provider.model`을 쓴다.
+- 모든 Provider 요청은 SSE streaming으로 받고, 서버에서 텍스트·Tool Calling arguments·usage를 조립한다. 완성된 결과만 로컬 검증과 State 반영에 사용한다. 웹 화면의 글자별 실시간 표시는 아직 연결되지 않았다.
 - Mock 및 fixture 테스트를 먼저 통과한 뒤 최소 smoke만 수행
 
 ## 9. Loading / Success / Failure

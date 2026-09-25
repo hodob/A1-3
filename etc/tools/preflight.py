@@ -54,7 +54,7 @@ def collect_static_checks(root: Path = ROOT) -> list[dict]:
         serialized = json.dumps(runtime).lower()
         split_ok = env_keys == {"DEBATER_API_KEY", "SESSION_SECRET"} and all(
             key in runtime for key in ("web_mode", "provider")
-        ) and all(key in runtime.get("provider", {}) for key in ("url", "model")) and not any(
+        ) and all(key in runtime.get("provider", {}) for key in ("url", "model", "debater_models")) and not any(
             marker in serialized for marker in ("api_key", "session_secret", "secret")
         )
         detail = "secrets=.env, runtime=config.json" if split_ok else f"env_keys={sorted(env_keys)}"

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .stance_compliance import StanceAssignment, finalize_utterance
+from .provider_transport import request_completion
 from src.runtime_config import DEFAULT_CONFIG_PATH, RuntimeConfigError, load_runtime_config, secret_values
 
 
@@ -124,16 +125,9 @@ def safe_record(value):
 
 def call_model(provider: dict[str, str], messages: list[dict[str, str]], *, timeout: float = 90) -> tuple[str, dict]:
     body: dict = {"model": provider["model"], "messages": messages}
-    request = urllib.request.Request(
-        provider["url"],
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Authorization": f"Bearer {provider['api_key']}", "Content-Type": "application/json"},
-        method="POST",
-    )
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            payload = json.load(response)
+        payload = request_completion(provider, body, timeout=timeout)
     except urllib.error.HTTPError as exc:
         # Provider error bodies can contain sensitive material; do not persist or print them.
         raise RuntimeError(f"LLM HTTP {exc.code}") from exc

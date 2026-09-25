@@ -23,6 +23,21 @@ const PERSONA_DESCRIPTIONS = {
   Synthesist: '양쪽의 타당한 부분과 조정점을 찾아요.',
 };
 
+async function loadBuildVersion() {
+  try {
+    const response = await fetch('/api/health', {cache: 'no-store'});
+    if (!response.ok) return;
+    const payload = await response.json();
+    const version = payload?.data?.version;
+    if (typeof version !== 'string' || !/^[0-9a-f]{7}$/.test(version)) return;
+    const node = $('#build-version');
+    node.textContent = `버전 ${version}`;
+    node.hidden = false;
+  } catch (_) {
+    // Version is diagnostic only; the app remains usable without it.
+  }
+}
+
 const state = {
   route: 'home',
   view: 'topic-view',
@@ -660,3 +675,4 @@ function bindEvents() {
 bindEvents();
 showHomeView('topic-view', false);
 routeFromHash();
+loadBuildVersion();

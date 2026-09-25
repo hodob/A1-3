@@ -72,7 +72,7 @@ class MeteredDependencies(LiveRuntimeDependencies):
     def generate_text(self, provider, messages, timeout=90):
         self._before()
         result, metadata = self.inner.generate_text(provider, messages, timeout)
-        self._record("utterance_generation", metadata, chars=len(result))
+        self._record("utterance_generation", metadata, model=provider.get("model"), chars=len(result))
         return result, metadata
 
     def check_compliance(self, provider, **kwargs):
@@ -82,7 +82,7 @@ class MeteredDependencies(LiveRuntimeDependencies):
         stance = getattr(result.stance_compliance, "value", str(result.stance_compliance))
         if action not in ("ALIGNED", "PARTIALLY_ALIGNED") or stance not in ("SUPPORTS_ASSIGNED", "COMPATIBLE_WITH_ASSIGNED"):
             self.compliance_failures += 1
-        self._record("combined_compliance", metadata, action_fidelity=action, stance_compliance=stance)
+        self._record("combined_compliance", metadata, model=provider.get("model"), action_fidelity=action, stance_compliance=stance)
         return result, metadata
 
     def extract_patch(self, provider, turn, state, timeout, feedback=None):
@@ -91,13 +91,13 @@ class MeteredDependencies(LiveRuntimeDependencies):
         counts: dict[str, int] = {}
         for op in patch.operations:
             counts[op.op] = counts.get(op.op, 0) + 1
-        self._record("state_patch", metadata, turn=turn.get("turn"), operations=counts, repair=bool(feedback))
+        self._record("state_patch", metadata, model=provider.get("model"), turn=turn.get("turn"), operations=counts, repair=bool(feedback))
         return patch, metadata
 
     def structured(self, provider, messages, contract, tool_name, timeout=90):
         self._before()
         result, metadata = self.inner.structured(provider, messages, contract, tool_name, timeout)
-        self._record(tool_name, metadata)
+        self._record(tool_name, metadata, model=provider.get("model"))
         return result, metadata
 
     def usage_summary(self) -> dict[str, int]:
@@ -165,6 +165,7 @@ def run_smoke(
     if not session.engine_token:
         raise RuntimeError("live smoke did not produce a signed engine token")
     payload = codec.decode(session.engine_token)
+    selected_models = payload["debater_models"]
     state = DebateState.model_validate(payload["debate_state"])
     state_issues = _state_issues(state)
 
@@ -189,6 +190,7 @@ def run_smoke(
         "claim_type": analysis.claim_type,
         "motion": motion.motion,
         "personas": list(motion.personas),
+        "debater_models": selected_models,
         "debate_turns": len(session.transcript),
         "speakers": speakers,
         "phases": phases,

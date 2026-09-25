@@ -15,6 +15,7 @@ Git에 커밋하는 `config.json`에는 다음만 둔다.
 - `web_mode`: 로컬 안전 기본값은 `mock`, Production 배포 전 `live`로 변경
 - `provider.url`: Provider의 `/v1` 또는 `/chat/completions` 주소
 - `provider.model`: `gpt-5.4`
+- `provider.debater_models`: 서로 다른 회사의 CHAT 모델 3개. 토론마다 2개를 추첨해 세션에 고정
 
 API Key나 `SESSION_SECRET`은 `config.json`에 넣지 않는다.
 
@@ -37,6 +38,7 @@ Production 환경에는 다음 두 값만 등록한다.
 2. `/`가 열리는지 확인
 3. `/styles.css`, `/app.js`, `/robots.txt`가 200인지 확인
 4. `/api/health`에서 `status=ready`, `mode=live`, `provider_call=false`인지 확인한다. 이 endpoint는 Provider를 호출하지 않는다.
+   `version`은 Vercel System Environment Variables가 노출된 경우 커밋 해시 앞 7자리이며, 없으면 `null`이다.
 5. 브라우저 콘솔에 JS/CSP 오류가 없는지 확인
 6. `DEBATER_API_KEY`, `SESSION_SECRET` 두 환경 변수가 등록되었는지 Vercel Dashboard에서 확인
 7. 그 다음에만 UI의 정상 POST 흐름으로 최소 Live 검증을 진행한다.

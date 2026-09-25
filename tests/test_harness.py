@@ -9,7 +9,10 @@ from src.debate_engine.debate_harness import ConfigError, PERSONAS, build_schedu
 class HarnessTests(unittest.TestCase):
     def _config(self, folder, url="https://example.test/v1"):
         path = Path(folder) / "config.json"
-        path.write_text(json.dumps({"web_mode": "live", "provider": {"url": url, "model": "gpt-test"}}), encoding="utf-8")
+        path.write_text(json.dumps({"web_mode": "live", "provider": {"url": url, "model": "gpt-test", "debater_models": [
+            {"company": "GOOGLE", "id": "gemini-test"},
+            {"company": "ANTHROPIC", "id": "claude-test"},
+        ]}}), encoding="utf-8")
         return path
 
     def test_missing_provider_credentials_fail_before_any_request(self):

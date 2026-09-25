@@ -13,6 +13,7 @@ from pathlib import Path
 from .debate_contracts import DebateState, PatchEnvelope, PatchIssue, PatchValidationError, apply_patch
 from .debate_harness import ConfigError, load_config, select_debaters
 from .provider_adapter import CURRENT_PROVIDER, ProviderAdapter, ProviderOutputError
+from .provider_transport import request_completion
 from .question_extraction_guard import explicit_question_candidates
 
 
@@ -48,11 +49,9 @@ def call_patch(provider: dict, turn: dict, state: DebateState, timeout: float, f
     relevant = extraction_context(state)
     messages = [{"role": "system", "content": PATCH_INSTRUCTIONS}, {"role": "user", "content": json.dumps({"state": relevant, "turn": turn, "validation_errors": feedback or []}, ensure_ascii=False)}]
     body = ADAPTER.build_structured_body(provider["model"], messages, PatchEnvelope, "extract_patch")
-    request = urllib.request.Request(provider["url"], data=json.dumps(body, ensure_ascii=False).encode("utf-8"), headers={"Authorization": f"Bearer {provider['api_key']}", "Content-Type": "application/json"}, method="POST")
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            payload = json.load(response)
+        payload = request_completion(provider, body, timeout=timeout)
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:

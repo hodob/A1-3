@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from src.web_app.api import dispatch
+from src.web_app.mock_service import MockDebateWebService
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC = ROOT / "public"
@@ -19,6 +20,8 @@ STATIC = {
 }
 
 class Handler(BaseHTTPRequestHandler):
+    _service = MockDebateWebService()
+
     def log_message(self, format, *args):
         pass
 
@@ -32,6 +35,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/api/health":
+            payload = {"ok": True, "data": {"status": "ready", "mode": "mock", "provider_call": False, "version": None}}
+            self._write(200, json.dumps(payload).encode(), "application/json; charset=utf-8")
+            return
         item = STATIC.get(path)
         if not item:
             self._write(404, b"Not Found", "text/plain; charset=utf-8")
@@ -49,7 +56,7 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError):
             self._write(400, json.dumps({"ok": False, "error": {"code": "INVALID_INPUT", "message": "JSON 요청 형식이 올바르지 않습니다."}}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             return
-        status, payload = dispatch(path, body)
+        status, payload = dispatch(path, body, service=self._service)
         self._write(status, json.dumps(payload, ensure_ascii=False).encode(), "application/json; charset=utf-8")
 
 

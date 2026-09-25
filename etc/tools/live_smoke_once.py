@@ -22,7 +22,7 @@ DEFAULT_TURNS = 3
 DEFAULT_BUDGET = 20_000
 
 
-def _live_settings(env_path: Path, config_path: Path = DEFAULT_CONFIG_PATH) -> tuple[dict, str]:
+def _live_settings(env_path: Path, config_path: Path = DEFAULT_CONFIG_PATH) -> tuple[dict, str, tuple]:
     try:
         runtime = load_runtime_config(config_path)
         secrets = secret_values(env_path=env_path)
@@ -40,7 +40,7 @@ def _live_settings(env_path: Path, config_path: Path = DEFAULT_CONFIG_PATH) -> t
         "api_key": required["DEBATER_API_KEY"],
         "model": runtime.provider.model,
     }
-    return provider, required["SESSION_SECRET"]
+    return provider, required["SESSION_SECRET"], runtime.provider.debater_models
 
 
 def _dry_plan(args) -> dict:
@@ -84,10 +84,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         plan = SmokePlan(topic=args.topic, debate_turns=args.turns, max_total_tokens=args.max_tokens)
-        provider, secret = _live_settings(args.env, args.config)
+        provider, secret, debater_models = _live_settings(args.env, args.config)
         deps = MeteredDependencies(LiveRuntimeDependencies(), max_total_tokens=plan.max_total_tokens)
         codec = SessionTokenCodec(secret)
-        service = LiveDebateWebService(provider=provider, codec=codec, deps=deps, timeout=args.timeout)
+        service = LiveDebateWebService(provider=provider, debater_models=debater_models, codec=codec, deps=deps, timeout=args.timeout)
         report = run_smoke(service, codec, deps, plan)
         report["mode"] = "LIVE"
         report["model"] = provider["model"]
