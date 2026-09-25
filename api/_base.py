@@ -20,6 +20,27 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _stream_debate(self, body: dict):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-transform")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        def emit(kind: str, data: dict):
+            raw = f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n".encode("utf-8")
+            self.wfile.write(raw)
+            self.wfile.flush()
+
+        try:
+            status, payload = dispatch(self.route, body, event_sink=emit)
+            if status == 200:
+                emit("commit", payload["data"])
+            else:
+                emit("error", payload["error"])
+        except (BrokenPipeError, ConnectionResetError):
+            return
+
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -35,8 +56,11 @@ class ApiHandler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError):
             self._write(400, {"ok": False, "error": {"code": "INVALID_INPUT", "message": "JSON 요청 형식이 올바르지 않습니다."}})
             return
-        status, payload = dispatch(self.route, body)
-        self._write(status, payload)
+        if self.route == "/api/debate-step" and "text/event-stream" in self.headers.get("Accept", ""):
+            self._stream_debate(body)
+        else:
+            status, payload = dispatch(self.route, body)
+            self._write(status, payload)
 
     def do_OPTIONS(self):
         self.send_response(204)

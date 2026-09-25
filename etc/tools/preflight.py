@@ -19,7 +19,7 @@ def collect_static_checks(root: Path = ROOT) -> list[dict]:
     checks: list[dict] = []
 
     required = [
-        "public/index.html", "public/styles.css", "public/app.js", "public/robots.txt",
+        "public/index.html", "public/styles.css", "public/app.js", "public/debate_stream.js", "public/robots.txt",
         "api/analyze_topic.py", "api/context_step.py", "api/create_motion.py",
         "api/debate_step.py", "api/neutral_summary.py", "api/health.py", "api/_base.py",
         "src/web_app/api.py", "src/web_app/live_service.py", "src/web_app/session_token.py",
@@ -73,7 +73,7 @@ def collect_static_checks(root: Path = ROOT) -> list[dict]:
 
 
 def _run(command: list[str], root: Path) -> dict:
-    result = subprocess.run(command, cwd=root, text=True, capture_output=True)
+    result = subprocess.run(command, cwd=root, text=True, encoding="utf-8", errors="replace", capture_output=True)
     detail = (result.stdout + result.stderr).strip()
     if len(detail) > 1200:
         detail = detail[-1200:]
@@ -87,10 +87,13 @@ def run_preflight(root: Path = ROOT, *, run_tests: bool = True) -> dict:
         checks.append(_run([sys.executable, "-m", "compileall", "-q", "api", "src", "etc/tools"], root))
         node = shutil.which("node")
         checks.append(_run([node, "--check", "public/app.js"], root) if node else _result("node --check public/app.js", True, "SKIPPED: node not installed"))
+        checks.append(_run([node, "--test", "tests/js/test_debate_stream.cjs"], root) if node else _result("node --test tests/js/test_debate_stream.cjs", True, "SKIPPED: node not installed"))
     return {"status": "PASS" if all(x["ok"] for x in checks) else "FAIL", "provider_calls": 0, "provider_tokens": 0, "checks": checks}
 
 
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Run zero-token deployment preflight checks")
     parser.add_argument("--static-only", action="store_true", help="Skip unittest/compile/Node subprocess checks")
     args = parser.parse_args(argv)

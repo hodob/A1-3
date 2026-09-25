@@ -225,6 +225,31 @@ async function api(path, body, operationId) {
   }
 }
 
+async function apiDebateStream(body, operationId, onDraft) {
+  try {
+    const response = await fetch('/api/debate-step', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'text/event-stream'},
+      body: JSON.stringify(body),
+      signal: state.activeController?.signal,
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new AppError(payload?.error?.code || 'API_ERROR', payload?.error?.message || 'request failed');
+    }
+    if (!response.headers.get('Content-Type')?.includes('text/event-stream')) throw new AppError('INVALID_RESPONSE', '스트림 응답이 아닙니다.');
+    const data = await readDebateStream(response, (kind, payload) => {
+      if (state.pendingOperation?.id !== operationId) throw new AppError('STALE_OPERATION', 'stale response');
+      onDraft(kind, payload);
+    });
+    if (state.pendingOperation?.id !== operationId) throw new AppError('STALE_OPERATION', 'stale response');
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new AppError('TIMEOUT', 'request timed out');
+    throw error;
+  }
+}
+
 async function performOperation(name, message, retry, task) {
   const operationId = beginOperation(name, message, retry);
   if (!operationId) return null;
@@ -523,11 +548,33 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
   const snapshot = state.session;
   const wasNearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 180;
   const retry = () => runStep(command, audienceQuestion);
-  const data = await performOperation('debate', command === 'AUDIENCE_QUESTION' ? '질문을 전달하고 있어요.' : '다음 발언을 준비하고 있어요.', retry, id => api('/api/debate-step', {
-    session: snapshot,
-    command,
-    audience_question: audienceQuestion,
-  }, id));
+  let draftNode = null;
+  const clearDraft = () => { draftNode?.remove(); draftNode = null; };
+  const onDraft = (kind, payload) => {
+    if (kind === 'draft_reset') {
+      clearDraft();
+      draftNode = element('li', `turn draft-turn ${payload.speaker === 'B' ? 'b' : ''}`);
+      draftNode.setAttribute('aria-live', 'off');
+      const card = element('article');
+      const identity = element('div', 'identity');
+      identity.append(element('span', `side-badge ${payload.speaker === 'B' ? 'side-b' : 'side-a'}`, payload.speaker));
+      identity.append(element('span', '', payload.side_label || '발언자'));
+      card.append(identity, element('p', 'draft-label', '작성 중 · 아직 확정되지 않았어요'), element('p', 'utterance'));
+      draftNode.append(card);
+      $('#debate-log').append(draftNode);
+      if (wasNearBottom) draftNode.scrollIntoView({block: 'nearest'});
+    } else if (kind === 'draft_delta') {
+      if (!draftNode || typeof payload.text !== 'string') throw new AppError('INVALID_RESPONSE', '임시 발언 순서가 올바르지 않습니다.');
+      $('.utterance', draftNode).textContent += payload.text;
+    }
+  };
+  const data = await performOperation('debate', command === 'AUDIENCE_QUESTION' ? '질문을 전달하고 있어요.' : '다음 발언을 준비하고 있어요.', retry, async id => {
+    try {
+      return await apiDebateStream({session: snapshot, command, audience_question: audienceQuestion}, id, onDraft);
+    } finally {
+      clearDraft();
+    }
+  });
   if (!data) return false;
   updateDebateAfterStep(data, wasNearBottom);
   return true;

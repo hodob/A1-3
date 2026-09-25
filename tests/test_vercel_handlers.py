@@ -18,6 +18,7 @@ class VercelHandlerTests(unittest.TestCase):
         self.assertEqual(rewrites["/"], "/public/index.html")
         self.assertEqual(rewrites["/styles.css"], "/public/styles.css")
         self.assertEqual(rewrites["/app.js"], "/public/app.js")
+        self.assertEqual(rewrites["/debate_stream.js"], "/public/debate_stream.js")
         self.assertEqual(rewrites["/robots.txt"], "/public/robots.txt")
 
     def test_hyphenated_public_api_routes_rewrite_to_python_files(self):

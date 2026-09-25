@@ -17,6 +17,7 @@ STATIC = {
     "/index.html": (PUBLIC / "index.html", "text/html; charset=utf-8"),
     "/styles.css": (PUBLIC / "styles.css", "text/css; charset=utf-8"),
     "/app.js": (PUBLIC / "app.js", "application/javascript; charset=utf-8"),
+    "/debate_stream.js": (PUBLIC / "debate_stream.js", "application/javascript; charset=utf-8"),
 }
 
 class Handler(BaseHTTPRequestHandler):
@@ -57,7 +58,13 @@ class Handler(BaseHTTPRequestHandler):
             self._write(400, json.dumps({"ok": False, "error": {"code": "INVALID_INPUT", "message": "JSON 요청 형식이 올바르지 않습니다."}}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             return
         status, payload = dispatch(path, body, service=self._service)
-        self._write(status, json.dumps(payload, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+        if path == "/api/debate-step" and "text/event-stream" in self.headers.get("Accept", ""):
+            kind = "commit" if status == 200 else "error"
+            data = payload["data"] if status == 200 else payload["error"]
+            raw = f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n".encode("utf-8")
+            self._write(200, raw, "text/event-stream; charset=utf-8")
+        else:
+            self._write(status, json.dumps(payload, ensure_ascii=False).encode(), "application/json; charset=utf-8")
 
 
 def main():

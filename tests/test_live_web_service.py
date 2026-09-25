@@ -126,6 +126,41 @@ class LiveWebServiceTests(unittest.TestCase):
         self.assertIsNotNone(result.session.engine_token)
         self.assertEqual(len(result.session.transcript), 1)
 
+    def test_streamed_draft_is_only_committed_after_validation(self):
+        class StreamDeps(FakeDeps):
+            def generate_text(self, provider, messages, timeout=90, on_delta=None):
+                if on_delta:
+                    on_delta("임시 ")
+                    on_delta("발언")
+                return "임시 발언", {"usage": {"total_tokens": 1}}
+
+        self.service.deps = StreamDeps()
+        session = DebateSession(motion="논제", side_labels=("찬성", "반대"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        events = []
+        result = self.service.debate_step(DebateStepRequest(session=session), on_event=lambda kind, data: events.append((kind, data)))
+        self.assertEqual([kind for kind, _ in events], ["draft_reset", "draft_delta", "draft_delta"])
+        self.assertEqual(result.session.transcript[0].utterance, "임시 발언")
+
+    def test_rejected_draft_does_not_change_session(self):
+        class RejectedDeps(FakeDeps):
+            def generate_text(self, provider, messages, timeout=90, on_delta=None):
+                if on_delta:
+                    on_delta("상대가 옳습니다")
+                return "상대가 옳습니다", {}
+
+            def check_compliance(self, provider, **kwargs):
+                return CombinedComplianceAssessment(ActionFidelityLabel.MISALIGNED, StanceLabel.CONTRADICTS_ASSIGNED, "wrong", "wrong"), {}
+
+        from src.web_app.errors import SafeFailure
+        self.service.deps = RejectedDeps()
+        session = DebateSession(motion="논제", side_labels=("찬성", "반대"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        original = session.model_dump(mode="json")
+        events = []
+        with self.assertRaises(SafeFailure):
+            self.service.debate_step(DebateStepRequest(session=session), on_event=lambda kind, data: events.append((kind, data)))
+        self.assertEqual([kind for kind, _ in events], ["draft_reset", "draft_delta", "draft_reset", "draft_delta"])
+        self.assertEqual(session.model_dump(mode="json"), original)
+
     def test_second_step_recovers_internal_state_from_token(self):
         analysis = self.service.analyze_topic(AnalyzeTopicRequest(topic="핫도그는 샌드위치인가?"))
         motion = self.service.create_motion(CreateMotionRequest(analysis=analysis, edit_count=0))

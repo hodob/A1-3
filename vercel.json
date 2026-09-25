@@ -71,6 +71,10 @@
       "destination": "/public/app.js"
     },
     {
+      "source": "/debate_stream.js",
+      "destination": "/public/debate_stream.js"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/public/robots.txt"
     }

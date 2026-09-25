@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import urllib.request
+from typing import Callable
 
 
-def request_completion(provider: dict, body: dict, *, timeout: float = 90) -> dict:
+def request_completion(provider: dict, body: dict, *, timeout: float = 90, on_text_delta: Callable[[str], None] | None = None) -> dict:
     wire_body = {**body, "stream": True, "stream_options": {"include_usage": True}}
     request = urllib.request.Request(
         provider["url"],
@@ -46,8 +47,14 @@ def request_completion(provider: dict, body: dict, *, timeout: float = 90) -> di
             part = delta.get("content")
             if isinstance(part, str):
                 content.append(part)
+                if part and on_text_delta:
+                    on_text_delta(part)
             elif isinstance(part, list):
-                content.extend(item.get("text", "") for item in part if isinstance(item, dict))
+                for item in part:
+                    if isinstance(item, dict) and item.get("text"):
+                        content.append(item["text"])
+                        if on_text_delta:
+                            on_text_delta(item["text"])
             for item in delta.get("tool_calls") or []:
                 index = item["index"]
                 call = tool_calls.setdefault(index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}})

@@ -14,6 +14,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from typing import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -123,11 +124,11 @@ def safe_record(value):
     return value
 
 
-def call_model(provider: dict[str, str], messages: list[dict[str, str]], *, timeout: float = 90) -> tuple[str, dict]:
+def call_model(provider: dict[str, str], messages: list[dict[str, str]], *, timeout: float = 90, on_delta: Callable[[str], None] | None = None) -> tuple[str, dict]:
     body: dict = {"model": provider["model"], "messages": messages}
     started = time.monotonic()
     try:
-        payload = request_completion(provider, body, timeout=timeout)
+        payload = request_completion(provider, body, timeout=timeout, on_text_delta=on_delta)
     except urllib.error.HTTPError as exc:
         # Provider error bodies can contain sensitive material; do not persist or print them.
         raise RuntimeError(f"LLM HTTP {exc.code}") from exc

@@ -20,7 +20,7 @@ def _error(status: int, code: str, message: str):
     return status, {"ok": False, "error": {"code": code, "message": message}}
 
 
-def dispatch(path: str, body: dict, service=None):
+def dispatch(path: str, body: dict, service=None, event_sink=None):
     try:
         service = service or get_default_service()
         if path == "/api/health":
@@ -35,7 +35,9 @@ def dispatch(path: str, body: dict, service=None):
         if path == "/api/create-motion":
             return _success(service.create_motion(CreateMotionRequest.model_validate(body)))
         if path == "/api/debate-step":
-            return _success(service.debate_step(DebateStepRequest.model_validate(body)))
+            request = DebateStepRequest.model_validate(body)
+            result = service.debate_step(request, on_event=event_sink) if event_sink is not None else service.debate_step(request)
+            return _success(result)
         if path == "/api/neutral-summary":
             return _success(service.neutral_summary(NeutralSummaryRequest.model_validate(body)))
         return _error(404, "NOT_FOUND", "요청한 API를 찾을 수 없습니다.")

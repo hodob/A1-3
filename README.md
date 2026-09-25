@@ -100,7 +100,7 @@ Topic → Motion → Debate → Audience Question → Neutral Summary → User C
 
 `provider.model`은 주제 파악, 의미 검사, State 추출, 요약을 담당한다. `debater_models` 중 서로 다른 회사의 모델 두 개를 토론 시작 시 뽑아 A/B 발언 생성에 배정하고 서명된 세션에 고정한다. 현재 배포 설정은 `live`다. 로컬 `web_dev_server`는 이 설정과 무관하게 Provider 호출 없이 Mock 서비스를 사용한다.
 
-모든 live Provider 요청은 streaming으로 전송한다. 발언과 Tool Calling 청크를 서버에서 완성한 뒤 기존 로컬 검증을 거쳐 확정하므로, 현재 웹 화면에는 확정 발언이 한 번에 표시된다.
+모든 live Provider 요청은 streaming으로 전송한다. 토론 발언의 텍스트 청크는 웹에 `작성 중 · 아직 확정되지 않았어요`로 표시한다. Action·Stance·State 검증 뒤에만 확정 발언과 세션을 전달하며, 재생성이나 실패 시 임시 문장은 폐기한다. Tool Calling 청크는 서버에서 조립한 뒤 로컬 검증한다.
 
 배포 화면 하단의 짧은 버전은 Vercel의 `VERCEL_GIT_COMMIT_SHA`가 제공될 때만 표시한다. 이 System Environment Variable이 비활성화된 환경에서는 버전을 숨긴다.
 

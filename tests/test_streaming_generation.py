@@ -44,6 +44,19 @@ class StreamingGenerationTests(unittest.TestCase):
         self.assertEqual(call["function"], {"name": "result", "arguments": '{"answer":"yes"}'})
         self.assertEqual(payload["choices"][0]["finish_reason"], "tool_calls")
 
+    def test_text_delta_callback_receives_chunks_before_completion(self):
+        events = [
+            {"choices": [{"delta": {"content": "첫"}, "finish_reason": None}]},
+            {"choices": [{"delta": {"content": " 문장"}, "finish_reason": "stop"}]},
+        ]
+        stream = io.BytesIO(b"".join(b"data: " + json.dumps(event, ensure_ascii=False).encode() + b"\n\n" for event in events) + b"data: [DONE]\n\n")
+        received = []
+        provider = {"url": "https://example.test/v1/chat/completions", "api_key": "test", "model": "claude-haiku-4"}
+        with patch("src.debate_engine.provider_transport.urllib.request.urlopen", return_value=stream):
+            payload = request_completion(provider, {"model": "claude-haiku-4", "messages": []}, on_text_delta=received.append)
+        self.assertEqual(received, ["첫", " 문장"])
+        self.assertEqual(payload["choices"][0]["message"]["content"], "첫 문장")
+
 
 if __name__ == "__main__":
     unittest.main()

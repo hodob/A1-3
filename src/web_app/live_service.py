@@ -10,6 +10,7 @@ import random
 import time
 import urllib.error
 import urllib.request
+from typing import Callable
 
 from .contracts import (
     AnalyzeTopicRequest, ContextStepRequest, ContextStepResponse, CreateMotionRequest,
@@ -33,8 +34,8 @@ from src.runtime_config import DebaterModelConfig
 
 
 class LiveRuntimeDependencies:
-    def generate_text(self, provider, messages, timeout=90):
-        return call_model(provider, messages, timeout=timeout)
+    def generate_text(self, provider, messages, timeout=90, on_delta=None):
+        return call_model(provider, messages, timeout=timeout, on_delta=on_delta)
 
     def check_compliance(self, provider, **kwargs):
         return judge_combined(provider, **kwargs)
@@ -175,7 +176,7 @@ class LiveDebateWebService:
     def _transcript_for_prompt(session: DebateSession) -> list[dict]:
         return [{"speaker": x.speaker, "side": x.side_label, "speech": x.utterance} for x in session.transcript]
 
-    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str) -> tuple[str, DebateState, list]:
+    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str, on_event: Callable[[str, dict], None] | None = None) -> tuple[str, DebateState, list]:
         phase_lower = phase.lower()
         turn_number = len(session.transcript) + 1
         raw_options = eligible_actions(state, speaker, phase_lower)
@@ -194,10 +195,20 @@ class LiveDebateWebService:
         if open_question:
             messages[1]["content"] += f"\n먼저 열린 질문 {open_question.id}에 답하세요: {open_question.core_proposition}"
 
+        generation_attempt = 0
+
         def generate(feedback: str):
+            nonlocal generation_attempt
+            generation_attempt += 1
             current = messages if not feedback else [*messages, {"role": "user", "content": feedback}]
             debater_provider = {**self.provider, "model": selected_models[speaker], "stream": True}
-            return self.deps.generate_text(debater_provider, current, self.timeout)[0]
+            if on_event is None:
+                return self.deps.generate_text(debater_provider, current, self.timeout)[0]
+            on_event("draft_reset", {"speaker": speaker, "phase": phase, "side_label": turn["side"], "attempt": generation_attempt})
+            return self.deps.generate_text(
+                debater_provider, current, self.timeout,
+                on_delta=lambda piece: on_event("draft_delta", {"text": piece}),
+            )[0]
 
         assignment = StanceAssignment(turn["side"], session.side_labels[1 if speaker == "A" else 0])
 
@@ -222,7 +233,7 @@ class LiveDebateWebService:
         history = [*history, (speaker, selected.name, selected.target_ids)]
         return checked.utterance, candidate, history
 
-    def debate_step(self, request: DebateStepRequest) -> DebateStepResponse:
+    def debate_step(self, request: DebateStepRequest, on_event: Callable[[str, dict], None] | None = None) -> DebateStepResponse:
         session, state, history, selected_models = self._load_engine(request.session)
         if session.completed:
             session = self._save_engine(session, state, history, selected_models)
@@ -248,7 +259,7 @@ class LiveDebateWebService:
 
         if session.audience_status == "ASKED" and session.audience_response_index < 2:
             phase, speaker = "AUDIENCE_RESPONSE", ("A" if session.audience_response_index == 0 else "B")
-            utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker)
+            utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event)
             item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
             session.transcript.append(item)
             session.audience_response_index += 1
@@ -263,7 +274,7 @@ class LiveDebateWebService:
             return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
 
         phase, speaker = self._base_schedule[session.next_index]
-        utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker)
+        utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event)
         item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
         session.transcript.append(item)
         session.next_index += 1

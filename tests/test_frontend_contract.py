@@ -12,6 +12,14 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("'/api/health'", js)
         self.assertIn("#build-version", js)
 
+    def test_debate_uses_sse_and_marks_draft_as_unconfirmed(self):
+        html = (ROOT / "public" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "public" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('/debate_stream.js', html)
+        self.assertIn("'text/event-stream'", js)
+        self.assertIn('아직 확정되지 않았어요', js)
+        self.assertIn('clearDraft();', js)
+
     def test_three_navigable_sections_exist(self):
         html = (ROOT / "public" / "index.html").read_text(encoding="utf-8")
         for section_id in ("home", "debate", "how-it-works"):

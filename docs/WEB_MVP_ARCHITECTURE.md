@@ -147,7 +147,7 @@ Browser 코드에는 Provider 설정이나 비밀값을 하드코딩하지 않�
 - 실제 Provider 사용
 - `config.json`의 URL, coordinator model, debater model array + 환경 변수의 API key/session secret이 필요
 - A/B 발언 생성은 서로 다른 회사의 모델을 한 번 뽑아 서명된 세션에 고정한다. 주제 파악, 의미 검사, State 추출, 중립 요약은 `provider.model`을 쓴다.
-- 모든 Provider 요청은 SSE streaming으로 받고, 서버에서 텍스트·Tool Calling arguments·usage를 조립한다. 완성된 결과만 로컬 검증과 State 반영에 사용한다. 웹 화면의 글자별 실시간 표시는 아직 연결되지 않았다.
+- 모든 Provider 요청은 SSE streaming으로 받고, 서버에서 텍스트·Tool Calling arguments·usage를 조립한다. 토론 발언은 `draft_reset`/`draft_delta`로 화면에 임시 표시하고, Action·Stance·State 검증이 끝난 뒤 `commit`으로 확정한다. 재생성 시 임시 발언을 교체하고 실패 시 `error`로 폐기한다. 기존 JSON API 응답 계약도 유지한다.
 - Mock 및 fixture 테스트를 먼저 통과한 뒤 최소 smoke만 수행
 
 ## 9. Loading / Success / Failure

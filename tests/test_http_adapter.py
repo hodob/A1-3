@@ -91,6 +91,32 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(item._status, 200)
         self.assertFalse(self._payload(item)["data"]["provider_call"])
 
+    def test_debate_stream_emits_draft_then_commit(self):
+        item = self._handler(DebateStepHandler, b'{}')
+        item.headers["Accept"] = "text/event-stream"
+        def dispatch_stream(route, body, event_sink=None):
+            event_sink("draft_reset", {"speaker": "A", "phase": "OPENING", "attempt": 1})
+            event_sink("draft_delta", {"text": "임시"})
+            return 200, {"ok": True, "data": {"utterance": "확정"}}
+        with patch("api._base.dispatch", side_effect=dispatch_stream):
+            item.do_POST()
+        raw = item.wfile.getvalue().decode()
+        self.assertEqual(item._headers["Content-Type"], "text/event-stream; charset=utf-8")
+        self.assertLess(raw.index("event: draft_delta"), raw.index("event: commit"))
+        self.assertIn('"utterance": "확정"', raw)
+
+    def test_debate_stream_failure_never_emits_commit(self):
+        item = self._handler(DebateStepHandler, b'{}')
+        item.headers["Accept"] = "text/event-stream"
+        def dispatch_stream(route, body, event_sink=None):
+            event_sink("draft_delta", {"text": "폐기할 발언"})
+            return 422, {"ok": False, "error": {"code": "SAFE_FAILURE", "message": "실패"}}
+        with patch("api._base.dispatch", side_effect=dispatch_stream):
+            item.do_POST()
+        raw = item.wfile.getvalue().decode()
+        self.assertIn("event: error", raw)
+        self.assertNotIn("event: commit", raw)
+
 
 if __name__ == "__main__":
     unittest.main()
