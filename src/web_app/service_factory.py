@@ -50,6 +50,7 @@ def build_service(*, config_path: Path | str = DEFAULT_CONFIG_PATH):
         provider=provider,
         debater_models=config.provider.debater_models,
         codec=SessionTokenCodec(required["SESSION_SECRET"]),
+        debug_mode=config.debug_mode,
     )
 
 
