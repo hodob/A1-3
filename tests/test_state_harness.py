@@ -41,6 +41,46 @@ class StateHarnessTests(unittest.TestCase):
         self.assertEqual(context["selected_action"], "DEFEND_CLAIM")
         self.assertEqual(context["selected_target_ids"], ["C2"])
 
+    def test_question_extraction_prompt_groups_one_immediate_qud(self):
+        self.assertIn("Immediate QUD", PATCH_INSTRUCTIONS)
+        self.assertIn("ASK_QUESTION 하나만", PATCH_INSTRUCTIONS)
+        self.assertIn("질문표('?') 개수", PATCH_INSTRUCTIONS)
+
+    def test_adaptive_context_caps_large_unrelated_state(self):
+        state = DebateState()
+        for turn in range(1, 21):
+            state = apply_patch(state, {"operations": [
+                {"op": "ADD_PROPOSITION", "text": f"독립 주장 {turn}", "semantic_kind": "NEW_REASON"},
+            ]}, speaker="A" if turn % 2 else "B", turn=turn)
+        context = extraction_context(
+            state,
+            {
+                "speaker": "A",
+                "action": "CHALLENGE_PREMISE",
+                "target_ids": ["C2"],
+                "reference_ids": ["C3"],
+            },
+        )
+        ids = {item["id"] for item in context["propositions"]}
+        self.assertIn("C2", ids)
+        self.assertIn("C3", ids)
+        self.assertLessEqual(len(context["propositions"]), 10)
+        self.assertLess(len(context["propositions"]), len(state.propositions))
+        self.assertEqual(context["working_set"]["immediate_qud_id"], None)
+        self.assertIn("explicit_target_or_reference", context["working_set"]["reasons"]["C2"])
+
+    def test_adaptive_context_keeps_immediate_qud_target(self):
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A 주장", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "근거는?", "target_proposition_id": "C1", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="B", turn=2)
+        context = extraction_context(state, {"speaker": "A", "action": "DEFEND_CLAIM", "target_ids": ["C1"]})
+        self.assertEqual(context["working_set"]["immediate_qud_id"], "QG-Q1")
+        self.assertIn("Q1", {q["id"] for q in context["questions"]})
+        self.assertIn("C1", {p["id"] for p in context["propositions"]})
+
     def test_invalid_model_patch_gets_one_validated_retry(self):
         state = apply_patch(DebateState(), {"operations": [{"op": "ADD_PROPOSITION", "text": "기존 주장"}]}, speaker="A", turn=1)
         candidates = [
