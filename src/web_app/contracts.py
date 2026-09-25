@@ -127,7 +127,18 @@ class DebateSession(StrictModel):
     audience_question: str | None = None
     audience_response_index: int = 0
     completed: bool = False
+    debater_models: dict[str, str] = Field(default_factory=dict)
+    debug_enabled: bool = False
     engine_token: str | None = None
+
+    @field_validator("debater_models")
+    @classmethod
+    def validate_debater_models(cls, value: dict[str, str]) -> dict[str, str]:
+        if value and set(value) != {"A", "B"}:
+            raise ValueError("debater_models must contain A and B")
+        if any(not isinstance(model, str) or not model.strip() for model in value.values()):
+            raise ValueError("debater model IDs must be non-empty strings")
+        return value
 
 
 class DebateStepRequest(StrictModel):
