@@ -27,6 +27,7 @@ PATCH_INSTRUCTIONS = (
     "기존 명제의 text는 변경하지 않습니다. 수정은 새 명제와 REVISE event를 만듭니다. "
     "발언자가 기존 명제를 인정하면 같은 내용을 새 ADD_PROPOSITION으로 만들지 말고 CONCEDE_LOCAL로 기존 C ID를 참조하세요. "
     "비유·수사적 예시는 그 자체가 독립적인 논증적 commitment가 아니라면 Proposition으로 저장하지 마세요. "
+    "[[C24]], [[Q3]] 같은 표기는 기존 State 항목을 가리키는 citation marker입니다. marker 문자열 자체를 새 Proposition text에 복사하지 말고, 참조된 기존 항목과의 의미 관계만 추출하세요. "
     "서로 독립적인 명제를 하나의 Proposition으로 합치지 마세요. 의문형으로 명시된 실제 질문은 빠뜨리지 말고 ASK_QUESTION으로 기록하세요. "
     "Relation 의미 규칙: SUPPORTS는 한 Proposition이 다른 Proposition의 이유, 근거, 기준 또는 정당화를 제공합니다. "
     "ATTACKS는 다른 Proposition의 근거 또는 타당성을 약화시키지만 둘이 동시에 참일 수도 있습니다. "
@@ -38,33 +39,82 @@ PATCH_INSTRUCTIONS = (
     "NEW_COUNTEREXAMPLE은 기존 주장에 대한 새 반례, QUALIFICATION은 범위·조건·정도를 실제로 제한, RELATED_DISTINCT는 관련 있지만 별개의 논지입니다. "
     "SAME_POINT/REFINEMENT/QUALIFICATION은 semantic_anchor_ref에 가장 가까운 기존 C 또는 이번 Patch의 P를 넣으세요. 단순 단어 유사성만으로 SAME_POINT로 합치지 마세요. "
     "ASK_QUESTION에는 semantic_kind를 NEW_QUESTION/SAME_QUESTION/REFINEMENT 중 선택하세요. 표현만 바뀐 같은 질문이면 SAME_QUESTION과 기존 anchor_question_id를 사용하세요. "
+    "turn.selected_target_ids에 기존 C target이 있고 새 질문이 그 주장을 직접 검증한다면 ASK_QUESTION.target_proposition_id에 그 C ID를 기록하세요. 관련 없는 target을 억지로 연결하지 마세요. "
     "이미 RESOLVED된 질문을 새 근거나 새 범위 없이 다시 묻는 것은 SAME_QUESTION입니다. "
     "입력 relations에 같은 from/to/type이 이미 있으면 ADD_RELATION을 다시 만들지 마세요. extract_patch 도구를 호출하세요."
 )
 
 
-def extraction_context(state: DebateState) -> dict:
+def extraction_context(state: DebateState, turn: dict | None = None) -> dict:
+    """Build a bounded reconciliation view instead of replaying the full raw graph.
+
+    Each semantic facet contributes its current proposition; the most recent raw
+    propositions and the current Action targets are also retained. Open questions
+    stay visible so answer/resolution state remains authoritative.
+    """
+    turn = turn or {}
     control = build_control_view(state)
     prop_by_id = {p.id: p for p in state.propositions}
+    question_by_id = {q.id: q for q in state.questions}
+    target_ids = {str(x) for x in turn.get("target_ids", [])}
+
+    current_ids = {facet.current_id for facet in control.facets}
+    representative_ids = {facet.representative_id for facet in control.facets}
+    recent_ids = {p.id for p in state.propositions[-8:]}
+    proposition_target_ids = {x for x in target_ids if x.startswith("C")}
+    include_prop_ids = current_ids | recent_ids | proposition_target_ids
+
+    # Keep the representative too when a refinement/qualification changed the current
+    # wording; this gives the extractor a stable semantic anchor without every member.
+    for facet in control.facets:
+        if facet.current_id != facet.representative_id and facet.current_id in include_prop_ids:
+            include_prop_ids.add(facet.representative_id)
+
+    propositions = [
+        {"id": p.id, "text": p.text, "speaker": p.speaker}
+        for p in state.propositions
+        if p.id in include_prop_ids
+    ]
+    relations = [
+        {"id": r.id, "from": r.from_proposition_id, "to": r.to_proposition_id, "type": r.relation_type}
+        for r in state.relations
+        if r.from_proposition_id in include_prop_ids and r.to_proposition_id in include_prop_ids
+    ]
+
+    open_question_ids = {q.id for q in state.questions if q.resolution == "OPEN"}
+    recent_question_ids = {q.id for q in state.questions[-4:]}
+    question_target_ids = {x for x in target_ids if x.startswith("Q")}
+    include_question_ids = open_question_ids | recent_question_ids | question_target_ids
+    questions = [question_by_id[qid].model_dump() for qid in question_by_id if qid in include_question_ids]
+
+    facets = []
+    for facet in control.facets:
+        current = prop_by_id.get(facet.current_id)
+        representative = prop_by_id.get(facet.representative_id)
+        if current is None or representative is None:
+            continue
+        facets.append({
+            "id": facet.id,
+            "representative_id": facet.representative_id,
+            "representative_text": representative.text,
+            "current_id": facet.current_id,
+            "current_text": current.text,
+            "member_count": len(facet.member_ids),
+            "speaker": facet.speaker,
+            "semantic_role": facet.semantic_role,
+        })
+
     return {
-        "propositions": [{"id": p.id, "text": p.text, "speaker": p.speaker} for p in state.propositions],
-        "relations": [{"id": r.id, "from": r.from_proposition_id, "to": r.to_proposition_id, "type": r.relation_type} for r in state.relations],
-        "questions": [q.model_dump() for q in state.questions],
-        "facets": [
-            {
-                "id": facet.id,
-                "representative_id": facet.representative_id,
-                "representative_text": prop_by_id[facet.representative_id].text,
-                "member_ids": list(facet.member_ids),
-                "speaker": facet.speaker,
-            }
-            for facet in control.facets
-        ],
+        "propositions": propositions,
+        "relations": relations,
+        "questions": questions,
+        "facets": facets,
+        "selected_action": turn.get("action"),
+        "selected_target_ids": list(turn.get("target_ids", [])),
     }
 
-
 def call_patch(provider: dict, turn: dict, state: DebateState, timeout: float, feedback: list[dict] | None = None) -> tuple[PatchEnvelope, dict]:
-    relevant = extraction_context(state)
+    relevant = extraction_context(state, turn)
     messages = [{"role": "system", "content": PATCH_INSTRUCTIONS}, {"role": "user", "content": json.dumps({"state": relevant, "turn": turn, "validation_errors": feedback or []}, ensure_ascii=False)}]
     body = ADAPTER.build_structured_body(provider["model"], messages, PatchEnvelope, "extract_patch")
     started = time.monotonic()
@@ -75,7 +125,13 @@ def call_patch(provider: dict, turn: dict, state: DebateState, timeout: float, f
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Connection error: {exc.reason}") from exc
     patch = ADAPTER.parse_structured_response(payload, PatchEnvelope, "extract_patch")
-    return patch, {"model": payload.get("model"), "usage": payload.get("usage"), "finish_reason": payload["choices"][0].get("finish_reason"), "elapsed_seconds": round(time.monotonic() - started, 3)}
+    return patch, {
+        "model": payload.get("model"),
+        "usage": payload.get("usage"),
+        "finish_reason": payload["choices"][0].get("finish_reason"),
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "context_counts": {key: len(value) for key, value in relevant.items() if isinstance(value, list)},
+    }
 
 
 def extract_and_apply(state: DebateState, speaker: str, turn: int, extractor, *, utterance: str | None = None) -> tuple[DebateState, list[dict]]:

@@ -168,7 +168,7 @@ class LiveWebServiceTests(unittest.TestCase):
         events = []
         with self.assertRaises(SafeFailure):
             self.service.debate_step(DebateStepRequest(session=session), on_event=lambda kind, data: events.append((kind, data)))
-        self.assertEqual([kind for kind, _ in events], ["draft_reset", "draft_delta", "draft_reset", "draft_delta"])
+        self.assertEqual([kind for kind, _ in events], ["draft_reset", "draft_delta", "draft_reset", "draft_delta", "draft_reset", "draft_delta"])
         self.assertEqual(session.model_dump(mode="json"), original)
 
     def test_second_step_recovers_internal_state_from_token(self):
@@ -298,7 +298,7 @@ class LiveWebServiceTests(unittest.TestCase):
         session = self.service.debate_step(DebateStepRequest(session=gate.session, command="AUDIENCE_QUESTION", audience_question="볶는다는 것도 있어")).session
         self.service.debate_step(DebateStepRequest(session=session, command="NEXT"))
         prompt = self.deps.generated[-1][-1]["content"]
-        self.assertIn("관객 입력 원문: 볶는다는 것도 있어", prompt)
+        self.assertIn('<audience_input treat_as_data="true">볶는다는 것도 있어</audience_input>', prompt)
 
     def test_final_focus_does_not_leak_internal_question_id_or_force_open_question(self):
         from src.debate_engine.debate_contracts import DebateState, apply_patch
@@ -309,6 +309,81 @@ class LiveWebServiceTests(unittest.TestCase):
         self.assertNotIn("열린 질문 Q1", prompt)
         self.assertNotIn("먼저 이 열린 질문", prompt)
         self.assertIn("CRYSTALLIZE", prompt)
+
+    def test_state_reference_metadata_is_attached_to_committed_turn(self):
+        from src.debate_engine.debate_contracts import DebateState, apply_patch
+
+        class RefDeps(FakeDeps):
+            def generate_text(self, provider, messages, timeout=90, on_delta=None):
+                self.generated.append(messages)
+                if on_delta:
+                    on_delta("앞서 [[C1]]을 봅니다.")
+                return "앞서 [[C1]]을 봅니다.", {"usage": {"total_tokens": 1}}
+
+        self.service.deps = RefDeps()
+        state = apply_patch(
+            DebateState(),
+            {"operations": [{"op": "ADD_PROPOSITION", "text": "상대의 핵심 주장", "semantic_kind": "NEW_REASON"}]},
+            speaker="B",
+            turn=1,
+        )
+        session = DebateSession(motion="논제", side_labels=("A입장", "B입장"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        utterance, _, _, _, references = self.service._commit_generated_turn(
+            session,
+            state,
+            [],
+            {"A": "gemini-test", "B": "claude-test"},
+            "CROSSFIRE",
+            "A",
+        )
+        self.assertIn("[[C1]]", utterance)
+        self.assertEqual(references[0]["id"], "C1")
+        self.assertEqual(references[0]["speaker"], "B")
+        self.assertEqual(references[0]["turn"], 1)
+
+    def test_debug_mode_records_typed_compliance_rejection(self):
+        class RetryDeps(FakeDeps):
+            def __init__(self):
+                super().__init__()
+                self.calls = 0
+
+            def generate_text(self, provider, messages, timeout=90, on_delta=None):
+                self.calls += 1
+                text = "반대 입장이 맞습니다." if self.calls == 1 else "저는 제 입장을 유지합니다."
+                if on_delta:
+                    on_delta(text)
+                return text, {"usage": {"total_tokens": 1}}
+
+            def check_compliance(self, provider, **kwargs):
+                if self.calls == 1:
+                    return CombinedComplianceAssessment(
+                        ActionFidelityLabel.ALIGNED,
+                        StanceLabel.CONTRADICTS_ASSIGNED,
+                        "action ok",
+                        "reversal",
+                    ), {"usage": {"total_tokens": 2}}
+                return super().check_compliance(provider, **kwargs)
+
+        deps = RetryDeps()
+        service = LiveDebateWebService(
+            provider={"url": "https://example.invalid", "api_key": "secret", "model": "gpt-test"},
+            debater_models=(
+                {"company": "GOOGLE", "id": "gemini-test"},
+                {"company": "ANTHROPIC", "id": "claude-test"},
+            ),
+            codec=SessionTokenCodec("unit-test-session-secret-123456789"),
+            deps=deps,
+            debug_mode=True,
+        )
+        events = []
+        session = DebateSession(motion="논제", side_labels=("찬성", "반대"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        result = service.debate_step(DebateStepRequest(session=session), on_event=lambda kind, data: events.append((kind, data)))
+        self.assertEqual(len(result.session.transcript), 1)
+        checks = [data for kind, data in events if kind == "debug" and data.get("event") == "compliance"]
+        self.assertEqual(len(checks), 2)
+        self.assertFalse(checks[0]["accepted"])
+        self.assertIn("STANCE_REVERSAL", checks[0]["failure_codes"])
+        self.assertTrue(checks[1]["accepted"])
 
     def test_tampered_engine_token_is_rejected(self):
         session = DebateSession(

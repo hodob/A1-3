@@ -299,3 +299,42 @@ legend { width: 100%; margin-bottom: 16px; font-size: 22px; font-weight: 750; }
   .current-stage details { flex: none; font-size: 13px; }
   .current-stage summary { white-space: nowrap; }
 }
+
+
+/* Structured Debate State references rendered from [[C..]] / [[Q..]] markers. */
+.markdown-body a.state-ref,
+.markdown-inline a.state-ref {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin: 0 2px;
+  padding: 2px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  font-size: .82em;
+  font-weight: 800;
+  line-height: 1.35;
+  text-decoration: none;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+.markdown-body a.state-ref:hover,
+.markdown-inline a.state-ref:hover {
+  border-color: var(--color-primary);
+  background: var(--color-a-soft);
+}
+.turn.state-ref-highlight {
+  animation: state-ref-pulse 1.4s ease-out;
+}
+@keyframes state-ref-pulse {
+  0%, 28% { box-shadow: 0 0 0 4px rgba(20, 111, 106, .18), var(--shadow-card); }
+  100% { box-shadow: var(--shadow-card); }
+}
+
+@media print {
+  .current-stage { position: static !important; }
+  .status-line:not(:empty) { display: none !important; }
+  .turn.state-ref-highlight { animation: none !important; }
+}

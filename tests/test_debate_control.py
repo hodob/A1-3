@@ -79,6 +79,31 @@ class DebateControlTests(unittest.TestCase):
         self.assertEqual(task.kind, TurnTaskKind.WEIGH_COMPETING_REASONS)
         self.assertEqual(len(task.target_ids), 2)
 
+    def test_third_probe_on_same_facet_switches_to_weighing(self):
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "A의 핵심 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "B의 핵심 이유", "semantic_kind": "NEW_REASON"},
+        ]}, speaker="B", turn=2)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "첫 번째 검증", "target_proposition_id": "C2", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=3)
+        state = apply_patch(state, {"operations": [
+            {"op": "ANSWER_QUESTION", "question_id": "Q1", "response_status": "DIRECT", "resolution": "RESOLVED"},
+        ]}, speaker="B", turn=4)
+        state = apply_patch(state, {"operations": [
+            {"op": "ASK_QUESTION", "core_proposition": "두 번째 검증", "target_proposition_id": "C2", "semantic_kind": "NEW_QUESTION"},
+        ]}, speaker="A", turn=5)
+        state = apply_patch(state, {"operations": [
+            {"op": "ANSWER_QUESTION", "question_id": "Q2", "response_status": "DIRECT", "resolution": "RESOLVED"},
+        ]}, speaker="B", turn=6)
+
+        task = plan_turn_task(state, speaker="A", phase="crossfire")
+        self.assertEqual(task.kind, TurnTaskKind.WEIGH_COMPETING_REASONS)
+        self.assertEqual(task.target_ids, ("C2", "C1"))
+        self.assertIn("이미 두 차례", task.description)
+
     def test_final_focus_is_always_crystallize_even_when_questions_remain(self):
         state = apply_patch(DebateState(), {"operations": [
             {"op": "ASK_QUESTION", "core_proposition": "남은 질문", "semantic_kind": "NEW_QUESTION"},

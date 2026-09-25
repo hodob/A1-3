@@ -105,12 +105,21 @@ class MotionResponse(StrictModel):
     truth_mode: TruthMode = "REAL_WORLD"
 
 
+class StateReference(StrictModel):
+    id: str
+    kind: Literal["CLAIM", "QUESTION"]
+    speaker: Literal["A", "B"]
+    turn: int = Field(ge=1)
+    excerpt: str = Field(min_length=1)
+
+
 class TranscriptItem(StrictModel):
     turn: int
     phase: Phase
     speaker: Literal["A", "B"]
     side_label: str
     utterance: str
+    references: list[StateReference] = Field(default_factory=list)
 
 
 class DebateSession(StrictModel):

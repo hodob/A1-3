@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.request
 from typing import Callable
+from html import escape as xml_escape
 
 from .contracts import (
     AnalyzeTopicRequest, ContextStepRequest, ContextStepResponse, CreateMotionRequest,
@@ -25,6 +26,7 @@ from src.debate_engine.action_pair_state import filter_available_pairs
 from src.debate_engine.action_policy import eligible_actions, select_action_for_speaker
 from src.debate_engine.debate_control import TurnTask, TurnTaskKind, plan_turn_task
 from src.debate_engine.combined_compliance import finalize_compliant_utterance, judge_combined
+from src.debate_engine.surface_contract import extract_state_references, validate_surface
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError
 from src.debate_engine.debate_harness import call_model, speech_messages
 from src.debate_engine.provider_adapter import CURRENT_PROVIDER, ProviderAdapter
@@ -141,6 +143,7 @@ class LiveDebateWebService:
     def neutral_summary(self, request: NeutralSummaryRequest) -> NeutralSummaryResponse:
         system = (
             "토론을 중립적으로 정리하세요. 승자, 점수, 어느 쪽이 더 낫다는 판정을 하지 마세요. "
+            "transcript의 [[C24]], [[Q3]] 같은 State reference marker는 내부 citation 문법이므로 요약 결과에 그대로 복사하지 말고 자연어 의미만 반영하세요. "
             "핵심 clash, A/B의 강한 논점, 합의, 미해결 쟁점을 각각 짧은 목록으로 반환하고 neutral_summary 도구를 호출하세요."
         )
         payload = {"motion": request.motion, "transcript": [x.model_dump() for x in request.transcript]}
@@ -190,7 +193,7 @@ class LiveDebateWebService:
     def _transcript_for_prompt(session: DebateSession) -> list[dict]:
         return [{"speaker": x.speaker, "side": x.side_label, "speech": x.utterance} for x in session.transcript]
 
-    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str, on_event: Callable[[str, dict], None] | None = None, *, turn_task: TurnTask | None = None) -> tuple[str, DebateState, list, TurnTask]:
+    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str, on_event: Callable[[str, dict], None] | None = None, *, turn_task: TurnTask | None = None) -> tuple[str, DebateState, list, TurnTask, list[dict]]:
         phase_lower = phase.lower()
         turn_number = len(session.transcript) + 1
         task = turn_task or plan_turn_task(
@@ -203,104 +206,310 @@ class LiveDebateWebService:
             raise NoValuableMove(task)
 
         raw_options = eligible_actions(state, speaker, phase_lower, turn_task=task)
-        selected = select_action_for_speaker(raw_options, history, speaker, state=state, current_turn=turn_number, persona=session.personas[0 if speaker == "A" else 1])
+        selected = select_action_for_speaker(
+            raw_options,
+            history,
+            speaker,
+            state=state,
+            current_turn=turn_number,
+            persona=session.personas[0 if speaker == "A" else 1],
+        )
         if selected is None:
-            # There is no useful legal realization for the chosen task. Do not ask the
-            # model to invent novelty merely to fill a scheduled slot.
             raise NoValuableMove(TurnTask(TurnTaskKind.NO_VALUABLE_MOVE, (), f"{task.kind.value}를 수행할 적법한 Action×Target 후보가 없습니다."))
 
-        target_texts = []
-        for target_id in selected.target_ids:
-            text = next((p.text for p in state.propositions if p.id == target_id), None)
-            if text is None:
-                text = next((q.core_proposition for q in state.questions if q.id == target_id), None)
-            if text:
-                target_texts.append(f"{target_id}: {text}")
-        target_id = selected.target_ids[0] if selected.target_ids else None
-        target_text = " | ".join(target_texts) if target_texts else None
+        def reference_info(ref_id: str) -> dict | None:
+            proposition = next((p for p in state.propositions if p.id == ref_id), None)
+            if proposition is not None:
+                return {"id": ref_id, "speaker": proposition.speaker, "turn": proposition.turn, "text": proposition.text, "kind": "CLAIM"}
+            question = next((q for q in state.questions if q.id == ref_id), None)
+            if question is not None:
+                return {"id": ref_id, "speaker": question.asker, "turn": question.source_turn_id, "text": question.core_proposition, "kind": "QUESTION"}
+            return None
 
-        turn = {"turn": turn_number, "phase": phase_lower, "speaker": speaker, "side": session.side_labels[0 if speaker == "A" else 1], "persona": session.personas[0 if speaker == "A" else 1]}
-        messages = speech_messages(self._scenario(session), turn, self._transcript_for_prompt(session))
-        contract = CONTRACTS[selected.name]
-        messages[1]["content"] += (
-            f"\n이번 턴 과제: {task.kind.value} — {task.description}"
-            f"\n선택 Action: {selected.name}, target_ids: {list(selected.target_ids)}, target_text: {target_text or '(없음)'}. "
-            f"Execution Contract: {contract.required_semantic_effect}"
-        )
+        def target_contract(candidate) -> tuple[str | None, str | None]:
+            target_texts = []
+            for ref_id in candidate.target_ids:
+                info = reference_info(ref_id)
+                if info:
+                    target_texts.append(f"{ref_id}: {info['text']}")
+            target_id = candidate.target_ids[0] if candidate.target_ids else None
+            return target_id, " | ".join(target_texts) if target_texts else None
 
-        # Audience input is a temporary top-priority QUD. It must be passed verbatim to
-        # both debaters instead of merely toggling an audience-response phase flag.
-        if phase_lower == "audience_response" and session.audience_question:
-            messages[1]["content"] += f"\n관객 입력 원문: {session.audience_question}\n이 입력에 먼저 직접 답한 뒤 자신의 입장과 연결하세요."
+        target_id, target_text = target_contract(selected)
+        turn = {
+            "turn": turn_number,
+            "phase": phase_lower,
+            "speaker": speaker,
+            "side": session.side_labels[0 if speaker == "A" else 1],
+            "persona": session.personas[0 if speaker == "A" else 1],
+        }
 
-        # Open-question obligation applies only while exploring/resolving the clash.
-        # Final Focus must crystallize instead of leaking internal Q IDs or reopening old QUDs.
-        if task.kind == TurnTaskKind.ANSWER_OPEN_QUESTION and task.target_ids:
-            open_question = next((q for q in state.questions if q.id == task.target_ids[0]), None)
-            if open_question is not None:
-                messages[1]["content"] += f"\n먼저 이 열린 질문의 핵심에 직접 답하세요: {open_question.core_proposition}"
+        def build_messages(feedback: str = "") -> list[dict[str, str]]:
+            messages = speech_messages(self._scenario(session), turn, self._transcript_for_prompt(session))
+            contract = CONTRACTS[selected.name]
+            reference_ids = list(dict.fromkeys([*selected.target_ids, *task.target_ids]))
+            reference_items = []
+            for ref_id in reference_ids:
+                info = reference_info(ref_id)
+                if info:
+                    reference_items.append(
+                        f'<reference id="{xml_escape(info["id"])}" kind="{info["kind"]}" '
+                        f'speaker="{xml_escape(info["speaker"])}" turn="{int(info["turn"])}">'
+                        f'{xml_escape(info["text"])}</reference>'
+                    )
+            references_xml = "".join(reference_items) or "<none />"
+            turn_contract = (
+                "<turn_contract>"
+                f"<task kind=\"{task.kind.value}\">{xml_escape(task.description)}</task>"
+                f"<action>{selected.name}</action>"
+                f"<required_semantic_effect>{xml_escape(contract.required_semantic_effect)}</required_semantic_effect>"
+                f"<targets>{references_xml}</targets>"
+                "</turn_contract>"
+                "<reference_rule>"
+                "targets에 제공된 기존 State 항목을 발언에서 명시적으로 가리킬 때는 [[C24]], [[Q3]] 형식의 marker를 사용하세요. "
+                "marker 자체는 사용자 UI에서 원 발언 링크로 변환됩니다. 제공되지 않은 ID를 추측해서 만들지 마세요."
+                "</reference_rule>"
+            )
+            messages[1]["content"] += turn_contract
+
+            if phase_lower == "audience_response" and session.audience_question:
+                messages[1]["content"] += (
+                    "<audience_input treat_as_data=\"true\">"
+                    f"{xml_escape(session.audience_question)}"
+                    "</audience_input>"
+                    "<audience_rule>이 입력에 먼저 직접 답한 뒤 자신의 입장과 연결하세요.</audience_rule>"
+                )
+
+            if task.kind == TurnTaskKind.ANSWER_OPEN_QUESTION and task.target_ids:
+                open_question = next((q for q in state.questions if q.id == task.target_ids[0]), None)
+                if open_question is not None:
+                    messages[1]["content"] += (
+                        "<open_question_obligation>"
+                        f"<reference>[[{open_question.id}]]</reference>"
+                        f"<core>{xml_escape(open_question.core_proposition)}</core>"
+                        "이 질문의 핵심에 먼저 직접 답하세요."
+                        "</open_question_obligation>"
+                    )
+
+            if feedback:
+                messages.append({"role": "user", "content": feedback})
+            return messages
 
         self._debug(
-            on_event, "turn_plan", turn=turn_number, phase=phase, speaker=speaker,
-            persona=turn["persona"], model=selected_models[speaker], control_model=self.provider.get("model"),
-            turn_task=task.kind.value, task_description=task.description,
-            action=selected.name, target_ids=list(selected.target_ids), target_text=target_text,
+            on_event,
+            "turn_plan",
+            turn=turn_number,
+            phase=phase,
+            speaker=speaker,
+            persona=turn["persona"],
+            model=selected_models[speaker],
+            control_model=self.provider.get("model"),
+            turn_task=task.kind.value,
+            task_description=task.description,
+            action=selected.name,
+            target_ids=list(selected.target_ids),
+            target_text=target_text,
+            prompt_version="speech-v4-structured",
+            retry_policy_version="typed-repair-v1",
         )
+
         generation_attempt = 0
+
+        def retry_strategy_from_feedback(feedback: str) -> str:
+            if not feedback:
+                return "INITIAL_DRAFT"
+            start_tag = "<retry_strategy>"
+            end_tag = "</retry_strategy>"
+            if start_tag in feedback and end_tag in feedback:
+                return feedback.split(start_tag, 1)[1].split(end_tag, 1)[0]
+            return "TARGETED_REPAIR"
 
         def generate(feedback: str):
             nonlocal generation_attempt
             generation_attempt += 1
-            current = messages if not feedback else [*messages, {"role": "user", "content": feedback}]
+            current = build_messages(feedback)
             debater_provider = {**self.provider, "model": selected_models[speaker], "stream": True}
-            reason = "INITIAL_DRAFT" if not feedback else "COMPLIANCE_RETRY"
-            self._debug(on_event, "draft_reset", turn=turn_number, speaker=speaker, phase=phase, attempt=generation_attempt, reason=reason, feedback=feedback or None, model=selected_models[speaker])
+            retry_strategy = retry_strategy_from_feedback(feedback)
+            self._debug(
+                on_event,
+                "draft_reset",
+                turn=turn_number,
+                speaker=speaker,
+                phase=phase,
+                attempt=generation_attempt,
+                max_attempts=3,
+                reason=retry_strategy,
+                feedback=feedback or None,
+                model=selected_models[speaker],
+            )
             if on_event is None:
                 utterance, metadata = self.deps.generate_text(debater_provider, current, self.timeout)
             else:
-                on_event("draft_reset", {"speaker": speaker, "phase": phase, "side_label": turn["side"], "attempt": generation_attempt})
+                on_event(
+                    "draft_reset",
+                    {
+                        "speaker": speaker,
+                        "phase": phase,
+                        "side_label": turn["side"],
+                        "attempt": generation_attempt,
+                        "max_attempts": 3,
+                        "retry_strategy": retry_strategy,
+                    },
+                )
                 utterance, metadata = self.deps.generate_text(
-                    debater_provider, current, self.timeout,
+                    debater_provider,
+                    current,
+                    self.timeout,
                     on_delta=lambda piece: on_event("draft_delta", {"text": piece}),
                 )
-            self._debug(on_event, "draft_completed", turn=turn_number, speaker=speaker, attempt=generation_attempt, model=selected_models[speaker], utterance=utterance, usage=(metadata or {}).get("usage"), finish_reason=(metadata or {}).get("finish_reason"))
+            self._debug(
+                on_event,
+                "draft_completed",
+                turn=turn_number,
+                speaker=speaker,
+                attempt=generation_attempt,
+                model=selected_models[speaker],
+                utterance=utterance,
+                usage=(metadata or {}).get("usage"),
+                finish_reason=(metadata or {}).get("finish_reason"),
+            )
             return utterance
 
         assignment = StanceAssignment(turn["side"], session.side_labels[1 if speaker == "A" else 0])
-
         compliance_metadata: list[dict] = []
+
         def semantic_check(utterance, assigned, current_phase, action, checked_target_text):
+            current_target_id = selected.target_ids[0] if selected.target_ids else None
             result, metadata = self.deps.check_compliance(
-                self.provider, action=action, target_id=target_id, target_text=checked_target_text,
-                utterance=utterance, assignment=assigned, phase=current_phase, timeout=self.timeout,
+                self.provider,
+                action=action,
+                target_id=current_target_id,
+                target_text=checked_target_text,
+                utterance=utterance,
+                assignment=assigned,
+                phase=current_phase,
+                timeout=self.timeout,
                 turn_task=f"{task.kind.value}: {task.description}",
             )
             compliance_metadata.append(metadata or {})
             return result
 
+        def local_validate(utterance: str) -> list[dict]:
+            exposed_reference_ids = set(selected.target_ids) | set(task.target_ids)
+            return [
+                issue.as_dict()
+                for issue in validate_surface(
+                    utterance,
+                    phase=phase_lower,
+                    allowed_reference_ids=exposed_reference_ids,
+                )
+            ]
+
         def on_check(check: dict):
-            metadata = compliance_metadata[len(compliance_metadata) - 1] if compliance_metadata else {}
-            self._debug(on_event, "compliance", turn=turn_number, speaker=speaker, model=self.provider.get("model"), usage=metadata.get("usage"), **check)
+            metadata = {} if check.get("semantic_skipped") else (compliance_metadata[-1] if compliance_metadata else {})
+            self._debug(
+                on_event,
+                "compliance",
+                turn=turn_number,
+                speaker=speaker,
+                model=self.provider.get("model"),
+                usage=metadata.get("usage"),
+                **check,
+            )
+
+        def on_replan(check: dict) -> tuple[str, str | None] | None:
+            nonlocal selected, target_id, target_text
+            prior = [*history, (speaker, selected.name, selected.target_ids)]
+            alternatives = eligible_actions(state, speaker, phase_lower, turn_task=task)
+            candidate = select_action_for_speaker(
+                alternatives,
+                prior,
+                speaker,
+                state=state,
+                current_turn=turn_number,
+                persona=turn["persona"],
+            )
+            if candidate is None or (candidate.name, candidate.target_ids) == (selected.name, selected.target_ids):
+                return None
+            old = selected
+            selected = candidate
+            target_id, target_text = target_contract(selected)
+            self._debug(
+                on_event,
+                "turn_replanned",
+                turn=turn_number,
+                speaker=speaker,
+                failure_codes=check.get("failure_codes", []),
+                from_action=old.name,
+                from_target_ids=list(old.target_ids),
+                to_action=selected.name,
+                to_target_ids=list(selected.target_ids),
+                target_text=target_text,
+            )
+            return selected.name, target_text
 
         checked = finalize_compliant_utterance(
-            generate, assignment, selected.name, target_text, phase_lower, semantic_check,
-            turn_task=task.kind.value, on_check=on_check,
+            generate,
+            assignment,
+            selected.name,
+            target_text,
+            phase_lower,
+            semantic_check,
+            turn_task=task.kind.value,
+            on_check=on_check,
+            local_validate=local_validate,
+            on_replan=on_replan,
+            max_attempts=3,
         )
         if not checked.committed:
+            self._debug(
+                on_event,
+                "turn_failed",
+                turn=turn_number,
+                speaker=speaker,
+                attempts=checked.attempts,
+                checks=list(checked.checks),
+            )
             raise SafeFailure("utterance compliance rejected")
+
+        references = extract_state_references(checked.utterance, state)
 
         def extractor(feedback):
             return self.deps.extract_patch(
                 self.provider,
-                {"turn": turn_number, "speaker": speaker, "phase": phase_lower, "turn_task": task.kind.value, "speech": checked.utterance},
-                state, self.timeout, feedback,
+                {
+                    "turn": turn_number,
+                    "speaker": speaker,
+                    "phase": phase_lower,
+                    "turn_task": task.kind.value,
+                    "action": selected.name,
+                    "target_ids": list(selected.target_ids),
+                    "target_text": target_text,
+                    "speech": checked.utterance,
+                },
+                state,
+                self.timeout,
+                feedback,
             )
 
         try:
-            candidate, patch_attempts = extract_and_apply(state, speaker, turn_number, extractor, utterance=checked.utterance)
+            candidate_state, patch_attempts = extract_and_apply(
+                state,
+                speaker,
+                turn_number,
+                extractor,
+                utterance=checked.utterance,
+            )
         except PatchValidationError as exc:
-            self._debug(on_event, "state_patch_failed", turn=turn_number, speaker=speaker, issues=[issue.as_dict() for issue in exc.issues])
+            self._debug(
+                on_event,
+                "state_patch_failed",
+                turn=turn_number,
+                speaker=speaker,
+                issues=[issue.as_dict() for issue in exc.issues],
+            )
             raise SafeFailure("state patch rejected") from exc
+
         compact_attempts = []
         for attempt in patch_attempts:
             item = {"valid": bool(attempt.get("valid"))}
@@ -311,16 +520,45 @@ class LiveDebateWebService:
             metadata = attempt.get("metadata") or {}
             if metadata.get("usage") is not None:
                 item["usage"] = metadata.get("usage")
+            if metadata.get("context_counts") is not None:
+                item["context_counts"] = metadata.get("context_counts")
             compact_attempts.append(item)
+
         self._debug(
-            on_event, "state_patch", turn=turn_number, speaker=speaker, model=self.provider.get("model"),
+            on_event,
+            "state_patch",
+            turn=turn_number,
+            speaker=speaker,
+            model=self.provider.get("model"),
             attempts=compact_attempts,
-            state_counts_before={"propositions": len(state.propositions), "relations": len(state.relations), "questions": len(state.questions), "commitment_events": len(state.commitment_events)},
-            state_counts_after={"propositions": len(candidate.propositions), "relations": len(candidate.relations), "questions": len(candidate.questions), "commitment_events": len(candidate.commitment_events)},
+            state_counts_before={
+                "propositions": len(state.propositions),
+                "relations": len(state.relations),
+                "questions": len(state.questions),
+                "commitment_events": len(state.commitment_events),
+            },
+            state_counts_after={
+                "propositions": len(candidate_state.propositions),
+                "relations": len(candidate_state.relations),
+                "questions": len(candidate_state.questions),
+                "commitment_events": len(candidate_state.commitment_events),
+            },
         )
         history = [*history, (speaker, selected.name, selected.target_ids)]
-        self._debug(on_event, "turn_committed", turn=turn_number, speaker=speaker, model=selected_models[speaker], attempts=checked.attempts, diagnostic_flag=checked.diagnostic_flag, action=selected.name, target_ids=list(selected.target_ids), turn_task=task.kind.value)
-        return checked.utterance, candidate, history, task
+        self._debug(
+            on_event,
+            "turn_committed",
+            turn=turn_number,
+            speaker=speaker,
+            model=selected_models[speaker],
+            attempts=checked.attempts,
+            diagnostic_flag=checked.diagnostic_flag,
+            action=selected.name,
+            target_ids=list(selected.target_ids),
+            turn_task=task.kind.value,
+            references=references,
+        )
+        return checked.utterance, candidate_state, history, task, references
 
     def debate_step(self, request: DebateStepRequest, on_event: Callable[[str, dict], None] | None = None) -> DebateStepResponse:
         session, state, history, selected_models = self._load_engine(request.session)
@@ -353,8 +591,8 @@ class LiveDebateWebService:
         if session.audience_status == "ASKED" and session.audience_response_index < 2:
             phase, speaker = "AUDIENCE_RESPONSE", ("A" if session.audience_response_index == 0 else "B")
             task = plan_turn_task(state, speaker=speaker, phase="audience_response", audience_question=session.audience_question)
-            utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
-            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
+            utterance, state, history, task, references = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
+            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance, references=references)
             session.transcript.append(item)
             session.audience_response_index += 1
             if session.audience_response_index == 2:
@@ -384,7 +622,7 @@ class LiveDebateWebService:
                     continue
 
             try:
-                utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
+                utterance, state, history, task, references = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
             except NoValuableMove:
                 if phase == "CROSSFIRE":
                     session.next_index = 8
@@ -397,7 +635,7 @@ class LiveDebateWebService:
                     continue
                 raise
 
-            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
+            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance, references=references)
             session.transcript.append(item)
             session.next_index += 1
             if session.next_index >= len(self._base_schedule):

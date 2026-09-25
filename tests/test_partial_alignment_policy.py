@@ -21,7 +21,7 @@ class PartialAlignmentPolicyTests(unittest.TestCase):
     def test_partial_without_target_use_regenerates_and_safe_fails(self):
         result = finalize_compliant_utterance(lambda _: "발언", self.assignment, "CHALLENGE_PREMISE", "대상", "crossfire", lambda *_: self.verdict(target_used=False))
         self.assertFalse(result.committed)
-        self.assertEqual(result.attempts, 2)
+        self.assertEqual(result.attempts, 3)
 
     def test_partial_with_protocol_violation_regenerates(self):
         verdicts = iter([self.verdict(additional_move_protocol_compliant=False), self.verdict()])
