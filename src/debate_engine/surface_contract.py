@@ -52,7 +52,8 @@ def validate_surface(utterance: str, *, phase: str, allowed_reference_ids: set[s
         if ref_id not in raw_ids:
             raw_ids.append(ref_id)
     for ref_id in raw_ids:
-        issues.append(SurfaceIssue("RAW_STATE_ID_LEAK", f"State ID {ref_id}는 [[{ref_id}]] 형식으로만 출력해야 합니다.", ref_id))
+        if ref_id in allowed_reference_ids:
+            issues.append(SurfaceIssue("RAW_STATE_ID_LEAK", f"State ID {ref_id}는 [[{ref_id}]] 형식으로만 출력해야 합니다.", ref_id))
 
     disallowed = []
     if HEADING_RE.search(text):
