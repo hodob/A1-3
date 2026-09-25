@@ -143,6 +143,7 @@ class LiveDebateWebService:
     def neutral_summary(self, request: NeutralSummaryRequest) -> NeutralSummaryResponse:
         system = (
             "토론을 중립적으로 정리하세요. 승자, 점수, 어느 쪽이 더 낫다는 판정을 하지 마세요. "
+            "transcript의 [[C24]], [[Q3]] 같은 State reference marker는 내부 citation 문법이므로 요약 결과에 그대로 복사하지 말고 자연어 의미만 반영하세요. "
             "핵심 clash, A/B의 강한 논점, 합의, 미해결 쟁점을 각각 짧은 목록으로 반환하고 neutral_summary 도구를 호출하세요."
         )
         payload = {"motion": request.motion, "transcript": [x.model_dump() for x in request.transcript]}
@@ -404,7 +405,7 @@ class LiveDebateWebService:
             ]
 
         def on_check(check: dict):
-            metadata = compliance_metadata[-1] if compliance_metadata else {}
+            metadata = {} if check.get("semantic_skipped") else (compliance_metadata[-1] if compliance_metadata else {})
             self._debug(
                 on_event,
                 "compliance",
