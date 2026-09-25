@@ -13,3 +13,6 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -q
       - run: node --check public/app.js
+      - run: node --check public/markdown_renderer.js
+      - run: node --check public/debate_moderator.js
+      - run: node --test tests/js/test_debate_stream.cjs tests/js/test_markdown_renderer.cjs tests/js/test_debate_moderator.cjs
