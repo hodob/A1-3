@@ -36,7 +36,8 @@ class StateHarnessTests(unittest.TestCase):
         context = extraction_context(state, {"action": "DEFEND_CLAIM", "target_ids": ["C2"]})
         ids = {item["id"] for item in context["propositions"]}
         self.assertIn("C2", ids)
-        self.assertIn("C1", ids)
+        self.assertIn("C14", ids)
+        self.assertNotIn("C1", ids)
         self.assertLess(len(context["propositions"]), len(state.propositions))
         self.assertEqual(context["selected_action"], "DEFEND_CLAIM")
         self.assertEqual(context["selected_target_ids"], ["C2"])
