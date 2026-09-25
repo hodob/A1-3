@@ -245,6 +245,17 @@ def _recent_stagnation(view: DebateControlView) -> bool:
     return all(not view.meaningful_progress(turn) for turn in last_two)
 
 
+def _question_pressure_on_facet(view: DebateControlView, state: DebateState, speaker: str, facet_id: str) -> int:
+    """Count resolved/open probes by this speaker against the same semantic facet."""
+    count = 0
+    for question in state.questions:
+        if question.asker != speaker or not question.target_proposition_id:
+            continue
+        if view.proposition_to_facet.get(question.target_proposition_id) == facet_id:
+            count += 1
+    return count
+
+
 def plan_turn_task(
     state: DebateState,
     *,
@@ -281,5 +292,13 @@ def plan_turn_task(
     if phase == "rebuttal" and opponent_target and own_target:
         return TurnTask(TurnTaskKind.WEIGH_COMPETING_REASONS, (opponent_target, own_target), "Rebuttal에서 양측 핵심 이유를 비교하고 남은 충돌을 좁히세요.")
     if opponent_target:
+        facet_id = view.proposition_to_facet.get(opponent_target)
+        if facet_id and own_target and _question_pressure_on_facet(view, state, speaker, facet_id) >= 2:
+            return TurnTask(
+                TurnTaskKind.WEIGH_COMPETING_REASONS,
+                (opponent_target, own_target),
+                "같은 상대 쟁점을 이미 두 차례 질문으로 검토했습니다. 새 질문을 반복하지 말고 양측 이유를 같은 기준에서 비교하세요.",
+                facet_id,
+            )
         return TurnTask(TurnTaskKind.TEST_UNRESOLVED_REASON, (opponent_target,), "아직 해결되지 않은 상대 핵심 이유 하나를 검증하거나 범위를 좁히세요.")
     return TurnTask(TurnTaskKind.NO_VALUABLE_MOVE, (), "현재 issue에서 검증할 상대 핵심 이유가 없습니다.")
