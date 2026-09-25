@@ -109,7 +109,7 @@ class HarnessTests(unittest.TestCase):
         self.assertIn("**굵게**", prompt)
         self.assertIn("*기울임*", prompt)
         self.assertIn("짧은 목록", prompt)
-        self.assertIn("blockquotes", prompt.lower() if "blockquotes" in prompt.lower() else prompt)
+        self.assertIn("blockquote", prompt)
         self.assertIn("[[C24]]", prompt)
         self.assertIn("외부 링크", prompt)
 
