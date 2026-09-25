@@ -35,17 +35,26 @@ def eligible_actions(state: DebateState, speaker: str, phase: str, *, turn_task:
             target = turn_task.target_ids[:1]
             return [ActionCandidate("REFUTE_CLAIM", target), ActionCandidate("CONCEDE_LOCAL", target)] if target else []
         if kind == TurnTaskKind.ANSWER_OPEN_QUESTION:
-            # Answering is a response obligation, not a strategic action. Pick a compatible
-            # move while the prompt requires the answer first.
-            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
-            options += [ActionCandidate("CONCEDE_LOCAL", (p.id,)) for p in reversed(opponent)]
-            options += [ActionCandidate("REVISE_CLAIM", (p.id,)) for p in reversed(own)]
-            if opponent and own:
-                options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
-            return options or [ActionCandidate("EXTEND_ARGUMENT")]
+            # The Immediate QUD determines the strategic target. Persona preference may
+            # choose between compatible moves, but may not redirect the turn elsewhere.
+            question = next((q for q in state.questions if q.id in turn_task.target_ids), None)
+            if question and question.target_proposition_id:
+                target = next((p for p in state.propositions if p.id == question.target_proposition_id), None)
+                if target is not None:
+                    control = build_control_view(state)
+                    facet_id = control.proposition_to_facet.get(target.id)
+                    current_id = next((f.current_id for f in control.facets if f.id == facet_id), target.id)
+                    if target.speaker == speaker:
+                        return [
+                            ActionCandidate("DEFEND_CLAIM", (current_id,)),
+                            ActionCandidate("REVISE_CLAIM", (current_id,)),
+                        ]
+                    return [ActionCandidate("CONCEDE_LOCAL", (current_id,))]
+            return [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[:2])] or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.ADDRESS_AUDIENCE:
-            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
-            if opponent and own:
+            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])]
+            comparative = any(token in turn_task.description for token in ("비교", "차이", "어느", "더 낫", "더 중요", "우선"))
+            if comparative and opponent and own:
                 options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
             return options or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.NARROW_DISAGREEMENT:
