@@ -109,9 +109,12 @@ function friendlyError(operation, error) {
 
 function showError(operation, error) {
   const [title, message] = friendlyError(operation, error);
+  const sameTurnRetry = operation === 'debate' && error.code === 'SAFE_FAILURE';
   $('#error-title').textContent = title;
   $('#error-message').textContent = message;
+  $('#retry-action').textContent = sameTurnRetry ? '이 발언 다시 준비하기' : '다시 시도하기';
   $('#retry-action').hidden = !state.lastRetry;
+  if (sameTurnRetry && state.view === 'debate-arena') $('#next-turn').textContent = '이 발언 다시 준비하기 →';
   $('#app-error').hidden = false;
 }
 
@@ -498,7 +501,7 @@ function renderDebateShell() {
 
 function turnCard(item, isLatest) {
   const li = element('li', `turn ${item.speaker === 'B' ? 'b' : 'a'} ${isLatest ? 'new' : ''}`);
-  li.id = isLatest ? 'latest-turn' : `turn-${item.turn}`;
+  li.id = `turn-${item.turn}`;
   const article = element('article');
   const headingId = `turn-${item.turn}-heading`;
   article.setAttribute('aria-labelledby', headingId);
@@ -511,7 +514,7 @@ function turnCard(item, isLatest) {
   identity.append(identityText);
   article.append(identity);
   const utterance = element('div', 'utterance markdown-body');
-  SaiMarkdown.renderBlock(utterance, item.utterance);
+  SaiMarkdown.renderBlock(utterance, item.utterance, {references: item.references || []});
   article.append(utterance);
   li.append(article);
   return li;
@@ -576,7 +579,7 @@ function updateDebateAfterStep(data, wasNearBottom) {
   }
   if (data.completed) $('#show-summary').hidden = false;
   if (data.utterance) {
-    if (wasNearBottom) $('#latest-turn .identity')?.focus({preventScroll: false});
+    if (wasNearBottom) $('#debate-log .turn.new .identity')?.focus({preventScroll: false});
     else $('#new-turn-link').hidden = false;
   }
 }
@@ -596,6 +599,14 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
     }
     if (kind === 'draft_reset') {
       clearDraft();
+      const attempt = Number(payload.attempt || 1);
+      const maxAttempts = Number(payload.max_attempts || 3);
+      if (attempt > 1) {
+        const retryText = payload.retry_strategy === 'REPLAN_AND_REGENERATE'
+          ? '다른 방식으로 발언을 다시 준비하고 있어요.'
+          : '발언을 다시 다듬고 있어요.';
+        setStatus(`${retryText} · ${attempt}/${maxAttempts}`);
+      }
       draftNode = element('li', `turn draft-turn ${payload.speaker === 'B' ? 'b' : ''}`);
       draftNode.setAttribute('aria-live', 'off');
       const card = element('article');
@@ -603,14 +614,17 @@ async function runStep(command = 'NEXT', audienceQuestion = null) {
       identity.append(element('span', `side-badge ${payload.speaker === 'B' ? 'side-b' : 'side-a'}`, payload.speaker));
       identity.append(element('span', '', payload.side_label || '발언자'));
       const draftUtterance = element('div', 'utterance markdown-body');
-      card.append(identity, element('p', 'draft-label', '작성 중 · 아직 확정되지 않았어요'), draftUtterance);
+      const attemptLabel = Number(payload.attempt || 1) > 1
+        ? `재작성 중 · ${payload.attempt}/${payload.max_attempts || 3}`
+        : '작성 중 · 아직 확정되지 않았어요';
+      card.append(identity, element('p', 'draft-label', attemptLabel), draftUtterance);
       draftNode.append(card);
       $('#debate-log').append(draftNode);
       if (wasNearBottom) draftNode.scrollIntoView({block: 'nearest'});
     } else if (kind === 'draft_delta') {
       if (!draftNode || typeof payload.text !== 'string') throw new AppError('INVALID_RESPONSE', '임시 발언 순서가 올바르지 않습니다.');
       draftMarkdown += payload.text;
-      SaiMarkdown.renderBlock($('.utterance', draftNode), draftMarkdown);
+      SaiMarkdown.renderBlock($('.utterance', draftNode), draftMarkdown, {draft: true});
     }
   };
   const data = await performOperation('debate', command === 'AUDIENCE_QUESTION' ? '질문을 전달하고 있어요.' : '다음 발언을 준비하고 있어요.', retry, async id => {
@@ -778,6 +792,21 @@ function resetDebate() {
   $('#topic-input').focus();
 }
 
+function focusStateReference(link) {
+  const href = link?.getAttribute?.('href') || '';
+  if (!/^#turn-\d+$/.test(href)) return false;
+  const target = document.querySelector(href);
+  if (!target) return false;
+  target.scrollIntoView({behavior: 'smooth', block: 'center'});
+  target.classList.remove('state-ref-highlight');
+  requestAnimationFrame(() => {
+    target.classList.add('state-ref-highlight');
+    setTimeout(() => target.classList.remove('state-ref-highlight'), 1400);
+    target.querySelector('.identity')?.focus({preventScroll: true});
+  });
+  return true;
+}
+
 function bindEvents() {
   window.addEventListener('hashchange', routeFromHash);
   $('#topic-form').addEventListener('submit', analyzeTopic);
@@ -807,6 +836,11 @@ function bindEvents() {
   $('#download-debug').addEventListener('click', downloadDebugLog);
   $('#reread-debate').addEventListener('click', () => showDebateView('debate-arena'));
   $('#new-turn-link').addEventListener('click', () => { $('#new-turn-link').hidden = true; });
+  $('#debate-log').addEventListener('click', event => {
+    const link = event.target.closest?.('a.state-ref');
+    if (!link) return;
+    if (focusStateReference(link)) event.preventDefault();
+  });
   $('#dismiss-error').addEventListener('click', clearError);
   $('#retry-action').addEventListener('click', () => { const retry = state.lastRetry; clearError(); retry?.(); });
   $('#stop-waiting').addEventListener('click', () => {
