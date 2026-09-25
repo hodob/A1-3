@@ -125,7 +125,7 @@ class MockDebateWebService:
             motion = request.analysis.normalized_motion
             edit_count = request.edit_count
         personas = PERSONA_PAIRS.get(request.analysis.claim_type, ("Falsifier", "Pragmatist"))
-        tone = "PLAYFUL" if request.analysis.treatment_mode == "PLAYFUL_DEBATE" else "SERIOUS"
+        tone = request.analysis.tone_hint or ("PLAYFUL" if request.analysis.treatment_mode == "PLAYFUL_DEBATE" else "SERIOUS")
         return MotionResponse(motion=motion, side_labels=side_labels, personas=personas, tone=tone, edit_count=edit_count, context_summary=request.context_summary, fact_anchor=request.analysis.fact_anchor, truth_mode=request.analysis.truth_mode)
 
     def start_session(self, motion: MotionResponse) -> DebateSession:

@@ -19,6 +19,8 @@ QuestionId = Annotated[str, StringConstraints(pattern=r"^Q[1-9][0-9]*$")]
 RelationId = Annotated[str, StringConstraints(pattern=r"^R[1-9][0-9]*$")]
 RelationType = Literal["SUPPORTS", "ATTACKS", "CONTRADICTS", "QUALIFIES"]
 ResponseStatus = Literal["DIRECT", "QUALIFIED", "PARTIAL", "EVADED", "FRAME_REJECTED_VALID", "UNCLEAR"]
+SemanticPropositionKind = Literal["NEW_REASON", "SAME_POINT", "REFINEMENT", "NEW_COUNTEREXAMPLE", "QUALIFICATION", "RELATED_DISTINCT"]
+SemanticQuestionKind = Literal["NEW_QUESTION", "SAME_QUESTION", "REFINEMENT"]
 
 
 class StrictModel(BaseModel):
@@ -29,6 +31,14 @@ class AddProposition(StrictModel):
     op: Literal["ADD_PROPOSITION"]
     temp_id: PatchPropositionId | None = None
     text: str = Field(min_length=1)
+    semantic_kind: SemanticPropositionKind = "NEW_REASON"
+    semantic_anchor_ref: PropositionRef | None = None
+
+    @model_validator(mode="after")
+    def validate_semantic_anchor(self):
+        if self.semantic_kind in ("SAME_POINT", "REFINEMENT", "QUALIFICATION") and self.semantic_anchor_ref is None:
+            raise ValueError(f"{self.semantic_kind} requires semantic_anchor_ref")
+        return self
 
 
 class AddRelation(StrictModel):
@@ -57,6 +67,14 @@ class AskQuestion(StrictModel):
     text: str | None = Field(default=None, min_length=1)
     core_proposition: str = Field(min_length=1)
     target_proposition_id: PropositionId | None = None
+    semantic_kind: SemanticQuestionKind = "NEW_QUESTION"
+    anchor_question_id: QuestionId | None = None
+
+    @model_validator(mode="after")
+    def validate_semantic_anchor(self):
+        if self.semantic_kind in ("SAME_QUESTION", "REFINEMENT") and self.anchor_question_id is None:
+            raise ValueError(f"{self.semantic_kind} requires anchor_question_id")
+        return self
 
 
 class AnswerQuestion(StrictModel):
@@ -221,13 +239,30 @@ def apply_patch(state: DebateState, raw_patch: dict | PatchEnvelope, *, speaker:
             raise PatchValidationError([PatchIssue("missing_entity", field, "Existing State Proposition does not exist", index, reference)])
         return original_propositions[reference]
 
+    # Semantic anchors may point to an existing proposition or another proposition in this patch.
+    for index, operation in enumerate(patch.operations):
+        if isinstance(operation, AddProposition) and operation.semantic_anchor_ref:
+            anchor = resolve_proposition_ref(operation.semantic_anchor_ref, "semantic_anchor_ref", index)
+            if operation.semantic_kind in ("SAME_POINT", "REFINEMENT", "QUALIFICATION") and anchor.speaker != speaker:
+                raise PatchValidationError([PatchIssue("invalid_semantic_owner", "semantic_anchor_ref", "Semantic same/refinement/qualification must anchor the speaker's own proposition", index, anchor.id)])
+        if isinstance(operation, AskQuestion) and operation.anchor_question_id:
+            anchor_question = _require(questions, operation.anchor_question_id, "anchor_question_id", index)
+            if operation.semantic_kind == "SAME_QUESTION" and anchor_question.asker != speaker:
+                raise PatchValidationError([PatchIssue("invalid_semantic_owner", "anchor_question_id", "Repeated question must anchor the same asker's question", index, anchor_question.id)])
+
     relation_keys = {(r.from_proposition_id, r.to_proposition_id, r.relation_type) for r in next_state.relations}
+    control_propositions: list[dict] = []
+    control_questions: list[dict] = []
     for index, operation in enumerate(patch.operations):
         if isinstance(operation, AddProposition):
             node = planned_propositions[index]
             next_state.propositions.append(node)
             propositions[node.id] = node
             next_state.commitment_events.append(CommitmentEvent(event="ASSERT", speaker=speaker, proposition_id=node.id, turn=turn))
+            anchor_id = None
+            if operation.semantic_anchor_ref:
+                anchor_id = resolve_proposition_ref(operation.semantic_anchor_ref, "semantic_anchor_ref", index).id
+            control_propositions.append({"proposition_id": node.id, "semantic_kind": operation.semantic_kind, "semantic_anchor_id": anchor_id})
         elif isinstance(operation, AddRelation):
             source = resolve_proposition_ref(operation.from_proposition_ref, "from_proposition_ref", index)
             target = resolve_proposition_ref(operation.to_proposition_ref, "to_proposition_ref", index)
@@ -239,9 +274,27 @@ def apply_patch(state: DebateState, raw_patch: dict | PatchEnvelope, *, speaker:
         elif isinstance(operation, AskQuestion):
             if operation.target_proposition_id:
                 _require(propositions, operation.target_proposition_id, "target_proposition_id", index)
+            anchor = questions.get(operation.anchor_question_id) if operation.anchor_question_id else None
+            if operation.semantic_kind == "SAME_QUESTION" and anchor is not None:
+                # Keep the raw utterance in the transcript/event log, but do not create a second open Q node.
+                control_questions.append({
+                    "question_id": None,
+                    "semantic_kind": operation.semantic_kind,
+                    "anchor_question_id": anchor.id,
+                    "anchor_resolution": anchor.resolution,
+                    "core_proposition": operation.core_proposition,
+                })
+                continue
             question = Question(id=f"Q{len(next_state.questions) + 1}", asker=speaker, text=operation.text or operation.core_proposition, core_proposition=operation.core_proposition, target_proposition_id=operation.target_proposition_id, turn=turn, source_turn_id=turn)
             next_state.questions.append(question)
             questions[question.id] = question
+            control_questions.append({
+                "question_id": question.id,
+                "semantic_kind": operation.semantic_kind,
+                "anchor_question_id": operation.anchor_question_id,
+                "anchor_resolution": anchor.resolution if anchor else None,
+                "core_proposition": operation.core_proposition,
+            })
         elif isinstance(operation, AnswerQuestion):
             prior = _require(questions, operation.question_id, "question_id", index)
             if prior.asker == speaker:
@@ -259,6 +312,7 @@ def apply_patch(state: DebateState, raw_patch: dict | PatchEnvelope, *, speaker:
             next_state.propositions.append(node)
             propositions[new_id] = node
             next_state.commitment_events.append(CommitmentEvent(event="REVISE", speaker=speaker, proposition_id=new_id, old_proposition_id=old.id, new_proposition_id=new_id, turn=turn))
+            control_propositions.append({"proposition_id": new_id, "semantic_kind": "QUALIFICATION", "semantic_anchor_id": old.id})
         elif isinstance(operation, ConcedeLocal):
             _require(propositions, operation.proposition_id, "proposition_id", index)
             next_state.commitment_events.append(CommitmentEvent(event="CONCEDE", speaker=speaker, proposition_id=operation.proposition_id, turn=turn))
@@ -267,7 +321,12 @@ def apply_patch(state: DebateState, raw_patch: dict | PatchEnvelope, *, speaker:
             if prior.speaker != speaker:
                 raise PatchValidationError([PatchIssue("invalid_owner", "proposition_id", "Cannot withdraw opponent proposition", index, prior.id)])
             next_state.commitment_events.append(CommitmentEvent(event="WITHDRAW", speaker=speaker, proposition_id=prior.id, turn=turn))
-    next_state.event_log.append({"turn": turn, "speaker": speaker, "patch": patch.model_dump()})
+    next_state.event_log.append({
+        "turn": turn,
+        "speaker": speaker,
+        "patch": patch.model_dump(),
+        "control": {"propositions": control_propositions, "questions": control_questions},
+    })
     return next_state
 
 

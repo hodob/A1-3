@@ -2,7 +2,7 @@
 
 사용자가 던진 주제를 두 AI 토론자가 **상대의 실제 이전 발언과 구조화된 Debate State를 보며 순차적으로 토론**하는 Vanilla Web + Python Serverless MVP다.
 
-단순 찬반 대본 생성이 아니라 `State → Action → Persona preference → Utterance → Guard → State Update` Harness를 구현하는 것이 핵심이다. 최종 승자는 AI가 정하지 않고 사용자가 직접 선택한다.
+단순 찬반 대본 생성이 아니라 `State → Semantic Control State → Turn Task → Action → Persona preference → Utterance → Guard → State Update` Harness를 구현하는 것이 핵심이다. 최종 승자는 AI가 정하지 않고 사용자가 직접 선택한다.
 
 ## 주요 기능
 
@@ -12,8 +12,10 @@
 - Opening → Crossfire → Audience Question → Rebuttal → Final Focus
 - Proposition / Relation / Question / Commitment 기반 Debate State
 - Rule-assisted Action Selector + Action–Target Pair State
+- QUD/semantic facet 기반 Turn Task + 의미 반복·해결된 질문 재개 방지
+- State progress 기반 Crossfire/Rebuttal 조기 phase 전환
 - 6개 사전 정의 Persona의 soft action preference
-- Action Fidelity Guard + Semantic Stance Guard
+- Action Fidelity Guard + Semantic Stance Guard + Turn Task Fidelity
 - Neutral Summary + 사용자 선택
 - Mock mode / Live mode 분리
 
@@ -41,7 +43,7 @@ src/web_app/            Web DTO, Mock/Live service, signed session
 tests/                 회귀·웹·배포 계약 테스트
 etc/fixtures/           검증 fixture
 etc/tools/              진단/개발 도구
-docs/                  서비스/아키텍처/배포/검증 문서
+docs/                  서비스/아키텍처/배포/검증/Control State 문서
 ```
 
 ## 로컬 테스트
@@ -145,3 +147,7 @@ python -m etc.tools.preflight
 - 테스트 감사: `docs/TEST_AUDIT.md`
 - 배포 체크리스트: `docs/DEPLOYMENT_CHECKLIST.md`
 - 제출 체크리스트: `docs/SUBMISSION_CHECKLIST.md`
+
+## 반복 토론 제어
+
+반복 제어 구조와 Turn Task/semantic facet 계약은 `docs/DEBATE_CONTROL_STATE.md`를 참고한다. 실제 탕수육 14-turn 회귀 자료는 `etc/fixtures/tangsuyuk_repetition_14turn.json`에 있다.

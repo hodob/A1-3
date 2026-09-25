@@ -15,6 +15,7 @@ from .debate_harness import ConfigError, load_config, select_debaters
 from .provider_adapter import CURRENT_PROVIDER, ProviderAdapter, ProviderOutputError
 from .provider_transport import request_completion
 from .question_extraction_guard import explicit_question_candidates
+from .debate_control import build_control_view
 
 
 ADAPTER = ProviderAdapter(CURRENT_PROVIDER)
@@ -33,15 +34,32 @@ PATCH_INSTRUCTIONS = (
     "QUALIFIES는 기존 Proposition의 적용 범위, 조건, 정도 또는 modality를 제한합니다. "
     "명시적 또는 강하게 표현된 argumentative relation만 저장하고 implicit warrant나 수사적 연관을 만들지 마세요. "
     "새 Proposition이 기존 핵심 Claim의 이유이면 SUPPORTS, 기존 Claim의 근거를 직접 약화하면 ATTACKS입니다. 단순 주제 유사성은 Relation이 아닙니다. "
+    "각 ADD_PROPOSITION에는 semantic_kind를 반드시 판단하세요: NEW_REASON은 기존에 없던 독립 이유, SAME_POINT는 같은 논지의 말바꿈, REFINEMENT는 같은 논지의 표현/정교화, "
+    "NEW_COUNTEREXAMPLE은 기존 주장에 대한 새 반례, QUALIFICATION은 범위·조건·정도를 실제로 제한, RELATED_DISTINCT는 관련 있지만 별개의 논지입니다. "
+    "SAME_POINT/REFINEMENT/QUALIFICATION은 semantic_anchor_ref에 가장 가까운 기존 C 또는 이번 Patch의 P를 넣으세요. 단순 단어 유사성만으로 SAME_POINT로 합치지 마세요. "
+    "ASK_QUESTION에는 semantic_kind를 NEW_QUESTION/SAME_QUESTION/REFINEMENT 중 선택하세요. 표현만 바뀐 같은 질문이면 SAME_QUESTION과 기존 anchor_question_id를 사용하세요. "
+    "이미 RESOLVED된 질문을 새 근거나 새 범위 없이 다시 묻는 것은 SAME_QUESTION입니다. "
     "입력 relations에 같은 from/to/type이 이미 있으면 ADD_RELATION을 다시 만들지 마세요. extract_patch 도구를 호출하세요."
 )
 
 
 def extraction_context(state: DebateState) -> dict:
+    control = build_control_view(state)
+    prop_by_id = {p.id: p for p in state.propositions}
     return {
         "propositions": [{"id": p.id, "text": p.text, "speaker": p.speaker} for p in state.propositions],
         "relations": [{"id": r.id, "from": r.from_proposition_id, "to": r.to_proposition_id, "type": r.relation_type} for r in state.relations],
-        "open_questions": [q.model_dump() for q in state.questions if q.resolution == "OPEN"],
+        "questions": [q.model_dump() for q in state.questions],
+        "facets": [
+            {
+                "id": facet.id,
+                "representative_id": facet.representative_id,
+                "representative_text": prop_by_id[facet.representative_id].text,
+                "member_ids": list(facet.member_ids),
+                "speaker": facet.speaker,
+            }
+            for facet in control.facets
+        ],
     }
 
 

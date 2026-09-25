@@ -117,6 +117,16 @@ class LiveWebServiceTests(unittest.TestCase):
         self.assertEqual(result.side_labels, ("철수 책임", "영희 책임"))
         self.assertIn("motion_normalization", self.deps.structured_tools)
 
+    def test_tone_hint_is_independent_from_treatment_mode(self):
+        from src.web_app.contracts import TopicAnalysis
+        analysis = TopicAnalysis(
+            original_topic="가벼운 취향", claim_type="COMPARISON", epistemic_status="NON_FACTUAL",
+            treatment_mode="NATURAL_DEBATE", interaction_state="READY", normalized_motion="A가 B보다 낫다.",
+            side_labels=("A", "B"), tone_hint="PLAYFUL",
+        )
+        motion = self.service.create_motion(CreateMotionRequest(analysis=analysis, edit_count=0))
+        self.assertEqual(motion.tone, "PLAYFUL")
+
     def test_first_debate_step_creates_signed_engine_token(self):
         analysis = self.service.analyze_topic(AnalyzeTopicRequest(topic="핫도그는 샌드위치인가?"))
         motion = self.service.create_motion(CreateMotionRequest(analysis=analysis, edit_count=0))
@@ -255,6 +265,50 @@ class LiveWebServiceTests(unittest.TestCase):
         self.assertEqual(len(session.transcript), 14)
         summary = self.service.neutral_summary(NeutralSummaryRequest(motion=session.motion, transcript=session.transcript))
         self.assertTrue(summary.unresolved)
+
+    def test_saturated_crossfire_moves_to_audience_gate_without_generation(self):
+        from src.debate_engine.debate_contracts import DebateState, apply_patch
+        from src.web_app.contracts import TranscriptItem
+        state = apply_patch(DebateState(), {"operations": [{"op": "ADD_PROPOSITION", "text": "전체 조화", "semantic_kind": "NEW_REASON"}]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [{"op": "ADD_PROPOSITION", "text": "선택권", "semantic_kind": "NEW_REASON"}]}, speaker="B", turn=2)
+        state = apply_patch(state, {"operations": [{"op": "ADD_PROPOSITION", "text": "전체 과정 안정성", "semantic_kind": "SAME_POINT", "semantic_anchor_ref": "C1"}]}, speaker="A", turn=3)
+        state = apply_patch(state, {"operations": [{"op": "ADD_PROPOSITION", "text": "개인별 선택 유지", "semantic_kind": "SAME_POINT", "semantic_anchor_ref": "C2"}]}, speaker="B", turn=4)
+        session = DebateSession(
+            motion="논제", side_labels=("A입장", "B입장"), personas=("Socratic", "Falsifier"), tone="SERIOUS", next_index=6,
+            transcript=[
+                TranscriptItem(turn=i, phase="OPENING" if i <= 2 else "CROSSFIRE", speaker="A" if i % 2 else "B", side_label="A입장" if i % 2 else "B입장", utterance=f"발언 {i}")
+                for i in range(1, 7)
+            ],
+        )
+        session = self.service._save_engine(session, state, [("A", "WEIGH_COMPARATIVE", ("C2", "C1"))], {"A": "gemini-test", "B": "claude-test"})
+        generated_before = len(self.deps.generated)
+        result = self.service.debate_step(DebateStepRequest(session=session, command="NEXT"))
+        self.assertTrue(result.awaiting_audience_question)
+        self.assertEqual(result.moderator_decision, "MOVE_PHASE")
+        self.assertEqual(result.session.next_index, 8)
+        self.assertEqual(len(self.deps.generated), generated_before)
+
+    def test_audience_question_verbatim_reaches_generation_prompt(self):
+        analysis = self.service.analyze_topic(AnalyzeTopicRequest(topic="핫도그는 샌드위치인가?"))
+        motion = self.service.create_motion(CreateMotionRequest(analysis=analysis, edit_count=0))
+        session = DebateSession(motion=motion.motion, side_labels=motion.side_labels, personas=motion.personas, tone=motion.tone)
+        for _ in range(8):
+            session = self.service.debate_step(DebateStepRequest(session=session, command="NEXT")).session
+        gate = self.service.debate_step(DebateStepRequest(session=session, command="NEXT"))
+        session = self.service.debate_step(DebateStepRequest(session=gate.session, command="AUDIENCE_QUESTION", audience_question="볶는다는 것도 있어")).session
+        self.service.debate_step(DebateStepRequest(session=session, command="NEXT"))
+        prompt = self.deps.generated[-1][-1]["content"]
+        self.assertIn("관객 입력 원문: 볶는다는 것도 있어", prompt)
+
+    def test_final_focus_does_not_leak_internal_question_id_or_force_open_question(self):
+        from src.debate_engine.debate_contracts import DebateState, apply_patch
+        state = apply_patch(DebateState(), {"operations": [{"op": "ASK_QUESTION", "core_proposition": "왜 전체 조화가 우선인가?"}]}, speaker="B", turn=3)
+        session = DebateSession(motion="논제", side_labels=("A입장", "B입장"), personas=("Socratic", "Falsifier"), tone="SERIOUS")
+        self.service._commit_generated_turn(session, state, [], {"A": "gemini-test", "B": "claude-test"}, "FINAL_FOCUS", "A")
+        prompt = self.deps.generated[-1][-1]["content"]
+        self.assertNotIn("열린 질문 Q1", prompt)
+        self.assertNotIn("먼저 이 열린 질문", prompt)
+        self.assertIn("CRYSTALLIZE", prompt)
 
     def test_tampered_engine_token_is_rejected(self):
         session = DebateSession(

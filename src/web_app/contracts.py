@@ -44,6 +44,7 @@ class TopicAnalysis(StrictModel):
     confirmation_reason: str | None = None
     fact_anchor: str | None = None
     truth_mode: TruthMode = "REAL_WORLD"
+    tone_hint: Literal["SERIOUS", "PLAYFUL"] | None = None
 
 
 class ContextAnswer(StrictModel):
@@ -153,6 +154,8 @@ class DebateStepResponse(StrictModel):
     utterance: str | None = None
     awaiting_audience_question: bool = False
     completed: bool = False
+    turn_task: str | None = None
+    moderator_decision: str | None = None
 
 
 class NeutralSummaryRequest(StrictModel):

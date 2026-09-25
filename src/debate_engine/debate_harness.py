@@ -156,11 +156,19 @@ def speech_messages(scenario: dict, turn: dict, transcript: list[dict]) -> list[
         "final_focus": "새 핵심 근거 없이 가장 중요한 이유 1~2개만 남기세요.",
         "audience_response": "관객 질문에 직접 답하고 필요하면 자신의 핵심 주장을 한정하세요.",
     }[phase]
+    tone = scenario.get("tone", "SERIOUS")
     surface_style = (
         "주제가 진지하다. 사실 명확성과 불확실성 표현을 우선하고 유머와 비꼼을 줄인다."
-        if scenario.get("tone", "SERIOUS") == "SERIOUS"
+        if tone == "SERIOUS"
         else "가벼운 비유와 논증에서 나온 유머는 가능하다. 상대의 인격은 공격하지 않는다."
     )
+    sentence_budget = {
+        "opening": "2~3문장",
+        "crossfire": "1~2문장" if tone == "PLAYFUL" else "1~3문장",
+        "audience_response": "1~2문장",
+        "rebuttal": "2~3문장",
+        "final_focus": "2문장 안팎",
+    }[phase]
     system = (
         "당신은 관전형 토론의 참가자입니다. 실제 사용자 사건, 통계, 연구, 인용을 지어내지 마세요. "
         "상대가 실제로 한 말에 반응하고, 유효한 반론은 인정하며, 불확실하면 밝히세요. "
@@ -170,7 +178,7 @@ def speech_messages(scenario: dict, turn: dict, transcript: list[dict]) -> list[
         f"Persona: {turn['persona']} — {PERSONA_CARDS[turn['persona']]} "
         f"단계: {phase}. {instruction} "
         + ("최종 결론에서는 '제 최종 입장은 <Assigned Stance>'로 입장을 명시하고, 설명도 그 결론과 일치시켜 주세요. " if phase == "final_focus" else "")
-        + f"Surface Style: {surface_style} 토론 발언만 한국어로 출력하세요. 보통 2~4문장으로 말하세요."
+        + f"Surface Style: {surface_style} 토론 발언만 한국어로 출력하세요. 이 단계는 {sentence_budget}을 기본 상한으로 삼고, 한 턴에는 한 과제만 처리하세요."
     )
     history = "\n".join(f"{item['speaker']}({item['side']}): {item['speech']}" for item in transcript[-12:]) or "(첫 발언)"
     user = f"논제: {scenario['motion']}\n맥락: {scenario.get('context', '(없음)')}\n사실 기준: {scenario.get('fact_anchor', '(없음)')}\n이전 발언:\n{history}"

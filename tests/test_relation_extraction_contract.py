@@ -100,6 +100,22 @@ class RelationExtractionContractTests(unittest.TestCase):
         for phrase in ("Patch-local", "SUPPORTS", "이유", "ATTACKS", "동시에 참", "CONTRADICTS", "QUALIFIES", "implicit warrant", "단순 주제 유사성"):
             self.assertIn(phrase, PATCH_INSTRUCTIONS)
 
+    def test_prompt_requires_semantic_progress_classification(self):
+        from src.debate_engine.state_harness import PATCH_INSTRUCTIONS
+        for label in ("SAME_POINT", "NEW_COUNTEREXAMPLE", "SAME_QUESTION", "semantic_anchor_ref"):
+            self.assertIn(label, PATCH_INSTRUCTIONS)
+
+    def test_extraction_context_contains_resolved_questions_and_semantic_facets(self):
+        from src.debate_engine.state_harness import extraction_context
+        state = apply_patch(DebateState(), {"operations": [
+            {"op": "ADD_PROPOSITION", "text": "핵심", "semantic_kind": "NEW_REASON"},
+            {"op": "ASK_QUESTION", "core_proposition": "왜?"},
+        ]}, speaker="A", turn=1)
+        state = apply_patch(state, {"operations": [{"op": "ANSWER_QUESTION", "question_id": "Q1", "response_status": "DIRECT", "resolution": "RESOLVED"}]}, speaker="B", turn=2)
+        context = extraction_context(state)
+        self.assertEqual(context["questions"][0]["resolution"], "RESOLVED")
+        self.assertEqual(context["facets"][0]["representative_id"], "C1")
+
 
 if __name__ == "__main__":
     unittest.main()

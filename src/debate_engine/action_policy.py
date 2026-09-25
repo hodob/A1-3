@@ -8,6 +8,7 @@ from .debate_contracts import DebateState
 from .target_quality import derive_target_metadata, ranking_key, saturation_key
 from .action_pair_state import evaluate_action_target_pair, filter_available_pairs, strategic_priority
 from .persona_preferences import preference_level
+from .debate_control import TurnTask, TurnTaskKind, build_control_view
 
 
 @dataclass(frozen=True)
@@ -16,9 +17,48 @@ class ActionCandidate:
     target_ids: tuple[str, ...] = ()
 
 
-def eligible_actions(state: DebateState, speaker: str, phase: str) -> list[ActionCandidate]:
+def eligible_actions(state: DebateState, speaker: str, phase: str, *, turn_task: TurnTask | None = None) -> list[ActionCandidate]:
     opponent = [p for p in state.propositions if p.speaker != speaker]
     own = [p for p in state.propositions if p.speaker == speaker]
+
+    if turn_task is not None:
+        kind = turn_task.kind
+        if kind == TurnTaskKind.NO_VALUABLE_MOVE:
+            return []
+        if kind == TurnTaskKind.INTRODUCE_UNCOVERED_FACET:
+            return [ActionCandidate("EXTEND_ARGUMENT")]
+        if kind == TurnTaskKind.CRYSTALLIZE:
+            return [ActionCandidate("CRYSTALLIZE")]
+        if kind == TurnTaskKind.WEIGH_COMPETING_REASONS:
+            return [ActionCandidate("WEIGH_COMPARATIVE", turn_task.target_ids)] if len(turn_task.target_ids) >= 2 else []
+        if kind == TurnTaskKind.ADDRESS_COUNTEREXAMPLE:
+            target = turn_task.target_ids[:1]
+            return [ActionCandidate("REFUTE_CLAIM", target), ActionCandidate("CONCEDE_LOCAL", target)] if target else []
+        if kind == TurnTaskKind.ANSWER_OPEN_QUESTION:
+            # Answering is a response obligation, not a strategic action. Pick a compatible
+            # move while the prompt requires the answer first.
+            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
+            options += [ActionCandidate("CONCEDE_LOCAL", (p.id,)) for p in reversed(opponent)]
+            options += [ActionCandidate("REVISE_CLAIM", (p.id,)) for p in reversed(own)]
+            if opponent and own:
+                options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
+            return options or [ActionCandidate("EXTEND_ARGUMENT")]
+        if kind == TurnTaskKind.ADDRESS_AUDIENCE:
+            options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own)]
+            if opponent and own:
+                options.append(ActionCandidate("WEIGH_COMPARATIVE", (opponent[-1].id, own[-1].id)))
+            return options or [ActionCandidate("EXTEND_ARGUMENT")]
+        if kind == TurnTaskKind.NARROW_DISAGREEMENT:
+            return [ActionCandidate("SEEK_COMMITMENT", (p.id,)) for p in reversed(opponent)] + [ActionCandidate("CLARIFY_CLAIM", (p.id,)) for p in reversed(opponent)]
+        if kind == TurnTaskKind.TEST_UNRESOLVED_REASON:
+            target_ids = set(turn_task.target_ids)
+            targets = [p for p in reversed(opponent) if not target_ids or p.id in target_ids]
+            options = []
+            for proposition in targets:
+                options.extend(ActionCandidate(name, (proposition.id,)) for name in ("CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CLARIFY_CLAIM", "SEEK_COMMITMENT", "CHECK_CONSISTENCY"))
+            return options
+
+    # Legacy/default phase policy remains available for CLI fixtures and backward compatibility.
     if phase == "opening":
         return [ActionCandidate("EXTEND_ARGUMENT")]
     if phase == "crossfire":
@@ -47,6 +87,33 @@ def select_action_for_speaker(options: list[ActionCandidate], previous: list[tup
         remaining = [candidate for candidate in remaining if (candidate.name, candidate.target_ids) not in speaker_previous]
         return max(remaining, key=lambda candidate: preference_level(persona, candidate.name), default=None)
     remaining = filter_available_pairs(state, speaker, remaining, previous, current_turn=current_turn)
+
+    # Prevent semantic duplicate proposition IDs from bypassing Action×Target exhaustion.
+    # Raw proposition IDs remain authoritative, but the control plane treats members of
+    # the same semantic facet as one target for repetition purposes.
+    control = build_control_view(state)
+    used_semantic_pairs = set()
+    for owner, action, targets in previous:
+        if owner != speaker or not targets:
+            continue
+        first = targets[0]
+        facet_id = control.proposition_to_facet.get(first)
+        if facet_id:
+            used_semantic_pairs.add((action, facet_id))
+    semantic_filtered = []
+    for candidate in remaining:
+        if not candidate.target_ids:
+            semantic_filtered.append(candidate)
+            continue
+        facet_id = control.proposition_to_facet.get(candidate.target_ids[0])
+        if facet_id and (candidate.name, facet_id) in used_semantic_pairs:
+            continue
+        if facet_id in control.agreed_facet_ids and candidate.name in {
+            "CHALLENGE_PREMISE", "CHALLENGE_INFERENCE", "REQUEST_SUPPORT", "TEST_BOUNDARY", "CHECK_CONSISTENCY", "REFUTE_CLAIM", "CLARIFY_CLAIM", "SEEK_COMMITMENT"
+        }:
+            continue
+        semantic_filtered.append(candidate)
+    remaining = semantic_filtered
 
     def candidate_key(candidate: ActionCandidate) -> tuple:
         if candidate.target_ids and candidate.target_ids[0].startswith("Q"):

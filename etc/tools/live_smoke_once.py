@@ -55,7 +55,7 @@ def _dry_plan(args) -> dict:
             "opening_A",
             "opening_B",
             "crossfire_A",
-            "combined_action_stance_compliance",
+            "combined_action_stance_task_compliance",
             "state_patch_and_relation_extraction",
             "question_extraction_if_emitted",
             "signed_session_roundtrip",

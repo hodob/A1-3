@@ -85,6 +85,18 @@ class HarnessTests(unittest.TestCase):
         self.assertLess(prompt.index("Protocol:"), prompt.index("Assigned Stance:"))
         self.assertLess(prompt.index("Assigned Stance:"), prompt.index("Persona:"))
 
+    def test_playful_crossfire_uses_short_surface_budget(self):
+        turn = {"persona": "Falsifier", "side": "left", "phase": "crossfire", "speaker": "A"}
+        prompt = speech_messages({"motion": "M", "sides": ["left", "right"], "tone": "PLAYFUL"}, turn, [])[0]["content"]
+        self.assertIn("1~2문장", prompt)
+        self.assertIn("한 턴에는 한 과제만", prompt)
+
+    def test_final_focus_budget_stays_short_but_allows_crystallization(self):
+        turn = {"persona": "Socratic", "side": "left", "phase": "final_focus", "speaker": "A"}
+        prompt = speech_messages({"motion": "M", "sides": ["left", "right"], "tone": "SERIOUS"}, turn, [])[0]["content"]
+        self.assertIn("2문장 안팎", prompt)
+        self.assertIn("새 핵심 근거 없이", prompt)
+
     def test_records_never_include_api_keys(self):
         record = safe_record({"api_key": "secret-value", "content": "debate text", "nested": {"authorization": "Bearer secret-value"}})
         encoded = json.dumps(record)

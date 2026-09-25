@@ -23,6 +23,7 @@ from .errors import SafeFailure
 from src.debate_engine.action_execution_contracts import CONTRACTS
 from src.debate_engine.action_pair_state import filter_available_pairs
 from src.debate_engine.action_policy import eligible_actions, select_action_for_speaker
+from src.debate_engine.debate_control import TurnTask, TurnTaskKind, plan_turn_task
 from src.debate_engine.combined_compliance import finalize_compliant_utterance, judge_combined
 from src.debate_engine.debate_contracts import DebateState, PatchEnvelope, PatchValidationError
 from src.debate_engine.debate_harness import call_model, speech_messages
@@ -55,6 +56,12 @@ class LiveRuntimeDependencies:
             raise RuntimeError(f"LLM 연결 실패: {exc.reason}") from exc
         result = adapter.parse_structured_response(payload, contract, tool_name)
         return result, {"usage": payload.get("usage"), "elapsed_seconds": round(time.monotonic() - started, 3)}
+
+
+class NoValuableMove(RuntimeError):
+    def __init__(self, task: TurnTask):
+        self.task = task
+        super().__init__(task.description)
 
 
 class LiveDebateWebService:
@@ -90,7 +97,7 @@ class LiveDebateWebService:
             "사용자 입력을 AI 토론 Harness용으로 분석하세요. claim_type, epistemic_status, treatment_mode, interaction_state를 계약 enum으로 고르세요. "
             "개인 사건에서 판단에 필요한 사실이 부족하면 CONTEXT_REQUIRED, 정보 설명 질문이면 INFORMATIONAL_FIRST입니다. "
             "사실 우세 주제를 거짓 대 현실의 동등한 증거 토론으로 만들지 마세요. Motion은 사용자 의미를 보존하고, 새 actor/criterion을 추가하면 CONFIRMATION_REQUIRED로 처리하세요. "
-            "side_labels는 대칭적이고 비평가적인 두 짧은 이름으로 만드세요. topic_analysis 도구를 호출하세요."
+            "side_labels는 대칭적이고 비평가적인 두 짧은 이름으로 만드세요. treatment_mode와 별개로 표현 강도를 위한 tone_hint도 고르세요: 가벼운 음식 취향·말장난·저위험 비교는 PLAYFUL, 개인 분쟁·정책·사실 민감 주제는 SERIOUS가 기본입니다. topic_analysis 도구를 호출하세요."
         )
         result, _ = self.deps.structured(self.provider, [{"role": "system", "content": system}, {"role": "user", "content": request.topic}], TopicAnalysis, "topic_analysis", self.timeout)
         # The user's input is authoritative even if a provider rewrites original_topic.
@@ -123,7 +130,7 @@ class LiveDebateWebService:
         else:
             motion, edit_count = request.analysis.normalized_motion, request.edit_count
         personas = PERSONA_PAIRS.get(request.analysis.claim_type, ("Falsifier", "Pragmatist"))
-        tone = "PLAYFUL" if request.analysis.treatment_mode == "PLAYFUL_DEBATE" else "SERIOUS"
+        tone = request.analysis.tone_hint or ("PLAYFUL" if request.analysis.treatment_mode == "PLAYFUL_DEBATE" else "SERIOUS")
         return MotionResponse(motion=motion, side_labels=side_labels, personas=personas, tone=tone, edit_count=edit_count, context_summary=request.context_summary, fact_anchor=request.analysis.fact_anchor, truth_mode=request.analysis.truth_mode)
 
     def neutral_summary(self, request: NeutralSummaryRequest) -> NeutralSummaryResponse:
@@ -176,24 +183,55 @@ class LiveDebateWebService:
     def _transcript_for_prompt(session: DebateSession) -> list[dict]:
         return [{"speaker": x.speaker, "side": x.side_label, "speech": x.utterance} for x in session.transcript]
 
-    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str, on_event: Callable[[str, dict], None] | None = None) -> tuple[str, DebateState, list]:
+    def _commit_generated_turn(self, session: DebateSession, state: DebateState, history, selected_models: dict[str, str], phase: str, speaker: str, on_event: Callable[[str, dict], None] | None = None, *, turn_task: TurnTask | None = None) -> tuple[str, DebateState, list, TurnTask]:
         phase_lower = phase.lower()
         turn_number = len(session.transcript) + 1
-        raw_options = eligible_actions(state, speaker, phase_lower)
+        task = turn_task or plan_turn_task(
+            state,
+            speaker=speaker,
+            phase=phase_lower,
+            audience_question=session.audience_question if phase_lower == "audience_response" else None,
+        )
+        if task.kind == TurnTaskKind.NO_VALUABLE_MOVE:
+            raise NoValuableMove(task)
+
+        raw_options = eligible_actions(state, speaker, phase_lower, turn_task=task)
         selected = select_action_for_speaker(raw_options, history, speaker, state=state, current_turn=turn_number, persona=session.personas[0 if speaker == "A" else 1])
         if selected is None:
-            raise SafeFailure("no eligible debate action")
+            # There is no useful legal realization for the chosen task. Do not ask the
+            # model to invent novelty merely to fill a scheduled slot.
+            raise NoValuableMove(TurnTask(TurnTaskKind.NO_VALUABLE_MOVE, (), f"{task.kind.value}를 수행할 적법한 Action×Target 후보가 없습니다."))
+
+        target_texts = []
+        for target_id in selected.target_ids:
+            text = next((p.text for p in state.propositions if p.id == target_id), None)
+            if text is None:
+                text = next((q.core_proposition for q in state.questions if q.id == target_id), None)
+            if text:
+                target_texts.append(f"{target_id}: {text}")
         target_id = selected.target_ids[0] if selected.target_ids else None
-        target_text = next((p.text for p in state.propositions if p.id == target_id), None)
-        if target_text is None and target_id:
-            target_text = next((q.core_proposition for q in state.questions if q.id == target_id), None)
+        target_text = " | ".join(target_texts) if target_texts else None
+
         turn = {"turn": turn_number, "phase": phase_lower, "speaker": speaker, "side": session.side_labels[0 if speaker == "A" else 1], "persona": session.personas[0 if speaker == "A" else 1]}
         messages = speech_messages(self._scenario(session), turn, self._transcript_for_prompt(session))
         contract = CONTRACTS[selected.name]
-        messages[1]["content"] += f"\n선택 Action: {selected.name}, target_ids: {list(selected.target_ids)}, target_text: {target_text or '(없음)'}. Execution Contract: {contract.required_semantic_effect}"
-        open_question = next((q for q in reversed(state.questions) if q.asker != speaker and q.resolution == "OPEN"), None)
-        if open_question:
-            messages[1]["content"] += f"\n먼저 열린 질문 {open_question.id}에 답하세요: {open_question.core_proposition}"
+        messages[1]["content"] += (
+            f"\n이번 턴 과제: {task.kind.value} — {task.description}"
+            f"\n선택 Action: {selected.name}, target_ids: {list(selected.target_ids)}, target_text: {target_text or '(없음)'}. "
+            f"Execution Contract: {contract.required_semantic_effect}"
+        )
+
+        # Audience input is a temporary top-priority QUD. It must be passed verbatim to
+        # both debaters instead of merely toggling an audience-response phase flag.
+        if phase_lower == "audience_response" and session.audience_question:
+            messages[1]["content"] += f"\n관객 입력 원문: {session.audience_question}\n이 입력에 먼저 직접 답한 뒤 자신의 입장과 연결하세요."
+
+        # Open-question obligation applies only while exploring/resolving the clash.
+        # Final Focus must crystallize instead of leaking internal Q IDs or reopening old QUDs.
+        if task.kind == TurnTaskKind.ANSWER_OPEN_QUESTION and task.target_ids:
+            open_question = next((q for q in state.questions if q.id == task.target_ids[0]), None)
+            if open_question is not None:
+                messages[1]["content"] += f"\n먼저 이 열린 질문의 핵심에 직접 답하세요: {open_question.core_proposition}"
 
         generation_attempt = 0
 
@@ -216,22 +254,30 @@ class LiveDebateWebService:
             result, _ = self.deps.check_compliance(
                 self.provider, action=action, target_id=target_id, target_text=checked_target_text,
                 utterance=utterance, assignment=assigned, phase=current_phase, timeout=self.timeout,
+                turn_task=f"{task.kind.value}: {task.description}",
             )
             return result
 
-        checked = finalize_compliant_utterance(generate, assignment, selected.name, target_text, phase_lower, semantic_check)
+        checked = finalize_compliant_utterance(
+            generate, assignment, selected.name, target_text, phase_lower, semantic_check,
+            turn_task=task.kind.value,
+        )
         if not checked.committed:
             raise SafeFailure("utterance compliance rejected")
 
         def extractor(feedback):
-            return self.deps.extract_patch(self.provider, {"turn": turn_number, "speaker": speaker, "speech": checked.utterance}, state, self.timeout, feedback)
+            return self.deps.extract_patch(
+                self.provider,
+                {"turn": turn_number, "speaker": speaker, "phase": phase_lower, "turn_task": task.kind.value, "speech": checked.utterance},
+                state, self.timeout, feedback,
+            )
 
         try:
             candidate, _ = extract_and_apply(state, speaker, turn_number, extractor, utterance=checked.utterance)
         except PatchValidationError as exc:
             raise SafeFailure("state patch rejected") from exc
         history = [*history, (speaker, selected.name, selected.target_ids)]
-        return checked.utterance, candidate, history
+        return checked.utterance, candidate, history, task
 
     def debate_step(self, request: DebateStepRequest, on_event: Callable[[str, dict], None] | None = None) -> DebateStepResponse:
         session, state, history, selected_models = self._load_engine(request.session)
@@ -239,46 +285,83 @@ class LiveDebateWebService:
             session = self._save_engine(session, state, history, selected_models)
             return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
 
+        def save() -> DebateSession:
+            return self._save_engine(session, state, history, selected_models)
+
+        # Audience gate occurs after Crossfire, including an adaptive early close.
         gate = session.next_index == 8 and session.audience_status == "PENDING"
         if gate:
             if request.command == "NEXT":
-                session = self._save_engine(session, state, history, selected_models)
-                return DebateStepResponse(session=session, phase="CROSSFIRE", awaiting_audience_question=True)
+                session = save()
+                return DebateStepResponse(session=session, phase="CROSSFIRE", awaiting_audience_question=True, moderator_decision="AUDIENCE_GATE")
             if request.command == "SKIP_AUDIENCE":
                 session.audience_status = "SKIPPED"
-                session = self._save_engine(session, state, history, selected_models)
-                return DebateStepResponse(session=session, phase="CROSSFIRE")
+                session = save()
+                return DebateStepResponse(session=session, phase="CROSSFIRE", moderator_decision="AUDIENCE_SKIPPED")
             if request.command == "AUDIENCE_QUESTION":
                 if not request.audience_question:
                     raise ValueError("관객 질문이 필요합니다.")
                 session.audience_status = "ASKED"
                 session.audience_question = request.audience_question
                 session.audience_response_index = 0
-                session = self._save_engine(session, state, history, selected_models)
-                return DebateStepResponse(session=session, phase="CROSSFIRE")
+                session = save()
+                return DebateStepResponse(session=session, phase="CROSSFIRE", moderator_decision="AUDIENCE_QUD_OPENED")
 
         if session.audience_status == "ASKED" and session.audience_response_index < 2:
             phase, speaker = "AUDIENCE_RESPONSE", ("A" if session.audience_response_index == 0 else "B")
-            utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event)
+            task = plan_turn_task(state, speaker=speaker, phase="audience_response", audience_question=session.audience_question)
+            utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
             item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
             session.transcript.append(item)
             session.audience_response_index += 1
             if session.audience_response_index == 2:
                 session.audience_status = "DONE"
             session = self._save_engine(session, state, history, selected_models)
-            return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance)
+            return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance, turn_task=task.kind.value, moderator_decision="CONTINUE")
 
         if session.next_index >= len(self._base_schedule):
             session.completed = True
+            session = save()
+            return DebateStepResponse(session=session, phase="COMPLETE", completed=True, moderator_decision="COMPLETE")
+
+        # A fixed schedule is now a cap, not a quota. If the control plane says there is
+        # no valuable Crossfire/Rebuttal move, advance the phase before spending tokens.
+        while session.next_index < len(self._base_schedule):
+            phase, speaker = self._base_schedule[session.next_index]
+            task = plan_turn_task(state, speaker=speaker, phase=phase.lower())
+            if task.kind == TurnTaskKind.NO_VALUABLE_MOVE:
+                if phase == "CROSSFIRE":
+                    session.next_index = 8
+                    if session.audience_status == "PENDING":
+                        session = save()
+                        return DebateStepResponse(session=session, phase="CROSSFIRE", awaiting_audience_question=True, turn_task=task.kind.value, moderator_decision="MOVE_PHASE")
+                    continue
+                if phase == "REBUTTAL":
+                    session.next_index = 10
+                    continue
+
+            try:
+                utterance, state, history, task = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event, turn_task=task)
+            except NoValuableMove:
+                if phase == "CROSSFIRE":
+                    session.next_index = 8
+                    if session.audience_status == "PENDING":
+                        session = save()
+                        return DebateStepResponse(session=session, phase="CROSSFIRE", awaiting_audience_question=True, turn_task=task.kind.value, moderator_decision="MOVE_PHASE")
+                    continue
+                if phase == "REBUTTAL":
+                    session.next_index = 10
+                    continue
+                raise
+
+            item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
+            session.transcript.append(item)
+            session.next_index += 1
+            if session.next_index >= len(self._base_schedule):
+                session.completed = True
             session = self._save_engine(session, state, history, selected_models)
-            return DebateStepResponse(session=session, phase="COMPLETE", completed=True)
+            return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance, completed=session.completed, turn_task=task.kind.value, moderator_decision="CONTINUE")
 
-        phase, speaker = self._base_schedule[session.next_index]
-        utterance, state, history = self._commit_generated_turn(session, state, history, selected_models, phase, speaker, on_event)
-        item = TranscriptItem(turn=len(session.transcript)+1, phase=phase, speaker=speaker, side_label=session.side_labels[0 if speaker == "A" else 1], utterance=utterance)
-        session.transcript.append(item)
-        session.next_index += 1
-        if session.next_index >= len(self._base_schedule):
-            session.completed = True
-        session = self._save_engine(session, state, history, selected_models)
-        return DebateStepResponse(session=session, phase=phase, speaker=speaker, side_label=item.side_label, utterance=utterance, completed=session.completed)
+        session.completed = True
+        session = save()
+        return DebateStepResponse(session=session, phase="COMPLETE", completed=True, moderator_decision="COMPLETE")

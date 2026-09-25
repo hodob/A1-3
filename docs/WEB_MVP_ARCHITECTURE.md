@@ -48,15 +48,20 @@ Pydantic request validation
 LiveDebateWebService
         ↓
 Debate State
+→ Semantic Facet / Question Group
+→ Progress / Common Ground
+→ Turn Task (이번 턴의 해결 과제)
 → eligible Action × Target
 → Pair State / Target Quality
 → Persona soft preference
         ↓
 AI Provider 발언 생성
         ↓
-Action Fidelity + Stance Compliance
+Action Fidelity + Stance Compliance + Turn Task Fidelity
         ↓
-State Patch / Relation / Question extraction
+State Patch / Relation / Question / semantic progress extraction
+        ↓
+Moderator: continue / weigh / phase change
         ↓
 Pydantic response DTO
         ↓
@@ -109,6 +114,8 @@ Browser에는 public `DebateSession`과 `engine_token`이 전달된다.
 `engine_token`은 서버의 `SESSION_SECRET`으로 HMAC 서명된 압축 payload다. 다음 요청에서 서버가 서명을 검증하고 내부 authoritative Debate State와 Action history를 복원한다.
 
 Browser가 public `next_index` 같은 값을 임의로 바꾸더라도 이미 signed token이 있는 세션에서는 그것이 authoritative engine state를 덮어쓰지 않는다.
+
+Raw `DebateState`는 발화 사실의 source of truth이고, `src/debate_engine/debate_control.py`가 semantic facet, question group, progress event, common ground를 Derived Control State로 계산한다. 새 C/Q ID가 생겼다는 사실만으로 토론 진전으로 보지 않는다. 고정 schedule은 최대 cap이며, 고가치 Turn Task가 없으면 추가 Provider 호출 전에 phase를 넘길 수 있다.
 
 ## 7. 설정과 Secret을 분리하는 이유
 

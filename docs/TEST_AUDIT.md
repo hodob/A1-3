@@ -4,14 +4,14 @@
 
 ## 현재 상태
 
-- Python unittest: **220개 통과**
-- `src + api` line coverage: **약 84%**
+- Python unittest: **276개 통과**
+- `src + api` line coverage: **이번 검증에서 미실측**
 - Provider 추가 호출: **0**
 - `api/*` HTTP adapter: 테스트 후 100% line coverage
 - `provider_adapter.py`: 정상/실패 structured output 경계 보강 후 100%
 - `runtime_config.py`: config/.env 분리 및 오류 경계 포함 97%
 
-테스트 개수에는 문서/배포 계약 테스트도 포함되므로, 220이라는 숫자 자체를 모델 품질이나 토론 품질의 통계적 정확도로 해석하지 않는다.
+테스트 개수에는 문서/배포 계약 테스트도 포함되므로, 276이라는 숫자 자체를 모델 품질이나 토론 품질의 통계적 정확도로 해석하지 않는다.
 
 ## 이번 감사에서 보강한 부분
 
@@ -66,3 +66,16 @@
 5. 실제 사용자 관전 피로도/재미 평가
 
 이 항목들은 기존 AI 엔진 회귀 테스트를 다시 돌릴 이유가 아니다.
+
+
+## 반복 토론 Control State 회귀 보강
+
+- SAME_POINT가 새 C ID를 받아도 같은 semantic facet으로 묶임
+- 같은 Action이 새 C ID로 repetition guard를 우회하지 못함
+- resolved 질문의 paraphrase가 새 OPEN Q로 재생성되지 않음
+- NEW_COUNTEREXAMPLE은 실제 progress로 유지
+- 두 턴 연속 rephrase-only이면 probing보다 WEIGH task로 전환
+- common ground/conceded facet을 다시 공격 대상으로 올리지 않음
+- Final Focus는 열린 Q ID를 노출하거나 답변 의무로 재개하지 않음
+- Audience Question 원문이 실제 generation prompt에 전달됨
+- task_fidelity=REPHRASES_ONLY이면 기존 Action/Stance가 정상이어도 commit되지 않음

@@ -1,6 +1,6 @@
 import unittest
 
-from src.debate_engine.combined_compliance import CombinedComplianceAssessment, finalize_compliant_utterance
+from src.debate_engine.combined_compliance import CombinedComplianceAssessment, TaskFidelityLabel, finalize_compliant_utterance
 from src.debate_engine.action_fidelity import ActionFidelityLabel
 from src.debate_engine.stance_compliance import StanceAssignment, StanceLabel
 from src.debate_engine.debate_contracts import DebateState
@@ -47,6 +47,18 @@ class CombinedComplianceTests(unittest.TestCase):
         self.assertFalse(result["committed"])
         self.assertEqual(patch_calls, [])
         self.assertEqual(result["state"].model_dump(), state.model_dump())
+
+    def test_rephrase_only_is_rejected_when_turn_task_requires_progress(self):
+        bad = CombinedComplianceAssessment(
+            ActionFidelityLabel.ALIGNED, StanceLabel.SUPPORTS_ASSIGNED, "action ok", "stance ok",
+            task_fidelity=TaskFidelityLabel.REPHRASES_ONLY, task_reason="same point again",
+        )
+        result = finalize_compliant_utterance(
+            lambda _: "같은 말을 다시 합니다.", self.assignment, "CRYSTALLIZE", None, "final_focus", lambda *_: bad,
+            turn_task="WEIGH_COMPETING_REASONS",
+        )
+        self.assertFalse(result.committed)
+        self.assertEqual(result.attempts, 2)
 
 
 if __name__ == "__main__":

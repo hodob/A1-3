@@ -1,0 +1,21 @@
+{
+  "source": "ㅅㄷㄴㅅ.pdf",
+  "motion": "탕수육은 찍어 먹는 것보다 부어 먹는 편이 더 낫다.",
+  "audience_input": "볶는다는 것도 있어",
+  "turns": [
+    {"turn":1,"page":1,"speaker":"A","phase":"OPENING","label":["NEW_CORE_REASON"],"point":"한 접시 전체의 조화와 소스 배임의 일관성"},
+    {"turn":2,"page":1,"speaker":"B","phase":"OPENING","label":["NEW_CORE_REASONS"],"point":"소스 양 개인화, 시간 경과 식감, 선택지 보존"},
+    {"turn":3,"page":2,"speaker":"A","phase":"CROSSFIRE","label":["CONCESSION","CRITERION_CHALLENGE"],"point":"소스 양 조절 장점을 인정하고 왜 실질적 기준인지 질문"},
+    {"turn":4,"page":2,"speaker":"B","phase":"CROSSFIRE","label":["ANSWER","NEW_DISTINCTION","PARTIAL_RESTATE"],"point":"능동 선택과 자동 강제 구분"},
+    {"turn":5,"page":3,"speaker":"A","phase":"CROSSFIRE","label":["ANSWER","REFINEMENT"],"point":"먹는 과정 전체 안정성과 조각 간 편차 감소"},
+    {"turn":6,"page":3,"speaker":"B","phase":"CROSSFIRE","label":["PARTIAL_PROGRESS","REPHRASE_DOMINANT"],"point":"맛 편차가 실제 손실인지 묻고 식감 유지 논지를 반복"},
+    {"turn":7,"page":4,"speaker":"A","phase":"CROSSFIRE","label":["PARTIAL_PROGRESS","REPHRASE_DOMINANT"],"point":"평균 만족도와 예측 가능성으로 전체 안정성 논지를 정교화"},
+    {"turn":8,"page":4,"speaker":"B","phase":"CROSSFIRE","label":["NEW_COUNTEREXAMPLE"],"point":"부먹도 바닥/위 조각이 시간에 따라 다르게 변한다는 반례"},
+    {"turn":9,"page":4,"speaker":"A","phase":"AUDIENCE_RESPONSE","label":["AUDIENCE_NOT_GROUNDED","REPHRASE"],"point":"관객 입력 대신 기존 접시 전체 조화 논리를 재진술"},
+    {"turn":10,"page":5,"speaker":"B","phase":"AUDIENCE_RESPONSE","label":["AUDIENCE_NOT_GROUNDED","REPHRASE"],"point":"관객 입력 대신 개인 선택과 강제된 일관성 논리를 재진술"},
+    {"turn":11,"page":5,"speaker":"A","phase":"REBUTTAL","label":["REPHRASE_DOMINANT"],"point":"각 입의 최대치보다 전체 과정 안정성을 다시 강조"},
+    {"turn":12,"page":5,"speaker":"B","phase":"REBUTTAL","label":["PARTIAL_PROGRESS","EVIDENCE_WEIGHING"],"point":"맛 편차는 불명확하고 식감 저하는 직접 체감되는 손실이라는 비교"},
+    {"turn":13,"page":6,"speaker":"A","phase":"FINAL_FOCUS","label":["FINAL_CRYSTALLIZE_ALLOWED"],"point":"전체 과정 안정성 압축. 내부 Q ID가 발화에 노출된 실패 포함"},
+    {"turn":14,"page":6,"speaker":"B","phase":"FINAL_FOCUS","label":["FINAL_CRYSTALLIZE_ALLOWED"],"point":"식감 저하가 맛 편차보다 본질적이라는 기존 논지 압축"}
+  ]
+}
