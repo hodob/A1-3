@@ -49,7 +49,10 @@ def eligible_actions(state: DebateState, speaker: str, phase: str, *, turn_task:
                             ActionCandidate("DEFEND_CLAIM", (current_id,)),
                             ActionCandidate("REVISE_CLAIM", (current_id,)),
                         ]
-                    return [ActionCandidate("CONCEDE_LOCAL", (current_id,))]
+                    return [
+                        ActionCandidate("REFUTE_CLAIM", (current_id,)),
+                        ActionCandidate("CONCEDE_LOCAL", (current_id,)),
+                    ]
             return [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])] or [ActionCandidate("EXTEND_ARGUMENT")]
         if kind == TurnTaskKind.ADDRESS_AUDIENCE:
             options = [ActionCandidate("DEFEND_CLAIM", (p.id,)) for p in reversed(own[-2:])]
