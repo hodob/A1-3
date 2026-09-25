@@ -11,9 +11,9 @@ import re
 from .debate_contracts import DebateState
 
 REFERENCE_RE = re.compile(r"\[\[([CQ]\d+)\]\]")
-RAW_STATE_ID_RE = re.compile(r"(?<!\[\[)\b([CQ]\d+)\b(?!\]\])")
+RAW_STATE_ID_RE = re.compile(r"(?<!\[\[)(?<![A-Z0-9_])([CQ]\d+)(?!\]\])(?!\d)")
 HEADING_RE = re.compile(r"(?m)^\s{0,3}#{1,6}\s+")
-FENCE_RE = re.compile(r"(?m)^\s*(\`{3,}|~{3,})")
+FENCE_RE = re.compile(r"(?m)^\s*(`{3,}|~{3,})")
 HTML_RE = re.compile(r"<\/?[A-Za-z][^>]*>")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]\n]+\]\([^\)\n]+\)")
 TABLE_SEPARATOR_RE = re.compile(r"(?m)^\s*\|?\s*:?-{3,}[^\n]*\|[^\n]*$")
