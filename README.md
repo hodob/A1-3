@@ -6,39 +6,41 @@
 
 | 한눈에 보기 | 내용 |
 |---|---|
-| **사용자 경험** | 주제 입력 → 필요 시 맥락 확인 → Motion 확인 → AI 토론 관전 → 선택적 질문 → 중립 요약 → 사용자 판단 |
-| **핵심 차이** | 다음 발언을 단순히 이어 쓰지 않고, 현재 쟁점과 상태를 읽어 **무엇에 어떻게 대응할지 먼저 결정** |
-| **AI 역할** | A/B 토론자는 실제 발언을 생성하고, 별도의 control/coordinator 경로가 분석·구조화·검증·요약 담당 |
-| **판정 원칙** | AI가 승자나 점수를 정하지 않으며 최종 선택은 사용자에게 남김 |
-| **모델 구성** | multi-provider debater pool에서 토론 시작 시 A/B를 배정하고 한 토론 동안 고정 |
+| 사용자 경험 | 주제 입력 → 필요 시 맥락 확인 → Motion 확인 → AI 토론 관전 → 선택적 질문 → 중립 요약 → 사용자 판단 |
+| 핵심 차이 | 다음 발언을 단순히 이어 쓰지 않고, 현재 쟁점과 상태를 읽어 **무엇에 어떻게 대응할지 먼저 결정** |
+| AI 역할 | A/B 토론자는 실제 발언을 생성하고, 별도의 control/coordinator 경로가 분석·구조화·검증·요약 담당 |
+| 판정 원칙 | AI가 승자나 점수를 정하지 않으며 최종 선택은 사용자에게 남김 |
+| 모델 구성 | multi-provider debater pool에서 토론 시작 시 A/B를 배정하고 한 토론 동안 고정 |
 
 ### 이 README를 읽는 순서
 
-이 문서는 하나의 거대한 아키텍처 그림 대신 **서로 다른 질문에 답하는 여러 View**로 구성했습니다. 처음 보는 경우 1~3절만 읽어도 서비스와 핵심 Harness 구조를 이해할 수 있고, 이후 절은 내부 동작을 더 자세히 설명합니다.
+이 문서는 하나의 거대한 그림에 모든 내용을 넣지 않고, 서로 다른 질문에 답하는 여러 View로 구성했습니다. 처음 보는 경우 1~4절만 읽어도 서비스와 핵심 구조를 이해할 수 있고, 이후 절은 필요한 부분을 확대해서 설명합니다.
 
 | 궁금한 것 | 보면 되는 절 |
 |---|---|
 | 사용자는 어떤 흐름을 경험하는가? | 1. 전체 사용자 흐름 |
 | Browser·Serverless·AI는 어떻게 연결되는가? | 2. 시스템 경계와 Runtime 구조 |
-| 다음 발언은 어떤 계층을 거쳐 결정되는가? | 3. Debate Engine |
-| 토론에서 무엇을 구조화해 기억하는가? | 4. Debate State |
-| 어떤 논점에 어떤 행동을 할지 어떻게 고르는가? | 5. Action 선택과 Persona |
-| 실제 API 요청 한 번은 어떻게 확정되는가? | 6. 한 턴의 Runtime Sequence |
-| 프롬프트와 검증·재작성은 어떻게 이어지는가? | 7. Prompt / Validation Pipeline |
-| Frontend와 Serverless session은 어떻게 상태를 유지하는가? | 8. Frontend · Session Runtime |
+| 실제 코드가 어떤 블록으로 나뉘는가? | 3. 코드 Building Block 구조 |
+| 다음 발언은 어떤 계층을 거쳐 결정되는가? | 4. Debate Engine |
+| 토론에서 무엇을 구조화해 기억하는가? | 5. Debate State |
+| 어떤 논점에 어떤 행동을 할지 어떻게 고르는가? | 6. Action 선택과 Persona |
+| 실제 API 요청 한 번은 어떻게 확정되는가? | 7. 한 턴의 Runtime Sequence |
+| 프롬프트와 검증·재작성은 어떻게 이어지는가? | 8. Prompt / Validation Pipeline |
+| Frontend와 Serverless session은 어떻게 상태를 유지하는가? | 9. Frontend · Session Runtime |
 
 ---
 
 ## 1. 전체 사용자 흐름
 
-처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않습니다. 먼저 **토론 가능한 주제인지**, **사용자만 알고 있는 맥락이 필요한지**, **사실 설명이 먼저 필요한 입력인지**를 판단한 뒤 토론을 시작합니다.
+처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않습니다. 먼저 토론 가능한 주제인지, 사용자만 알고 있는 맥락이 필요한지, 사실 설명이 먼저 필요한 입력인지 판단한 뒤 토론을 시작합니다.
 
-**그림 1. 사용자가 주제를 입력한 순간부터 최종 판단까지의 전체 흐름**
+### 1.1 토론을 시작하기 전
+
+**그림 1. Product Flow — 주제를 토론 가능한 상태로 준비하는 과정**
 
 ```mermaid
 flowchart TD
     A[주제 입력] -->|분석| B{어떻게 진행할까?}
-
     B -->|바로 가능| M[Motion 확인]
     B -->|확인 필요| C[확인 이유 표시]
     C --> M
@@ -51,19 +53,8 @@ flowchart TD
 
     B -->|사실 설명이 먼저 필요| I[주제 수정 안내]
     I --> A
-
-    M -->|최대 1회 수정| O[Opening]
-    O --> X[Crossfire]
-    X --> Q{사용자 질문?}
-    Q -->|질문| AQ[A와 B가 같은 질문에 답변]
-    Q -->|건너뜀| R[Rebuttal]
-    AQ --> R
-    R --> FF[Final Focus]
-    FF --> S[Neutral Summary]
-    S --> U[사용자 선택]
+    M -->|최대 1회 수정| Z[토론 시작]
 ```
-
-### Topic Analyzer
 
 Topic Analyzer는 현재 구현에서 다음 축을 분리합니다.
 
@@ -78,103 +69,202 @@ Topic Analyzer는 현재 구현에서 다음 축을 분리합니다.
 
 개인 사건은 한 번에 하나씩 질문합니다. 답변은 Context Summary에서 **직접 본 일 / 전해 들은 이야기 / 내 해석 / 모르는 부분**으로 구분하고, 사용자가 주지 않은 사건 사실을 AI가 임의로 채우지 않습니다.
 
-Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 **최대 cap**입니다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있습니다.
+### 1.2 토론이 시작된 뒤
+
+**그림 2. Debate Protocol — 토론이 탐색에서 최종 판단으로 진행되는 과정**
+
+```mermaid
+flowchart LR
+    O[Opening] --> C[Crossfire]
+    C --> Q{사용자 질문?}
+    Q -->|질문| A[A와 B가 같은 질문에 답변]
+    Q -->|건너뜀| R[Rebuttal]
+    A --> R
+    R --> F[Final Focus]
+    F --> S[Neutral Summary]
+    S --> U[사용자 선택]
+```
+
+Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 최대 cap입니다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있습니다.
+
+다음 절에서는 이 Product Flow가 실제 Browser, Serverless Function, Debate Harness, AI Provider로 어떻게 나뉘어 실행되는지 보여줍니다.
 
 ---
 
 ## 2. 시스템 경계와 Runtime 구조
 
-시스템은 **화면**, **제품 흐름**, **토론 제어**, **실제 발언 생성**을 분리합니다.
+시스템은 화면, 제품 흐름, 토론 제어, 실제 발언 생성을 분리합니다.
 
-**그림 2. Browser에서 AI Provider까지의 책임 경계**
+**그림 3. System Context / Container View — 사이 시스템과 외부 AI Provider의 경계**
 
 ```mermaid
-flowchart TD
-    U[사용자] -->|주제·답변·질문·선택| B[Browser<br/>HTML / CSS / Vanilla JS]
-    B -->|JSON fetch / SSE| API[Vercel Python<br/>Serverless Functions]
-    API -->|Pydantic DTO| W[LiveDebateWebService<br/>제품 흐름·세션·오류 처리]
+flowchart LR
+    U[사용자]
 
-    W -->|현재 State와 phase| H[Debate Harness<br/>Control / Action / Guard]
-    H -->|이번 과제와 Action × Target| W
+    subgraph SAI[사이 시스템]
+        B[Browser<br/>HTML / CSS / Vanilla JS]
+        API[Vercel Python API<br/>Serverless Functions]
+        W[Web Service<br/>제품 흐름·세션·오류 처리]
+        H[Debate Harness<br/>State·Action·Guard]
+        T[(signed engine_token)]
 
-    W -->|A/B 발언 생성| D[Debater Models<br/>multi-provider pool]
+        B -->|JSON fetch / SSE| API
+        API -->|Pydantic DTO| W
+        W -->|턴 계획·상태 제어| H
+        W <-->|검증·복원·재서명| T
+    end
+
+    subgraph EXT[외부 AI Provider]
+        D[Debater Models]
+        C[Control / Coordinator]
+    end
+
+    U -->|주제·답변·질문·선택| B
+    H -->|선택된 계획| W
+    W -->|A/B 발언 생성| D
     D -->|draft / final text| W
-
-    W -->|분석·구조화·검증·요약| C[Control / Coordinator Model]
+    W -->|분석·구조화·검증·요약| C
     C -->|structured result| W
-
-    W <-->|검증·복원·재서명| T[(engine_token)]
-    W -->|commit / SSE event| API
-    API -->|화면 갱신| B
 ```
 
 | 영역 | 책임 |
 |---|---|
-| **Browser** | 화면 state, 입력, loading/error UX, provisional draft 표시 |
-| **Vercel API** | HTTP/SSE adapter, Pydantic request/response 경계 |
-| **Web Service** | 제품 단계 진행, signed session, Provider orchestration |
-| **Debate Harness** | Debate State, 현재 과제, Action × Target, Persona, Guard |
-| **Debater Models** | 선택된 계획에 따라 실제 A/B 발언 생성 |
-| **Control / Coordinator** | 주제 분석, 구조화 출력, State Patch, Compliance, Neutral Summary |
+| Browser | 화면 state, 입력, loading/error UX, provisional draft 표시 |
+| Vercel API | HTTP/SSE adapter, Pydantic request/response 경계 |
+| Web Service | 제품 단계 진행, signed session, Provider orchestration |
+| Debate Harness | Debate State, 현재 과제, Action × Target, Persona, Guard |
+| Debater Models | 선택된 계획에 따라 실제 A/B 발언 생성 |
+| Control / Coordinator | 주제 분석, 구조화 출력, State Patch, Compliance, Neutral Summary |
 
-브라우저에는 transcript와 함께 **서명된 `engine_token`**이 있습니다. 이 토큰 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정됩니다.
+그림에서 **사이 시스템** subgraph 안은 이 저장소가 직접 제어하는 영역이고, **외부 AI Provider** subgraph는 모델 호출 경계입니다. 원통형 `engine_token`은 데이터베이스가 아니라 브라우저가 보관하는 signed session payload입니다.
 
-즉 `engine_token`은 **암호화가 아니라 무결성 보호**입니다. API Key와 Action 선택 로직은 서버에만 존재합니다.
+브라우저의 `engine_token` 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정됩니다. 즉 `engine_token`은 암호화가 아니라 무결성 보호입니다. API Key와 Action 선택 로직은 서버에만 존재합니다.
 
 토론 시작 시 `multi-provider debater pool`에서 서로 다른 두 토론자 모델을 A/B에 배정하고, 그 배정은 한 토론 동안 signed session에 고정됩니다.
 
+다음 절에서는 이 Runtime 구조가 실제 저장소 디렉터리와 어떤 Building Block으로 대응되는지 보여줍니다.
+
 ---
 
-## 3. Debate Engine: 다음 발언을 결정하는 계층
+## 3. 코드 Building Block 구조
 
-이 프로젝트의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 것입니다. **지금 무엇이 허용되는지 → 무엇을 해결해야 하는지 → 어떤 논점에 어떤 행동을 할지 → 실제 문장을 만들고 검증하는지**를 분리합니다.
+상위 코드 구조는 Frontend, Serverless adapter, 제품 orchestration, Debate Core의 네 층으로 나뉩니다.
 
-**그림 3. Debate Engine의 제어 계층과 데이터 흐름**
+**그림 4. Building Block View — 저장소의 상위 디렉터리와 책임**
+
+```mermaid
+flowchart LR
+    P[public/<br/>Browser UI]
+    A[api/<br/>Serverless Adapter]
+    W[src/web_app/<br/>제품 흐름·세션·Provider orchestration]
+    D[src/debate_engine/<br/>Debate Control Core]
+    CFG[config.json<br/>비밀이 아닌 설정]
+    ENV[.env / Vercel Env<br/>server-only secret]
+
+    P -->|fetch / SSE| A
+    A -->|DTO 전달| W
+    W -->|토론 제어 호출| D
+    CFG --> W
+    CFG --> D
+    ENV --> W
+```
+
+| Building Block | 역할 |
+|---|---|
+| `public/` | 화면 state, fetch/SSE, 토론 진행, Markdown·reference 렌더링 |
+| `api/` | Vercel HTTP/SSE adapter와 공개 endpoint |
+| `src/web_app/` | Browser-facing DTO, signed session, Mock/Live 제품 흐름 |
+| `src/debate_engine/` | Debate State, Control State, Action 선택, Persona preference, Guard, State Patch |
+| `config.json` | provider URL, model pool, debug mode 등 비밀이 아닌 설정 |
+| 환경 변수 | `DEBATER_API_KEY`, `SESSION_SECRET` 같은 server-only secret |
+
+<details>
+<summary><strong>주요 파일별 역할 보기</strong></summary>
+
+```text
+public/
+  index.html                 화면 구조와 3개 주요 섹션
+  styles.css                 반응형 레이아웃과 상태별 UI
+  app.js                     UI state, fetch/SSE, 토론 진행, 오류 처리
+  debate_stream.js           Server-Sent Events parser
+  debate_moderator.js        서버의 진행 결정을 사회자 카드로 표현
+  markdown_renderer.js       Markdown + State reference 렌더링
+
+api/
+  _base.py                   공통 HTTP/SSE adapter
+  analyze_topic.py           /api/analyze-topic
+  context_step.py            /api/context-step
+  create_motion.py           /api/create-motion
+  debate_step.py             /api/debate-step
+  neutral_summary.py         /api/neutral-summary
+  health.py                  /api/health
+
+src/web_app/
+  contracts.py               Browser ↔ Server Pydantic DTO
+  api.py                     API dispatcher와 공통 오류 응답
+  live_service.py            실제 AI orchestration
+  mock_service.py            Provider 호출 없는 동일 제품 흐름
+  session_token.py           zlib + HMAC signed session
+  service_factory.py         Mock / Live service 선택
+
+src/debate_engine/
+  debate_contracts.py        Proposition / Relation / Question / Patch 계약
+  debate_control.py          semantic facet, 질문 초점, progress, 이번 턴 과제
+  action_policy.py           Action 후보 생성과 선택
+  action_pair_state.py       Action × Target 반복/소진 상태
+  target_quality.py          target 중요도·행동 가능성 평가
+  persona_preferences.py     Persona별 soft preference
+  action_execution_contracts.py  15개 Action 의미 계약
+  combined_compliance.py     Action / Stance / Task 통합 검증과 retry
+  stance_compliance.py       Assigned Stance 유지 검사
+  surface_contract.py        출력 형식과 State reference 검사
+  state_harness.py           State Patch 추출·검증·적용
+```
+
+</details>
+
+다음 절부터는 이 중 `src/debate_engine/`을 확대해, 다음 발언이 어떻게 결정되는지 설명합니다.
+
+---
+
+## 4. Debate Engine: 다음 발언을 결정하는 계층
+
+Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 것입니다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤에 문장을 생성하고 검증합니다.
+
+**그림 5. Debate Engine Overview — 다음 발언이 확정되기까지의 제어 단계**
 
 ```mermaid
 flowchart TD
-    P[Protocol / Phase<br/>현재 허용 범위] --> T[이번 턴의 과제]
-    S[Raw Debate State] --> C[Derived Control State<br/>질문 초점·facet·progress]
-    C --> T
-
-    T --> A[Action Policy]
-    S --> A
-    A --> Q[Action × Target 후보]
-
-    Q --> F[Pair State / Target Quality]
-    F --> R[Persona soft preference]
-    R --> X[선택된 Action × Target]
-
-    X --> G[Surface Generation]
-    G --> V[Compliance Guard]
-    V -->|통과| SP[State Patch]
-    V -->|실패| RP[Repair / Replan]
-    RP --> G
-
-    SP --> NS[다음 Debate State]
-    NS --> M[Control Plane<br/>계속 / phase 이동]
+    A[Protocol + Debate State] --> B[현재 질문·과제]
+    B --> C[Action × Target 선택]
+    C --> D[Persona preference]
+    D --> E[발언 생성]
+    E --> F{검증}
+    F -->|통과| G[State Update]
+    F -->|실패| H[Repair / Replan]
+    H --> E
+    G --> I[다음 턴 또는 phase 이동]
 ```
-
-각 계층은 서로 다른 질문에 답합니다.
 
 | 계층 | 질문 |
 |---|---|
 | Protocol / Phase | 지금 단계에서 무엇을 할 수 있는가? |
 | Debate State | 지금까지 무엇이 주장·질문·양보·수정되었는가? |
-| Derived Control State | 지금 해결 중인 질문은 무엇이고 같은 논점을 반복하고 있지는 않은가? |
-| Turn Task | 이번 발언이 가장 먼저 해야 할 일은 무엇인가? |
+| 현재 질문·과제 | 이번 발언이 가장 먼저 해야 할 일은 무엇인가? |
 | Action × Target | 어떤 논점에 어떤 방식으로 대응할 것인가? |
 | Persona | 적법한 후보 중 어떤 행동을 상대적으로 선호하는가? |
 | Guard | 생성된 문장이 실제 계획·입장·과제를 수행했는가? |
-| State Patch | 확정된 발언에서 다음 턴에 필요한 변화를 무엇으로 남길 것인가? |
+| State Update | 확정된 발언에서 다음 턴에 필요한 변화를 무엇으로 남길 것인가? |
+
+이 그림은 Debate Engine의 overview입니다. 다음 절에서는 여기의 **Debate State와 현재 질문·과제** 부분을 확대합니다.
 
 ---
 
-## 4. Debate State: 무엇을 기억하는가
+## 5. Debate State: 무엇을 기억하는가
 
 Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**입니다.
 
-**그림 4. 실제 기록과 그 위에서 매 턴 계산되는 제어 상태**
+**그림 6. Debate State View — 확정 상태와 매 턴 계산되는 제어 상태**
 
 ```mermaid
 flowchart TD
@@ -189,10 +279,10 @@ flowchart TD
     RAW -->|매 턴 계산| D[Derived Control State]
 
     D --> F[Semantic Facets<br/>같은 논점 묶기]
-    D --> G[Question Groups / Immediate QUD<br/>현재 질문 초점]
-    D --> H[Progress<br/>의미 있는 진전 여부]
+    D --> G[Question Groups / QUD<br/>현재 질문 초점]
+    D --> H[Progress<br/>진전 여부]
     D --> I[Action × Target State<br/>반복·해결·소진]
-    D --> J[Target Quality<br/>중요도·행동 가능성]
+    I --> J[Target Quality<br/>중요도·행동 가능성]
 ```
 
 ### 실제로 저장하는 핵심 정보
@@ -246,17 +336,22 @@ RELATED_DISTINCT
 
 </details>
 
-> README에서는 아키텍처 이해에 필요한 State만 설명합니다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략했습니다.
+> 그림의 위쪽은 확정된 Debate State, 아래쪽은 매 턴 계산되는 제어 상태입니다. README에서는 아키텍처 이해에 필요한 State만 설명합니다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략했습니다.
 
 ---
 
-## 5. Action 선택과 Persona
+
+다음 절에서는 이 State를 바탕으로 실제 Action × Target 후보를 어떻게 좁히는지 보여줍니다.
+
+---
+
+## 6. Action 선택과 Persona
 
 ### 5.1 어떤 논점에 어떤 행동을 할지 고르는 과정
 
 Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약입니다.
 
-**그림 5. 후보를 넓게 만든 뒤 단계적으로 좁히는 Action 선택 흐름**
+**그림 7. 후보를 넓게 만든 뒤 단계적으로 좁히는 Action 선택 흐름**
 
 ```mermaid
 flowchart TD
@@ -315,50 +410,50 @@ Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 �
 
 ---
 
-## 6. 한 턴의 Runtime Sequence
 
-아래 그림은 개념도가 아니라 **브라우저에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 실제 실행 순서**를 보여줍니다.
+다음 절에서는 선택된 Action × Target이 실제 발언으로 생성되고 commit될 때까지의 Runtime을 보여줍니다.
 
-**그림 6. Request → provisional draft → validation → State Patch → commit**
+---
+
+## 7. 한 턴의 Runtime Sequence
+
+아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario입니다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 Building Block 수준으로 묶었습니다.
+
+**그림 8. Runtime Sequence — request → provisional draft → validation → State Patch → commit**
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A as /api/debate-step
-    participant W as Web Service
+    participant W as Web Service / API
     participant H as Debate Harness
     participant D as Debater Model
-    participant G as Guard
-    participant S as State Patch
+    participant C as Coordinator
 
-    B->>A: signed session + NEXT
-    A->>W: DebateStepRequest
+    B->>W: signed session + NEXT
     W->>W: token 검증 / State 복원
-
     W->>H: 현재 State + phase
     H-->>W: Turn Task + Action × Target
 
     W->>D: stance + persona + task + target + context
     D-->>W: streaming draft
-    W-->>A: draft_reset / draft_delta
-    A-->>B: SSE 임시 표시
+    W-->>B: draft_reset / draft_delta
 
-    W->>G: 발언 검증
-
+    W->>C: compliance 검사
     alt 검증 실패
-        G-->>W: typed failure
+        C-->>W: typed failure
         W->>D: targeted repair 또는 replan
     else 검증 통과
-        G-->>W: committed utterance
-        W->>S: 확정 발언 + 관련 State
-        S-->>W: typed Patch
-        W->>W: Patch 적용 / 새 token 서명
-        W-->>A: commit
-        A-->>B: 확정 발언 표시
+        C-->>W: compliant utterance
+        W->>C: State Patch 추출
+        C-->>W: typed Patch
+        W->>H: Patch 검증 / 적용
+        H-->>W: 다음 Debate State
+        W->>W: 새 engine_token 서명
+        W-->>B: commit event
     end
 ```
 
-화면에 streaming되는 문장은 **확정 전 draft**입니다. Guard와 State Patch까지 통과해야 transcript에 commit됩니다.
+화면에 streaming되는 문장은 **확정 전 draft**입니다. Compliance와 State Patch 적용까지 통과해야 transcript에 commit됩니다.
 
 ### State Patch와 Adaptive Context
 
@@ -378,27 +473,29 @@ State가 커져도 전체 graph를 매번 넣지 않습니다. 현재 Action tar
 
 긴 context에서는 필요한 정보의 위치와 양이 모델 활용 성능에 영향을 줄 수 있다는 결과를 참고해, 전체 누적 State보다 현재 과제와 연결된 node를 우선합니다 (Liu et al., 2024).
 
+다음 절에서는 이 sequence의 **발언 생성 → compliance → repair** 구간 안에 어떤 정보가 들어가는지 확대합니다.
+
 ---
 
-## 7. Prompt / Validation Pipeline
+## 8. Prompt / Validation Pipeline
 
-프롬프트는 하나의 거대한 역할 지시문이 아니라 **변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context**를 분리해 합성합니다.
+프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성합니다.
 
-**그림 7. 발언 생성에 들어가는 정보의 우선순위와 Repair loop**
+**그림 9. Prompt / Validation View — 발언 생성에 들어가는 정보와 Repair loop**
 
 ```mermaid
 flowchart TD
-    A[Global Hard Rules<br/>사실성·stance 경계] --> B[Grounding<br/>fact anchor / context]
-    B --> C[Assignment<br/>stance / persona / phase]
-    C --> D[Phase Instruction]
-    D --> E[Turn Contract<br/>task + action + target]
-    E --> F[Allowed State References]
-    F --> G[Recent Transcript]
-    G --> H[Surface Style / Format]
+    A[전역 규칙<br/>Global Hard Rules] --> B[현재 사실·맥락<br/>Grounding]
+    B --> C[입장·Persona·Phase<br/>Assignment]
+    C --> D[단계별 지시<br/>Phase Instruction]
+    D --> E[이번 턴 계약<br/>Task + Action + Target]
+    E --> F[허용된 State 참조]
+    F --> G[최근 Transcript]
+    G --> H[표현·형식 규칙]
     H --> I[Draft]
-    I --> J{Validation}
+    I --> J{검증}
     J -->|통과| K[Commit 후보]
-    J -->|실패 코드| L[Targeted Repair / Replan]
+    J -->|실패 코드| L[부분 재작성 / 재계획]
     L --> I
 ```
 
@@ -417,19 +514,19 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 검증은 단순 pass/fail이 아니라 stance reversal, Action 미수행, target 미사용, off-task, 반복, 잘못된 State reference, Final Focus 형식 위반 등을 구분합니다.
 
-첫 retry는 이전 draft에서 **무엇을 유지하고 무엇만 바꿀지** 알려주는 targeted repair입니다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있습니다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않습니다.
+첫 retry는 이전 draft에서 무엇을 유지하고 무엇만 바꿀지 알려주는 targeted repair입니다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있습니다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않습니다.
 
 이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했습니다 (Ray & Goyal, 2026).
 
 ---
 
-## 8. Frontend · Session Runtime
+## 9. Frontend · Session Runtime
 
 ### 8.1 Frontend 화면 상태
 
 Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리합니다.
 
-**그림 8. 사용자가 보는 화면 상태의 lifecycle**
+**그림 10. UI State Machine — 사용자가 보는 화면 상태의 lifecycle**
 
 ```mermaid
 stateDiagram-v2
@@ -466,7 +563,7 @@ stateDiagram-v2
 
 Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없습니다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어갑니다.
 
-**그림 9. `engine_token`을 이용한 Serverless session lifecycle**
+**그림 11. Serverless Session — `engine_token`을 이용한 Serverless session lifecycle**
 
 ```mermaid
 flowchart TD
@@ -483,7 +580,10 @@ flowchart TD
 
 ---
 
-## 9. Debate Protocol과 Moderator
+
+---
+
+## 10. Debate Protocol과 Moderator
 
 ### Crossfire
 
@@ -508,63 +608,14 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 
 ---
 
-## 10. 코드와 API 구조
 
-상위 구조는 다음 네 영역으로 나뉩니다.
+---
 
-```text
-public/                 Browser UI
-api/                    Vercel Python Serverless 진입점
-src/web_app/            Web DTO, 세션, Mock/Live orchestration
-src/debate_engine/      토론 상태·행동 선택·검증 Core
-```
+## 11. Implementation Reference
 
-<details>
-<summary><strong>주요 파일별 역할 보기</strong></summary>
+앞 절이 시스템을 이해하기 위한 Architecture & Design이라면, 이 절은 endpoint·기술 스택·실행 정보를 빠르게 찾기 위한 Reference입니다.
 
-```text
-public/
-  index.html                 화면 구조와 3개 주요 섹션
-  styles.css                 반응형 레이아웃과 상태별 UI
-  app.js                     UI state, fetch/SSE, 토론 진행, 오류 처리
-  debate_stream.js           Server-Sent Events parser
-  debate_moderator.js        서버의 진행 결정을 사회자 카드로 표현
-  markdown_renderer.js       Markdown + State reference 렌더링
-
-api/
-  _base.py                   공통 HTTP/SSE adapter
-  analyze_topic.py           /api/analyze-topic
-  context_step.py            /api/context-step
-  create_motion.py           /api/create-motion
-  debate_step.py             /api/debate-step
-  neutral_summary.py         /api/neutral-summary
-  health.py                  /api/health
-
-src/web_app/
-  contracts.py               Browser ↔ Server Pydantic DTO
-  api.py                     API dispatcher와 공통 오류 응답
-  live_service.py            실제 AI orchestration
-  mock_service.py            Provider 호출 없는 동일 제품 흐름
-  session_token.py           zlib + HMAC signed session
-  service_factory.py         Mock / Live service 선택
-
-src/debate_engine/
-  debate_contracts.py        Proposition / Relation / Question / Patch 계약
-  debate_control.py          semantic facet, 질문 초점, progress, 이번 턴 과제
-  action_policy.py           Action 후보 생성과 선택
-  action_pair_state.py       Action × Target 반복/소진 상태
-  target_quality.py          target 중요도·행동 가능성 평가
-  persona_preferences.py     Persona별 soft preference
-  action_execution_contracts.py  15개 Action 의미 계약
-  combined_compliance.py     Action / Stance / Task 통합 검증과 retry
-  stance_compliance.py       Assigned Stance 유지 검사
-  surface_contract.py        출력 형식과 State reference 검사
-  state_harness.py           State Patch 추출·검증·적용
-```
-
-</details>
-
-### API
+### 11.1 API
 
 | Endpoint | 주요 역할 |
 |---|---|
@@ -577,11 +628,12 @@ src/debate_engine/
 
 Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control State를 일반 Web DTO에 그대로 노출하지 않습니다.
 
-> 전체 Pydantic field와 bookkeeping 값은 문서 길이와 가독성을 위해 생략했습니다.
+> 전체 Pydantic field와 validation bookkeeping은 구조 설명에 직접 필요하지 않아 생략했습니다.
 
 ---
 
-## 11. 기술 스택과 실행·배포
+
+### 11.2 기술 스택과 실행·배포
 
 | 영역 | 기술 |
 |---|---|
@@ -608,6 +660,7 @@ python -m etc.tools.web_dev_server
 Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 등록합니다. `public/`은 정적 Frontend로 제공되고 `api/*.py`는 Python Serverless Function으로 실행됩니다. GitHub 저장소와 연결된 Vercel 프로젝트는 `main` 변경에 따라 배포됩니다.
 
 ---
+
 
 ## References
 
