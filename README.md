@@ -115,30 +115,31 @@ flowchart TD
 
     subgraph SAI[사이 시스템]
         direction TB
+
         B[Browser<br/>HTML / CSS / Vanilla JS]
         API[Vercel Python API<br/>Serverless Functions]
-        W[Web Service<br/>제품 흐름·세션·오류 처리]
-        H[Debate Harness<br/>State·Action·Guard]
-        T[(signed engine_token)]
+        W[Web Service<br/>제품 흐름·세션·Provider orchestration]
+        H[Debate Harness<br/>State · Action · Guard]
 
         B -->|JSON fetch / SSE| API
         API -->|Pydantic DTO| W
         W -->|턴 계획·상태 제어| H
-        W <-->|검증·복원·재서명| T
         H -->|선택된 계획| W
+
+        T[signed engine_token<br/>브라우저 보관]
+        B -.->|보관| T
+        T -.->|요청마다 전달| API
     end
 
     subgraph EXT[외부 AI Provider]
-        direction LR
-        D[Debater Models]
-        C[Control / Coordinator]
+        direction TB
+        D[A/B 발언 생성]
+        C[분석 · 구조화 · 검증 · 요약]
     end
 
-    U -->|주제·답변·질문·선택| B
-    W -->|A/B 발언 생성| D
-    D -->|draft / final text| W
-    W -->|분석·구조화·검증·요약| C
-    C -->|structured result| W
+    U -->|주제 · 답변 · 질문 · 선택| B
+    W <-->|draft / final text| D
+    W <-->|structured result| C
 ```
 
 | 영역 | 책임 |
