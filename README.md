@@ -31,7 +31,7 @@
 
 ```mermaid
 flowchart TD
-    A[주제 입력] -->|분석| B{어떻게 진행할까?}
+    A[주제 입력] -->|분석| B{"어떻게 진행할까?<br/>(Topic Analyzer)"}
     B -->|바로 가능| M[Motion 확인]
     B -->|확인 필요| C[확인 이유 표시]
     C --> M
