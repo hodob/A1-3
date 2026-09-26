@@ -16,88 +16,6 @@ Topic Analyzer는 사용자의 입력을 하나의 주제 유형으로만 분류
 | `tone_hint` | 발언의 표현 스타일 결정 |
 
 각 필드는 서로 완전히 무관한 값이 아니라 연관될 수 있다. 다만 같은 책임을 중복해서 표현하기보다 서로 다른 downstream 결정을 담당하도록 나눈다.
-
-## 함수 관점에서 본 Topic Analyzer
-
-Topic Analyzer를 하나의 분류 함수로 보면 이 구조를 더 간단히 이해할 수 있다.
-
-사용자 입력을 `x`라고 할 때, 하나의 label만 반환하는 일반적인 분류는 다음처럼 표현할 수 있다.
-
-```text
-f(x) = y
-```
-
-하지만 Topic Analyzer는 입력을 하나의 `topic_type`으로 압축하지 않는다. 서로 다른 책임을 가진 여러 분석 결과를 동시에 만든다.
-
-```text
-f(x) = (
-  claim_type,
-  epistemic_status,
-  treatment_mode,
-  interaction_state,
-  truth_mode,
-  tone_hint
-)
-```
-
-위 표현은 `TopicAnalysis` DTO 전체 필드를 나타내기 위한 식이 아니라, 이 문서에서 다루는 여섯 분석 정보를 추상화한 표현이다.
-
-집합의 관점에서는 다음처럼 볼 수 있다.
-
-```text
-f : X → C × E × T × I × R × S
-```
-
-- `X` — 사용자 입력의 집합
-- `C` — Claim Type의 가능한 값 집합
-- `E` — Epistemic Status의 가능한 값 집합
-- `T` — Treatment Mode의 가능한 값 집합
-- `I` — Interaction State의 가능한 값 집합
-- `R` — Truth Mode의 가능한 값 집합
-- `S` — Tone Hint의 가능한 값 집합
-
-즉 하나의 입력을 하나의 거대한 복합 enum으로 분류하는 대신, 서로 다른 의미 공간의 값으로 나눠 반환하는 구조다.
-
-예를 들어 입력이 다음과 같다고 하자.
-
-> “철수와 영희 중 누가 더 잘못했어?”
-
-개념적으로는 다음처럼 볼 수 있다.
-
-```text
-x = "철수와 영희 중 누가 더 잘못했어?"
-
-f(x) = (
-  PERSONAL_DISPUTE,
-  UNKNOWN,
-  NATURAL_DEBATE,
-  CONTEXT_REQUIRED,
-  REAL_WORLD,
-  SERIOUS
-)
-```
-
-이를 하나의 값으로 합치면 다음과 같은 형태가 필요해진다.
-
-```text
-PERSONAL_DISPUTE_UNKNOWN_NATURAL_CONTEXT_REQUIRED_REAL_WORLD_SERIOUS
-```
-
-이 방식은 논쟁 종류, 사실 상태, 진행 상태, 현실성 프레임, 표현 스타일처럼 성격이 다른 개념을 하나의 분류 체계에 섞는다. 한 책임의 값이 늘어날 때 조합 가능한 전체 상태 수도 함께 증가한다.
-
-현재 구조는 이를 각각의 분리된 출력 차원으로 둔다.
-
-```text
-C(x) = PERSONAL_DISPUTE
-E(x) = UNKNOWN
-T(x) = NATURAL_DEBATE
-I(x) = CONTEXT_REQUIRED
-R(x) = REAL_WORLD
-S(x) = SERIOUS
-```
-
-여기서 “분리”는 각 값이 통계적으로나 논리적으로 완전히 독립이라는 뜻이 아니다. 예를 들어 `PLAYFUL_DEBATE`와 `PLAYFUL`은 서로 관련될 수 있다. 핵심은 **각 필드가 같은 질문에 중복 답하는 것이 아니라, 서로 다른 시스템 결정에 필요한 정보를 표현한다는 점**이다.
-
 ---
 
 ## 1. `claim_type` — 무슨 종류의 논쟁인가
@@ -342,3 +260,127 @@ tone_hint         = SERIOUS
 - 진지한 표현이 적합하다는 **표현 스타일**
 
 Topic Analyzer는 이 책임을 분리해 이후 단계가 필요한 정보만 사용하도록 한다.
+
+---
+
+## 부록: 집합과 함수로 표현한 Topic Analyzer
+
+이 절의 목적은 수학 용어를 추가하는 데 있지 않다. 앞에서 설명한 “하나의 입력을 여러 책임으로 나눠 판단한다”는 구조를 **정의역, 공역, 치역, 사상**으로 짧고 모호하지 않게 표현하기 위한 모델이다.
+
+여기서는 `TopicAnalysis` DTO 전체가 아니라 이 문서에서 설명한 여섯 분석 필드만 대상으로 한다. 또한 실제 Analyzer는 LLM 호출을 포함하므로 아래 표현은 런타임의 결정론성을 주장하는 수학적 정의가 아니라 **입출력 구조를 설명하기 위한 추상화**다.
+
+### 정의역
+
+사용자가 Topic Analyzer에 넣을 수 있는 입력의 집합을 `X`라고 둔다.
+
+```text
+X = 가능한 사용자 주제 입력의 집합
+```
+
+예를 들어 다음 문장들은 모두 `X`의 원소가 될 수 있다.
+
+```text
+"핫도그는 샌드위치인가?"
+"대학은 출석을 의무화해야 하는가?"
+"철수와 영희 중 누가 더 잘못했어?"
+"파이썬 리스트가 뭐야?"
+```
+
+### 공역
+
+각 분석 필드가 가질 수 있는 값의 집합을 다음처럼 둔다.
+
+```text
+C = Claim Type 값의 집합
+E = Epistemic Status 값의 집합
+T = Treatment Mode 값의 집합
+I = Interaction State 값의 집합
+R = Truth Mode 값의 집합
+S = Tone Hint 값의 집합
+```
+
+Topic Analyzer가 반환할 수 있는 여섯 값의 전체 형식은 이 집합들의 곱으로 표현할 수 있다.
+
+```text
+Y = C × E × T × I × R × S
+```
+
+이 `Y`가 이 모델의 공역이다. 즉 타입 계약상 표현 가능한 분석 결과의 전체 공간이다.
+
+### 사상
+
+Topic Analyzer는 사용자 입력 하나를 공역의 한 점, 즉 여섯 값으로 이루어진 하나의 튜플에 대응시킨다고 볼 수 있다.
+
+```text
+f : X → Y
+
+f(x) = (
+  claim_type,
+  epistemic_status,
+  treatment_mode,
+  interaction_state,
+  truth_mode,
+  tone_hint
+)
+```
+
+예를 들어:
+
+```text
+x = "철수와 영희 중 누가 더 잘못했어?"
+
+f(x) = (
+  PERSONAL_DISPUTE,
+  UNKNOWN,
+  NATURAL_DEBATE,
+  CONTEXT_REQUIRED,
+  REAL_WORLD,
+  SERIOUS
+)
+```
+
+여기서 중요한 점은 `f(x)`가 하나의 거대한 `topic_type`이 아니라는 것이다. 하나의 입력을 **서로 다른 질문에 답하는 여섯 좌표**로 사상한다.
+
+```text
+claim_type        → 무슨 종류의 논쟁인가
+epistemic_status  → 현실에서 사실적으로 어떤 상태인가
+treatment_mode    → 어떤 방식으로 토론할 것인가
+interaction_state → 사용자에게 다음에 무엇을 요구할 것인가
+truth_mode        → 현실과 가정·놀이의 경계를 어떻게 둘 것인가
+tone_hint         → 어떤 표현 스타일을 사용할 것인가
+```
+
+### 치역
+
+공역 `Y`에 포함된 모든 조합이 실제로 의미 있는 결과로 나오는 것은 아니다. 실제 Analyzer가 입력들을 분석하면서 만들어 내는 결과의 집합은 공역의 일부가 된다.
+
+```text
+Im(f) = { f(x) | x ∈ X }
+
+Im(f) ⊆ Y
+```
+
+이 `Im(f)`가 치역이다.
+
+예를 들어 타입만 보면 여러 필드의 값을 자유롭게 조합할 수 있지만, Analyzer의 판단 규칙 때문에 실제로는 특정 조합이 자주 함께 나타나거나 일부 조합은 거의 나오지 않을 수 있다. `PLAYFUL_DEBATE`와 `PLAYFUL`이 관련될 수 있는 것이 한 예다.
+
+따라서 이 설계에서 “분리된 축”은 **서로 아무 관계도 없는 독립 변수**라는 뜻이 아니다. 각 필드의 공역을 따로 정의해 **책임을 분리하되, 하나의 사상 결과 안에서는 서로 관계를 가질 수 있다**는 뜻이다.
+
+### 왜 하나의 enum으로 만들지 않는가
+
+모든 의미를 하나의 값으로 합치면 다음처럼 표현해야 한다.
+
+```text
+PERSONAL_DISPUTE_UNKNOWN_NATURAL_CONTEXT_REQUIRED_REAL_WORLD_SERIOUS
+```
+
+이 방식에서는 논쟁 종류, 사실 상태, 진행 상태, 현실성 프레임, 표현 스타일이 하나의 분류 체계에 섞인다.
+
+현재 구조는 같은 결과를 다음처럼 표현한다.
+
+```text
+f(x) ∈ C × E × T × I × R × S
+```
+
+즉 **하나의 입력을 여러 책임의 좌표로 사상한다.** 이 표현이 Topic Analyzer를 여러 필드로 나눈 설계 의도를 가장 압축해서 보여준다.
+
