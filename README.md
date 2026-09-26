@@ -190,7 +190,7 @@ src/debate_engine/
 
 ## 4. 토론 엔진 구조 (Debate Engine)
 
-Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 데 있다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤 문장을 생성하고 검증한다.
+**Debate Engine은 LLM이 토론의 진행을 직접 결정하지 않도록 제어 Harness를 구성했다.** Harness가 현재 쟁점과 과제를 계산하고, `Action × Target`을 선택하며, 생성된 발언을 검증한 뒤 Debate State를 갱신한다.
 
 **그림 4. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
 
