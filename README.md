@@ -133,8 +133,9 @@ flowchart TD
 
     subgraph EXT[외부 AI Provider]
         direction TB
-        D[A/B 발언 생성]
-        C[분석 · 구조화 · 검증 · 요약]
+        D[Debater Models<br/>A/B 발언 생성]
+        C[Control / Coordinator<br/>분석 · 구조화<br/>검증 · 요약]
+        D ~~~ C
     end
 
     U -->|주제 · 답변 · 질문 · 선택| B
