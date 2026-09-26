@@ -199,19 +199,22 @@ flowchart TD
     subgraph H[Debate Harness]
         S[현재 Debate State + Phase]
         P[다음 턴 계획]
+        G[발언 생성 요청]
         V{발언 검증}
         U[Debate State 갱신]
         R[수정 또는 재계획]
 
         S -->|현재 상황을 바탕으로| P
+        P --> G
         V -->|통과| U
         U -->|다음 턴| S
         V -->|실패| R
-        R -->|다시 준비| P
+        R -->|수정| G
+        R -->|재계획| P
     end
 
-    P -->|계획 + Context로 발언 생성 요청| M[Debater Model<br/>외부 AI Provider]
-    M -->|발언 후보 반환| V
+    G -->|계획 + Context| M[Debater Model<br/>외부 AI Provider]
+    M -->|발언 후보| V
 ```
 
 | 단계 | 역할 |
