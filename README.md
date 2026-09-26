@@ -8,16 +8,32 @@
 |---|---|
 | **사용자 경험** | 주제 입력 → 필요 시 맥락 확인 → Motion 확인 → AI 토론 관전 → 선택적 질문 → 중립 요약 → 사용자 판단 |
 | **핵심 차이** | 다음 발언을 단순히 이어 쓰지 않고, 현재 쟁점과 상태를 읽어 **무엇에 어떻게 대응할지 먼저 결정** |
-| **AI 역할** | A/B 토론자는 발언을 생성하고, 별도의 control/coordinator 경로가 분석·구조화·검증·요약 담당 |
+| **AI 역할** | A/B 토론자는 실제 발언을 생성하고, 별도의 control/coordinator 경로가 분석·구조화·검증·요약 담당 |
 | **판정 원칙** | AI가 승자나 점수를 정하지 않으며 최종 선택은 사용자에게 남김 |
+| **모델 구성** | multi-provider debater pool에서 토론 시작 시 A/B를 배정하고 한 토론 동안 고정 |
 
-**바로 보기:** [전체 흐름](#1-전체-흐름) · [시스템 구조](#2-시스템-구조) · [한 턴의 결정](#3-한-턴은-어떻게-결정되는가) · [Debate State](#4-debate-state) · [Action과 Persona](#5-action과-persona) · [실제 실행 흐름](#6-실제-한-턴의-실행-흐름) · [코드/API](#9-코드와-api-구조)
+### 이 README를 읽는 순서
+
+이 문서는 하나의 거대한 아키텍처 그림 대신 **서로 다른 질문에 답하는 여러 View**로 구성했습니다. 처음 보는 경우 1~3절만 읽어도 서비스와 핵심 Harness 구조를 이해할 수 있고, 이후 절은 내부 동작을 더 자세히 설명합니다.
+
+| 궁금한 것 | 보면 되는 절 |
+|---|---|
+| 사용자는 어떤 흐름을 경험하는가? | 1. 전체 사용자 흐름 |
+| Browser·Serverless·AI는 어떻게 연결되는가? | 2. 시스템 경계와 Runtime 구조 |
+| 다음 발언은 어떤 계층을 거쳐 결정되는가? | 3. Debate Engine |
+| 토론에서 무엇을 구조화해 기억하는가? | 4. Debate State |
+| 어떤 논점에 어떤 행동을 할지 어떻게 고르는가? | 5. Action 선택과 Persona |
+| 실제 API 요청 한 번은 어떻게 확정되는가? | 6. 한 턴의 Runtime Sequence |
+| 프롬프트와 검증·재작성은 어떻게 이어지는가? | 7. Prompt / Validation Pipeline |
+| Frontend와 Serverless session은 어떻게 상태를 유지하는가? | 8. Frontend · Session Runtime |
 
 ---
 
-## 1. 전체 흐름
+## 1. 전체 사용자 흐름
 
-처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않습니다. 먼저 **토론 가능한 주제인지**, **사용자만 알고 있는 맥락이 필요한지**, **사실 설명이 먼저 필요한 입력인지**를 판단합니다.
+처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않습니다. 먼저 **토론 가능한 주제인지**, **사용자만 알고 있는 맥락이 필요한지**, **사실 설명이 먼저 필요한 입력인지**를 판단한 뒤 토론을 시작합니다.
+
+**그림 1. 사용자가 주제를 입력한 순간부터 최종 판단까지의 전체 흐름**
 
 ```mermaid
 flowchart TD
@@ -47,7 +63,7 @@ flowchart TD
     S --> U[사용자 선택]
 ```
 
-### 주제 분석
+### Topic Analyzer
 
 Topic Analyzer는 현재 구현에서 다음 축을 분리합니다.
 
@@ -66,20 +82,29 @@ Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니�
 
 ---
 
-## 2. 시스템 구조
+## 2. 시스템 경계와 Runtime 구조
 
-시스템은 **화면**, **제품 흐름**, **토론 제어**, **AI 생성**을 분리합니다.
+시스템은 **화면**, **제품 흐름**, **토론 제어**, **실제 발언 생성**을 분리합니다.
+
+**그림 2. Browser에서 AI Provider까지의 책임 경계**
 
 ```mermaid
-flowchart LR
-    U[사용자] -->|입력·질문·선택| B[Browser]
-    B -->|fetch / SSE| API[Vercel Python API]
-    API --> W[Web Service]
-    W -->|턴 계획| H[Debate Harness]
-    H -->|A/B 발언 생성| D[Debater Models]
-    W -->|분석·구조화·검증·요약| C[Control / Coordinator]
-    W <-->|서명·복원| T[(engine_token)]
-    W -->|commit / SSE| API
+flowchart TD
+    U[사용자] -->|주제·답변·질문·선택| B[Browser<br/>HTML / CSS / Vanilla JS]
+    B -->|JSON fetch / SSE| API[Vercel Python<br/>Serverless Functions]
+    API -->|Pydantic DTO| W[LiveDebateWebService<br/>제품 흐름·세션·오류 처리]
+
+    W -->|현재 State와 phase| H[Debate Harness<br/>Control / Action / Guard]
+    H -->|이번 과제와 Action × Target| W
+
+    W -->|A/B 발언 생성| D[Debater Models<br/>multi-provider pool]
+    D -->|draft / final text| W
+
+    W -->|분석·구조화·검증·요약| C[Control / Coordinator Model]
+    C -->|structured result| W
+
+    W <-->|검증·복원·재서명| T[(engine_token)]
+    W -->|commit / SSE event| API
     API -->|화면 갱신| B
 ```
 
@@ -92,7 +117,7 @@ flowchart LR
 | **Debater Models** | 선택된 계획에 따라 실제 A/B 발언 생성 |
 | **Control / Coordinator** | 주제 분석, 구조화 출력, State Patch, Compliance, Neutral Summary |
 
-브라우저에는 transcript와 함께 **서명된 `engine_token`**이 있습니다. 이 토큰 안에는 internal Debate State와 Action history가 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정됩니다.
+브라우저에는 transcript와 함께 **서명된 `engine_token`**이 있습니다. 이 토큰 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정됩니다.
 
 즉 `engine_token`은 **암호화가 아니라 무결성 보호**입니다. API Key와 Action 선택 로직은 서버에만 존재합니다.
 
@@ -100,43 +125,75 @@ flowchart LR
 
 ---
 
-## 3. 한 턴은 어떻게 결정되는가
+## 3. Debate Engine: 다음 발언을 결정하는 계층
 
-이 프로젝트의 핵심은 **문장을 생성하기 전에, 이번 턴에서 무엇을 해야 하는지 먼저 정한다는 것**입니다.
+이 프로젝트의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 것입니다. **지금 무엇이 허용되는지 → 무엇을 해결해야 하는지 → 어떤 논점에 어떤 행동을 할지 → 실제 문장을 만들고 검증하는지**를 분리합니다.
+
+**그림 3. Debate Engine의 제어 계층과 데이터 흐름**
 
 ```mermaid
 flowchart TD
-    A[현재 Phase + Debate State] --> B[이번에 먼저 해결할 질문·과제]
-    B --> C[가능한 Action × Target 생성]
-    C --> D[해결·반복·소진된 후보 제거]
-    D --> E[중요한 Target 우선]
-    E --> F[Strategic Utility]
-    F --> G[Persona 선호]
-    G --> H[Action × Target 확정]
-    H --> I[발언 생성]
-    I --> J{검증 통과?}
-    J -->|예| K[State Patch 적용 후 commit]
-    J -->|아니오| L[Targeted Repair / Replan]
-    L --> I
+    P[Protocol / Phase<br/>현재 허용 범위] --> T[이번 턴의 과제]
+    S[Raw Debate State] --> C[Derived Control State<br/>질문 초점·facet·progress]
+    C --> T
+
+    T --> A[Action Policy]
+    S --> A
+    A --> Q[Action × Target 후보]
+
+    Q --> F[Pair State / Target Quality]
+    F --> R[Persona soft preference]
+    R --> X[선택된 Action × Target]
+
+    X --> G[Surface Generation]
+    G --> V[Compliance Guard]
+    V -->|통과| SP[State Patch]
+    V -->|실패| RP[Repair / Replan]
+    RP --> G
+
+    SP --> NS[다음 Debate State]
+    NS --> M[Control Plane<br/>계속 / phase 이동]
 ```
 
-| 단계 | 하는 일 |
-|---|---|
-| **Protocol / Phase** | 지금 단계에서 허용되는 행동 범위를 정함 |
-| **Debate State** | 지금까지 실제로 주장·질문·양보·수정된 내용을 보관 |
-| **현재 질문·과제** | 이번 발언이 가장 먼저 해결해야 할 것을 정함 |
-| **Action × Target** | 어떤 논점에 어떤 방식으로 대응할지 정함 |
-| **Persona** | 이미 적법한 후보들 사이에서 선호를 줌 |
-| **Guard** | 생성된 문장이 실제 계획·입장·과제를 수행했는지 확인 |
-| **State Patch** | 확정된 발언에서 다음 턴에 필요한 변화만 구조화해 저장 |
+각 계층은 서로 다른 질문에 답합니다.
 
-Persona는 후보를 새로 만들 수 없습니다. 이미 해결됐거나 막힌 행동을 되살릴 수도 없습니다.
+| 계층 | 질문 |
+|---|---|
+| Protocol / Phase | 지금 단계에서 무엇을 할 수 있는가? |
+| Debate State | 지금까지 무엇이 주장·질문·양보·수정되었는가? |
+| Derived Control State | 지금 해결 중인 질문은 무엇이고 같은 논점을 반복하고 있지는 않은가? |
+| Turn Task | 이번 발언이 가장 먼저 해야 할 일은 무엇인가? |
+| Action × Target | 어떤 논점에 어떤 방식으로 대응할 것인가? |
+| Persona | 적법한 후보 중 어떤 행동을 상대적으로 선호하는가? |
+| Guard | 생성된 문장이 실제 계획·입장·과제를 수행했는가? |
+| State Patch | 확정된 발언에서 다음 턴에 필요한 변화를 무엇으로 남길 것인가? |
 
 ---
 
-## 4. Debate State
+## 4. Debate State: 무엇을 기억하는가
 
 Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**입니다.
+
+**그림 4. 실제 기록과 그 위에서 매 턴 계산되는 제어 상태**
+
+```mermaid
+flowchart TD
+    subgraph RAW[Authoritative Debate State]
+        P[Propositions]
+        R[Relations]
+        Q[Questions]
+        C[Commitment Events]
+        E[Response / Event History]
+    end
+
+    RAW -->|매 턴 계산| D[Derived Control State]
+
+    D --> F[Semantic Facets<br/>같은 논점 묶기]
+    D --> G[Question Groups / Immediate QUD<br/>현재 질문 초점]
+    D --> H[Progress<br/>의미 있는 진전 여부]
+    D --> I[Action × Target State<br/>반복·해결·소진]
+    D --> J[Target Quality<br/>중요도·행동 가능성]
+```
 
 ### 실제로 저장하는 핵심 정보
 
@@ -151,7 +208,7 @@ Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 
 
 ### 같은 말을 새 ID로 반복하지 않게 하기
 
-새 Proposition이 생겼다고 곧바로 “토론이 진전됐다”고 보지 않습니다. 기존 논점과의 의미 관계를 판정하고, 같은 논지는 하나의 **semantic facet**으로 묶습니다. 따라서 표현만 바꾼 새 Proposition ID로 이미 사용한 Action × Target 제한을 우회하기 어렵게 합니다.
+새 Proposition이 생겼다고 곧바로 “토론이 진전됐다”고 보지 않습니다. 기존 논점과의 의미 관계를 판정하고 같은 논지는 하나의 **semantic facet**으로 묶습니다. 따라서 표현만 바꾼 새 Proposition ID로 반복 제한을 우회하기 어렵게 합니다.
 
 ### 현재 가장 먼저 해결할 질문
 
@@ -160,7 +217,7 @@ Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 
 이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했습니다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
 
 <details>
-<summary><strong>세부 Control State와 Turn Task 보기</strong></summary>
+<summary><strong>세부 Control State와 Turn Task 전체 보기</strong></summary>
 
 새 Proposition의 의미 관계:
 
@@ -193,19 +250,25 @@ RELATED_DISTINCT
 
 ---
 
-## 5. Action과 Persona
+## 5. Action 선택과 Persona
 
-### Action: “무슨 말을 할까”보다 먼저 정하는 전략
+### 5.1 어떤 논점에 어떤 행동을 할지 고르는 과정
 
-현재 Runtime에는 15개의 Strategic Action이 있습니다. 각 Action은 단순 이름이 아니라 **target 종류, 반드시 나타나야 할 의미 효과, 실패 조건**을 가진 실행 계약입니다.
+Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약입니다.
 
-```text
-Hard Eligibility
-→ Action × Target Pair Filter
-→ Target Quality
-→ Strategic Utility
-→ Persona Preference
-→ Repetition / Saturation
+**그림 5. 후보를 넓게 만든 뒤 단계적으로 좁히는 Action 선택 흐름**
+
+```mermaid
+flowchart TD
+    A[현재 Turn Task] --> B[Eligible Action × Target]
+    B --> C{Pair 상태가 유효한가?}
+    C -->|아니오| Z[후보 제거]
+    C -->|예| D[Target Quality 평가]
+
+    D --> E[Strategic Utility]
+    E --> F[Persona Preference]
+    F --> G[Repetition / Saturation]
+    G --> H[최종 Action × Target]
 ```
 
 Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있습니다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 다음 후보에서 제외됩니다.
@@ -233,7 +296,7 @@ Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAU
 
 </details>
 
-### Persona: 캐릭터가 아니라 행동 선호 정책
+### 5.2 Persona는 캐릭터가 아니라 행동 선호 정책
 
 Persona는 고정된 세계관이나 역할극 캐릭터가 아닙니다. 현재 구현에서는 **이미 적법하다고 판정된 Action 후보들 사이의 안정적인 soft preference**입니다. Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있습니다.
 
@@ -248,13 +311,15 @@ Persona 연구에서 role-playing persona, personality prompting, role과 expres
 | Principlist | **원칙 중심형** | 기준·전제·일관성 점검, 원칙 기반 이유 확장 |
 | Synthesist | **조정 통합형** | 국소적 양보, 주장 수정, 비교와 핵심 압축 |
 
-Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택합니다.
+Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택합니다. Persona는 후보를 새로 만들 수 없고 이미 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 행동을 되살릴 수도 없습니다.
 
 ---
 
-## 6. 실제 한 턴의 실행 흐름
+## 6. 한 턴의 Runtime Sequence
 
-아래는 브라우저에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 실제 runtime 흐름입니다.
+아래 그림은 개념도가 아니라 **브라우저에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 실제 실행 순서**를 보여줍니다.
+
+**그림 6. Request → provisional draft → validation → State Patch → commit**
 
 ```mermaid
 sequenceDiagram
@@ -269,8 +334,9 @@ sequenceDiagram
     B->>A: signed session + NEXT
     A->>W: DebateStepRequest
     W->>W: token 검증 / State 복원
+
     W->>H: 현재 State + phase
-    H-->>W: 이번 과제 + Action × Target
+    H-->>W: Turn Task + Action × Target
 
     W->>D: stance + persona + task + target + context
     D-->>W: streaming draft
@@ -279,10 +345,10 @@ sequenceDiagram
 
     W->>G: 발언 검증
 
-    alt 실패
+    alt 검증 실패
         G-->>W: typed failure
         W->>D: targeted repair 또는 replan
-    else 통과
+    else 검증 통과
         G-->>W: committed utterance
         W->>S: 확정 발언 + 관련 State
         S-->>W: typed Patch
@@ -293,22 +359,6 @@ sequenceDiagram
 ```
 
 화면에 streaming되는 문장은 **확정 전 draft**입니다. Guard와 State Patch까지 통과해야 transcript에 commit됩니다.
-
-### 실패 유형에 맞춘 Repair
-
-검증은 단순한 pass/fail이 아니라 실패 종류를 구분합니다.
-
-- Assigned Stance를 뒤집었는가
-- 선택한 Action을 실제로 수행했는가
-- target에 제대로 반응했는가
-- 이번 턴의 과제를 수행했는가
-- 같은 말을 바꿔 반복했는가
-- 허용되지 않은 State reference를 출력했는가
-- Final Focus 형식을 위반했는가
-
-첫 retry는 이전 draft에서 **무엇을 유지하고 무엇만 바꿀지** 알려주는 targeted repair입니다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있습니다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않습니다.
-
-이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했습니다 (Ray & Goyal, 2026).
 
 ### State Patch와 Adaptive Context
 
@@ -330,21 +380,26 @@ State가 커져도 전체 graph를 매번 넣지 않습니다. 현재 Action tar
 
 ---
 
-## 7. Prompt Architecture와 Guard
+## 7. Prompt / Validation Pipeline
 
-프롬프트는 하나의 거대한 역할 지시문이 아니라 **규칙과 현재 데이터를 층별로 합성**합니다.
+프롬프트는 하나의 거대한 역할 지시문이 아니라 **변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context**를 분리해 합성합니다.
 
-```text
-Global Hard Rules
-→ Grounding (fact anchor / context)
-→ Assignment (stance / persona / phase)
-→ Phase Instruction
-→ 이번 턴 계약 (task + action + target)
-→ 허용된 State References
-→ Recent Transcript
-→ Surface Style / Format
-→ Draft
-→ Validation
+**그림 7. 발언 생성에 들어가는 정보의 우선순위와 Repair loop**
+
+```mermaid
+flowchart TD
+    A[Global Hard Rules<br/>사실성·stance 경계] --> B[Grounding<br/>fact anchor / context]
+    B --> C[Assignment<br/>stance / persona / phase]
+    C --> D[Phase Instruction]
+    D --> E[Turn Contract<br/>task + action + target]
+    E --> F[Allowed State References]
+    F --> G[Recent Transcript]
+    G --> H[Surface Style / Format]
+    H --> I[Draft]
+    I --> J{Validation}
+    J -->|통과| K[Commit 후보]
+    J -->|실패 코드| L[Targeted Repair / Replan]
+    L --> I
 ```
 
 Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `assignment`, `phase_instruction`, `surface_style`, `surface_format`처럼 구획을 나눕니다. Motion, Context, transcript, Audience Question은 instruction과 섞이지 않도록 data 영역으로 전달합니다.
@@ -358,15 +413,83 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 - 유효한 반론은 국소적으로 인정할 수 있음
 - 세부 주장은 수정할 수 있지만 Assigned Stance 전체를 뒤집지 않음
 
+### 실패 유형에 맞춘 Repair
+
+검증은 단순 pass/fail이 아니라 stance reversal, Action 미수행, target 미사용, off-task, 반복, 잘못된 State reference, Final Focus 형식 위반 등을 구분합니다.
+
+첫 retry는 이전 draft에서 **무엇을 유지하고 무엇만 바꿀지** 알려주는 targeted repair입니다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있습니다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않습니다.
+
+이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했습니다 (Ray & Goyal, 2026).
+
 ---
 
-## 8. Debate Protocol, Moderator, Frontend
+## 8. Frontend · Session Runtime
+
+### 8.1 Frontend 화면 상태
+
+Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리합니다.
+
+**그림 8. 사용자가 보는 화면 상태의 lifecycle**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Topic
+    Topic --> Context: 추가 맥락 필요
+    Topic --> Motion: 바로 진행
+    Context --> Context: 다음 질문
+    Context --> Motion: debate_ready
+    Motion --> Debate: 토론 시작
+    Debate --> Debate: draft → validation → commit
+    Debate --> Audience: Crossfire 종료
+    Audience --> Debate: 질문 또는 건너뛰기
+    Debate --> Summary: COMPLETE
+    Summary --> Choice
+    Choice --> Done
+    Done --> Topic: 다른 주제로 시작
+```
+
+주요 Frontend 책임:
+
+- operation sequence로 stale response 차단
+- `AbortController`를 이용한 지연/timeout 처리
+- SSE `draft_reset → draft_delta → commit/error`
+- provisional draft와 committed transcript 분리
+- Markdown sanitize/render
+- State reference를 사람이 읽을 수 있는 발언 링크로 변환
+- 서버의 진행 결정을 deterministic moderator card로 표현
+- 모바일/데스크톱 반응형 UI
+- raw stack trace 대신 안정적인 오류 메시지 표시
+
+토론자가 `[[C24]]`, `[[Q3]]` 같은 내부 State marker를 사용하면 서버는 확정 후 `StateReference` metadata로 변환하고, Frontend는 사용자에게 **A/B · 발언 번호** 형태의 링크로 보여줍니다.
+
+### 8.2 Serverless에서 토론 상태 유지
+
+Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없습니다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어갑니다.
+
+**그림 9. `engine_token`을 이용한 Serverless session lifecycle**
+
+```mermaid
+flowchart TD
+    A[Browser<br/>signed engine_token] -->|다음 요청| B[Signature 검증]
+    B --> C[Payload decode]
+    C --> D[Session + Debate State<br/>Action history + A/B models 복원]
+    D --> E[한 턴 실행]
+    E --> F[새 State + history]
+    F --> G[JSON → zlib → HMAC-SHA256]
+    G -->|새 engine_token| A
+```
+
+`engine_token`에는 browser-visible session, internal Debate State, Action history, A/B model assignment가 포함됩니다. 브라우저가 공개 DTO의 값을 임의로 바꾸더라도, 이미 시작된 토론에서는 서명된 token에서 복원한 내부 상태가 우선합니다.
+
+---
+
+## 9. Debate Protocol과 Moderator
 
 ### Crossfire
 
-Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재 Debate State에서 살아 있는 논점을 골라 **질문, 반례, 추론 공격, commitment 요구, 국소적 양보, 주장 수정**으로 상태를 변화시키는 구간입니다.
+Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재 Debate State에서 살아 있는 논점을 골라 **질문, 반례, 추론 공격, commitment 요구, 국소적 양보, 주장 수정**으로 상태를 실제로 변화시키는 구간입니다.
 
-관전 재미도 별도 농담 생성 모듈보다 **상대의 방금 한 발언을 이용한 callback, 반례, 양보, 수정, 새로운 충돌**에서 나오도록 설계했습니다. PLAYFUL 주제에서는 가벼운 비유나 논증에서 나온 유머를 허용하지만 상대 인격 공격은 허용하지 않습니다.
+관전 재미도 별도의 농담 생성 모듈보다 **상대의 방금 한 발언을 이용한 callback, 반례, 양보, 수정, 새로운 충돌**에서 나오도록 설계했습니다. PLAYFUL 주제에서는 가벼운 비유나 논증에서 나온 유머를 허용하지만 상대 인격 공격은 허용하지 않습니다.
 
 ### Moderator는 별도 AI가 아님
 
@@ -383,27 +506,11 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 - **Final Focus**: 새 핵심 근거 없이 이미 나온 가장 중요한 이유를 짧게 압축
 - **Neutral Summary**: 핵심 충돌, A/B의 강한 논점, 합의, 남은 질문만 정리하며 승자·점수·정답은 정하지 않음
 
-### Frontend Runtime
-
-Frontend는 결과를 출력하는 것 외에도 긴 AI 작업의 lifecycle을 관리합니다.
-
-- operation sequence로 stale response 차단
-- `AbortController`를 이용한 지연/timeout 처리
-- SSE `draft_reset → draft_delta → commit/error`
-- provisional draft와 committed transcript 분리
-- Markdown sanitize/render
-- State reference를 사람이 읽을 수 있는 발언 링크로 변환
-- deterministic moderator card
-- 모바일/데스크톱 반응형 UI
-- raw stack trace 대신 안정적인 오류 메시지 표시
-
-토론자가 `[[C24]]`, `[[Q3]]` 같은 내부 State marker를 사용하면 서버는 확정 후 `StateReference` metadata로 변환하고, Frontend는 사용자에게 **A/B · 발언 번호** 형태의 링크로 보여줍니다.
-
 ---
 
-## 9. 코드와 API 구조
+## 10. 코드와 API 구조
 
-상위 구조만 보면 다음 네 영역으로 나뉩니다.
+상위 구조는 다음 네 영역으로 나뉩니다.
 
 ```text
 public/                 Browser UI
@@ -459,7 +566,7 @@ src/debate_engine/
 
 ### API
 
-| Endpoint | 역할 |
+| Endpoint | 주요 역할 |
 |---|---|
 | `POST /api/analyze-topic` | 주제 성격과 진행 방식 분석 |
 | `POST /api/context-step` | 필요한 개인 맥락을 한 질문씩 수집 |
@@ -474,7 +581,7 @@ Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Pa
 
 ---
 
-## 10. 기술 스택과 실행·배포
+## 11. 기술 스택과 실행·배포
 
 | 영역 | 기술 |
 |---|---|
