@@ -122,7 +122,7 @@ flowchart TD
         H[Debate Harness<br/>State · Action · Guard]
 
         B -->|JSON fetch / SSE| API
-        API -->|Pydantic DTO| W
+        API -->|DTO| W
         W -->|턴 계획·상태 제어| H
         H -->|선택된 계획| W
 
@@ -142,23 +142,6 @@ flowchart TD
     W <-->|draft / final text| D
     W <-->|structured result| C
 ```
-
-| 영역 | 책임 |
-|---|---|
-| Browser | 화면 state, 입력, loading/error UX, provisional draft 표시 |
-| Vercel API | HTTP/SSE adapter, Pydantic request/response 경계 |
-| Web Service | 제품 단계 진행, signed session, Provider orchestration |
-| Debate Harness | Debate State, 현재 과제, Action × Target, Persona, Guard |
-| Debater Models | 선택된 계획에 따라 실제 A/B 발언 생성 |
-| Control / Coordinator | 주제 분석, 구조화 출력, State Patch, Compliance, Neutral Summary |
-
-그림에서 **사이 시스템** subgraph 안은 이 저장소가 직접 제어하는 영역이고, **외부 AI Provider** subgraph는 모델 호출 경계다. 원통형 `engine_token`은 데이터베이스가 아니라 브라우저가 보관하는 signed session payload다.
-
-브라우저의 `engine_token` 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정된다. 즉 `engine_token`은 암호화가 아니라 무결성 보호다. API Key와 Action 선택 로직은 서버에만 존재한다.
-
-토론 시작 시 `multi-provider debater pool`에서 서로 다른 두 토론자 모델을 A/B에 배정하고, 그 배정은 한 토론 동안 signed session에 고정된다.
-
-다음 절에서는 이 Runtime 구조가 실제 저장소 디렉터리와 어떤 Building Block으로 대응되는지 보여줍니다.
 
 ---
 
