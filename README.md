@@ -580,9 +580,6 @@ flowchart TD
 
 ---
 
-
----
-
 ## 10. Debate Protocol과 Moderator
 
 ### Crossfire
@@ -605,9 +602,6 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 - **Audience Question**: A와 B가 같은 사용자 질문에 차례로 직접 답함
 - **Final Focus**: 새 핵심 근거 없이 이미 나온 가장 중요한 이유를 짧게 압축
 - **Neutral Summary**: 핵심 충돌, A/B의 강한 논점, 합의, 남은 질문만 정리하며 승자·점수·정답은 정하지 않음
-
----
-
 
 ---
 
