@@ -190,42 +190,41 @@ src/debate_engine/
 
 ## 4. 토론 엔진 구조 (Debate Engine)
 
-**Debate Harness는 발언을 생성하는 모델이 아니라, 한 턴의 진행을 제어하는 제어 루프(control loop)다.** 현재 `Debate State`와 `Phase`를 보고 이번 턴에서 무엇을 다뤄야 할지 계획하고, 외부 `Debater Model`에 그 계획과 필요한 Context를 전달해 발언 생성을 요청한다. 반환된 발언은 바로 확정하지 않고 검증하며, 통과한 결과만 다음 `Debate State`에 반영한다.
+**Debate Harness는 발언을 생성하는 모델이 아니라, 한 턴의 진행을 제어하는 제어 루프(control loop)다.** 현재 `Debate State`와 `Phase`를 보고 이번 턴에서 무엇을 다뤄야 할지 정한 뒤 필요한 Context를 구성한다. 그 준비를 바탕으로 외부 `Debater Model`을 호출해 발언 후보를 얻고, 검증을 통과한 결과만 다음 `Debate State`에 반영한다.
 
-**그림 4. Debate Harness 제어 흐름 — 상태 확인 → 턴 계획 → 생성 요청 → 검증 → 상태 갱신**
+**그림 4. Debate Harness 제어 흐름 — 상태 확인 → 발언 준비 → 생성 → 검증 → 상태 갱신**
 
 ```mermaid
 flowchart TD
     subgraph H[Debate Harness]
         S[현재 Debate State + Phase]
-        P[다음 턴 계획]
-        G[발언 생성 요청]
+        P[발언 준비<br/>계획 · Context 구성]
+        G[발언 생성]
         V{발언 검증}
         U[Debate State 갱신]
         R[수정 또는 재계획]
 
         S -->|현재 상황을 바탕으로| P
         P --> G
+        G --> V
         V -->|통과| U
         U -->|다음 턴| S
         V -->|실패| R
-        R -->|수정| G
-        R -->|재계획| P
+        R -->|다시 준비| P
     end
 
-    G -->|계획 + Context| M[Debater Model<br/>외부 AI Provider]
-    M -->|발언 후보| V
+    G -.->|호출| M[Debater Model<br/>외부 AI Provider]
 ```
 
 | 단계 | 역할 |
 |---|---|
 | 상태 확인 | 현재 `Debate State`와 `Phase`에서 이번 턴이 놓인 상황을 읽는다. |
-| 다음 턴 계획 | 이번 발언이 먼저 해결해야 할 과제와 전략을 정한다. |
-| 발언 생성 요청 | 계획과 필요한 Context를 외부 `Debater Model`에 전달하고 발언 후보를 받는다. |
+| 발언 준비 | 이번 발언이 먼저 해결해야 할 과제와 전략을 정하고, 생성에 필요한 Context를 구성한다. |
+| 발언 생성 | 외부 `Debater Model`을 호출해 준비된 조건에 맞는 발언 후보를 받는다. |
 | 발언 검증 | 발언 후보가 계획·입장·형식 제약을 충족하는지 확인한다. |
 | 상태 갱신 | 통과한 발언에서 다음 턴에 필요한 변화를 `Debate State`에 반영한다. |
 
-검증에 실패한 발언은 State에 반영하지 않는다. 같은 계획을 유지한 채 발언만 수정하거나, 필요한 경우 계획 자체를 다시 고른다.
+검증에 실패한 발언은 State에 반영하지 않는다. 실패 원인에 따라 기존 계획을 유지한 채 다시 생성하거나, 필요한 경우 계획 자체를 다시 고른 뒤 발언 준비 단계로 돌아간다.
 
 `Turn Task`, `Action × Target`, Persona preference는 **다음 턴 계획 내부의 세부 메커니즘**이다. 5절에서는 계획의 입력이 되는 Debate State를, 6절에서는 Action × Target 선택을, 7절에서는 실제 한 턴의 실행을, 8절에서는 검증과 수정 경로를 각각 확대한다.
 
