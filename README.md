@@ -47,16 +47,23 @@ flowchart TD
     M -->|최대 1회 수정| Z[토론 시작]
 ```
 
-Topic Analyzer는 다음 기준으로 주제의 성격과 처리 방식을 판단합니다.
+Topic Analyzer는 주제를 하나의 유형으로만 분류하지 않습니다. 이후 시스템이 내려야 하는 서로 다른 결정을 각각의 분석 정보로 나누고, 각 항목이 서로 다른 주된 책임을 맡도록 구성했습니다.
 
-| 축 | 판단 내용 |
+1. `Claim Type`은 **무슨 종류의 논쟁인지** 판단합니다.
+2. `Epistemic Status`는 **현실에서 사실적으로 어떤 상태인지** 판단합니다.
+3. `Treatment Mode`는 **이 입력을 어떤 방식으로 토론할지** 판단합니다.
+4. `Interaction State`는 **사용자에게 다음에 무엇을 요구할지** 판단합니다.
+5. `Truth Mode`는 **현실 사실과 가정·놀이를 어떻게 구분할지** 판단합니다.
+6. `Tone`은 **어떤 표현 스타일로 말할지** 판단합니다.
+
+| 분석 정보 | 주요 값과 의미 |
 |---|---|
-| Claim Type(주장 유형) | FACT(사실), DEFINITION(정의), CAUSE(원인), VALUE(가치), POLICY(정책), COMPARISON(비교), INTERPRETATION(해석), PERSONAL_DISPUTE(개인 갈등) 등 |
-| Epistemic Status(인식 상태) | 사실 우세인지, 실제로 논쟁 가능한지, 아직 불명확한지 |
-| Treatment Mode(처리 방식) | 자연스러운 토론 / 가벼운 토론 / 재구성된 토론 |
-| Interaction State(상호작용 상태) | 바로 진행 / 확인 필요 / 추가 맥락 필요 / 먼저 정보 설명 필요 |
-| Truth Mode(사실성 유형) | 현실 세계 사실 / 가정된 반사실 / 수사적·놀이형 논쟁 |
-| Tone(어조) | SERIOUS / PLAYFUL |
+| Claim Type(주제 유형) | FACT(사실), DEFINITION(정의), CAUSE(원인), VALUE(가치), POLICY(정책), COMPARISON(비교), INTERPRETATION(해석), PERSONAL_DISPUTE(개인 갈등) 등 |
+| Epistemic Status(사실 상태) | 사실 우세인지, 실제로 논쟁 가능한지, 아직 불명확한지 |
+| Treatment Mode(토론 처리 방식) | 자연스러운 토론 / 가벼운 토론 / 재구성된 토론 |
+| Interaction State(진행 상태) | 바로 진행 / 확인 필요 / 추가 맥락 필요 / 먼저 정보 설명 필요 |
+| Truth Mode(현실성 프레임) | 현실 세계 사실 / 가정된 반사실 / 수사적·놀이형 논쟁 |
+| Tone(표현 어조) | SERIOUS / PLAYFUL |
 
 개인 사건은 한 번에 하나씩 질문합니다. 답변은 Context Summary에서 **직접 본 일 / 전해 들은 이야기 / 내 해석 / 모르는 부분**으로 구분하고, 사용자가 주지 않은 사건 사실을 AI가 임의로 채우지 않습니다.
 
