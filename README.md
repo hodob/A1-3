@@ -229,86 +229,53 @@ flowchart TD
 
 ---
 
-## 5. 토론 상태 (Debate State): 무엇을 기억하는가
+## 5. 토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가
 
-Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**다.
+Debate State는 transcript의 복사본도, 매 턴 새로 만드는 요약문도 아니다. **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 현재 쟁점이나 질문 초점처럼 다시 계산할 수 있는 값은 State에 중복 저장하지 않고, 필요할 때 이 기록에서 `Derived Control View`로 계산한다.
 
-**그림 5. 토론 상태 구조 (Debate State View) — 확정 상태와 파생 제어 상태**
+**그림 5. 토론 상태 개요 (Debate State View) — 확정된 발언 → 구조화 상태 → 파생 제어 관점**
 
 ```mermaid
 flowchart TD
-    subgraph RAW[Authoritative Debate State]
-        P[Propositions]
-        R[Relations]
-        Q[Questions]
-        C[Commitment Events]
-        E[Response / Event History]
-    end
+    A[검증을 통과한 발언]
+    A -->|토론의 변화를 구조화해 반영| S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
+    S -->|매 턴 계산| V[Derived Control View]
 
-    RAW -->|매 턴 계산| D[Derived Control State]
-
-    D --> F[Semantic Facets<br/>같은 논점 묶기]
-    D --> G[Question Groups / QUD<br/>현재 질문 초점]
-    D --> H[Progress<br/>진전 여부]
-    D --> I[Action × Target State<br/>반복·해결·소진]
-    I --> J[Target Quality<br/>중요도·행동 가능성]
+    V --> F[Semantic Facets<br/>같은 논점 묶기]
+    V --> G[Question Groups / QUD<br/>지금 답해야 할 질문]
+    V --> H[Progress<br/>실제 진전 여부]
 ```
 
-### 실제로 저장하는 핵심 정보
+### 무엇을 State로 남기는가
 
-| 구조 | 의미 |
+| 구조 | State가 답하는 질문 |
 |---|---|
-| **Proposition** | 주장·근거·반례 등의 기본 명제 |
-| **Relation** | `SUPPORTS`, `ATTACKS`, `CONTRADICTS`, `QUALIFIES` |
-| **Question** | 질문 자체를 별도 Entity로 저장하고 `OPEN / RESOLVED` 관리 |
-| **Commitment Event** | `ASSERT`, `CONCEDE`, `WITHDRAW`, `REVISE` |
+| **Proposition** | 무엇이 주장됐는가? |
+| **Relation** | 어떤 주장이 무엇을 지지·공격·모순·한정하는가? |
+| **Question** | 무엇이 아직 답을 요구하는가? `OPEN / RESOLVED`로 관리한다. |
+| **Commitment Event** | 누가 무엇을 주장·양보·철회·수정했는가? |
 
-기존 Proposition text를 덮어써 과거를 지우지 않는다. 주장을 바꾸면 새 Proposition과 `REVISE` event를 추가한다.
+이 구조를 두는 이유는 발언 문장 자체와 **토론에서 남아야 할 의미 상태**가 같지 않기 때문이다. 같은 문장을 다시 읽는 것만으로는 어떤 질문이 아직 열려 있는지, 어떤 주장이 수정되었는지, 무엇이 무엇을 공격하는지 안정적으로 구분하기 어렵다.
 
-### 같은 말을 새 ID로 반복하지 않게 하기
+### 변경은 기존 기록을 덮어쓰지 않는다
 
-새 Proposition이 생겼다고 곧바로 “토론이 진전됐다”고 보지 않는다. 기존 논점과의 의미 관계를 판정하고 같은 논지는 하나의 **semantic facet**으로 묶는다. 따라서 표현만 바꾼 새 Proposition ID로 반복 제한을 우회하기 어렵게 한다.
-
-### 현재 가장 먼저 해결할 질문
-
-질문을 오래된 순서대로 전부 다시 꺼내지 않는다. 현재 쟁점에서 **가장 먼저 해결해야 하는 질문 초점**을 정하고, 한 번의 답변으로 함께 해결할 수 있는 유사 질문은 하나의 Question Group으로 묶을 수 있다.
-
-이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
-
-<details>
-<summary><strong>세부 Control State와 Turn Task 전체 보기</strong></summary>
-
-새 Proposition의 의미 관계:
+주장을 수정해도 기존 Proposition text를 바꾸지 않는다. 수정된 내용을 새 Proposition으로 추가하고 `REVISE` event로 이전 주장과 연결한다.
 
 ```text
-NEW_REASON
-SAME_POINT
-REFINEMENT
-NEW_COUNTEREXAMPLE
-QUALIFICATION
-RELATED_DISTINCT
+C12  기존 주장: "모든 경우에 X다"
+C19  수정 주장: "조건 Y에서는 X다"
+REVISE  C12 → C19
 ```
 
-이번 발언이 해야 할 일:
+따라서 이후 턴은 최신 주장만 볼 수 있을 뿐 아니라, **무엇이 어떻게 바뀌었는지**도 추적할 수 있다. 양보와 철회도 같은 방식으로 Commitment Event에 남는다.
 
-| 내부 이름 | 의미 |
-|---|---|
-| `INTRODUCE_UNCOVERED_FACET` | 아직 다뤄지지 않은 핵심 측면 제시 |
-| `ANSWER_OPEN_QUESTION` | 현재 열린 핵심 질문에 직접 답변 |
-| `ADDRESS_AUDIENCE` | 관객 질문에 직접 답변 |
-| `ADDRESS_COUNTEREXAMPLE` | 최근 반례를 처리 |
-| `TEST_UNRESOLVED_REASON` | 아직 해결되지 않은 이유를 검증 |
-| `WEIGH_COMPETING_REASONS` | 경쟁하는 이유를 같은 기준에서 비교 |
-| `NARROW_DISAGREEMENT` | 동의/불일치 범위를 좁힘 |
-| `CRYSTALLIZE` | 이미 나온 핵심 충돌을 압축 |
-| `NO_VALUABLE_MOVE` | 현재 단계에서 추가 발언 가치가 낮음 |
+### 저장된 State에서 현재 제어 관점을 계산한다
 
-</details>
+새 Proposition ID가 생겼다고 곧바로 새로운 논점이나 진전으로 보지 않는다. `SAME_POINT`, `REFINEMENT`, `QUALIFICATION`처럼 기존 주장과 같은 논지에 속하는 경우에는 **Semantic Facet**으로 묶어 표현만 바뀐 반복을 새 진전으로 세지 않는다.
 
-> 그림의 위쪽은 확정된 Debate State, 아래쪽은 매 턴 계산되는 제어 상태다. README에서는 아키텍처 이해에 필요한 State만 설명한다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략한다.
+질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶고, 현재 가장 먼저 해결해야 할 질문을 **QUD (Question Under Discussion)** 로 계산한다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
 
-
-다음 절에서는 이 State를 바탕으로 실제 Action × Target 후보를 어떻게 좁히는지 보여줍니다.
+이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
 
 ---
 
