@@ -351,7 +351,7 @@ RELATED_DISTINCT
 
 Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약입니다.
 
-**그림 7. 후보를 넓게 만든 뒤 단계적으로 좁히는 Action 선택 흐름**
+**그림 7. Action Selection View — 후보를 단계적으로 좁혀 최종 행동을 고르는 과정**
 
 ```mermaid
 flowchart TD
