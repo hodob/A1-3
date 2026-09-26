@@ -17,6 +17,87 @@ Topic Analyzer는 사용자의 입력을 하나의 주제 유형으로만 분류
 
 각 필드는 서로 완전히 무관한 값이 아니라 연관될 수 있다. 다만 같은 책임을 중복해서 표현하기보다 서로 다른 downstream 결정을 담당하도록 나눈다.
 
+## 함수 관점에서 본 Topic Analyzer
+
+Topic Analyzer를 하나의 분류 함수로 보면 이 구조를 더 간단히 이해할 수 있다.
+
+사용자 입력을 `x`라고 할 때, 하나의 label만 반환하는 일반적인 분류는 다음처럼 표현할 수 있다.
+
+```text
+f(x) = y
+```
+
+하지만 Topic Analyzer는 입력을 하나의 `topic_type`으로 압축하지 않는다. 서로 다른 책임을 가진 여러 분석 결과를 동시에 만든다.
+
+```text
+f(x) = (
+  claim_type,
+  epistemic_status,
+  treatment_mode,
+  interaction_state,
+  truth_mode,
+  tone_hint
+)
+```
+
+위 표현은 `TopicAnalysis` DTO 전체 필드를 나타내기 위한 식이 아니라, 이 문서에서 다루는 여섯 분석 정보를 추상화한 표현이다.
+
+집합의 관점에서는 다음처럼 볼 수 있다.
+
+```text
+f : X → C × E × T × I × R × S
+```
+
+- `X` — 사용자 입력의 집합
+- `C` — Claim Type의 가능한 값 집합
+- `E` — Epistemic Status의 가능한 값 집합
+- `T` — Treatment Mode의 가능한 값 집합
+- `I` — Interaction State의 가능한 값 집합
+- `R` — Truth Mode의 가능한 값 집합
+- `S` — Tone Hint의 가능한 값 집합
+
+즉 하나의 입력을 하나의 거대한 복합 enum으로 분류하는 대신, 서로 다른 의미 공간의 값으로 나눠 반환하는 구조다.
+
+예를 들어 입력이 다음과 같다고 하자.
+
+> “철수와 영희 중 누가 더 잘못했어?”
+
+개념적으로는 다음처럼 볼 수 있다.
+
+```text
+x = "철수와 영희 중 누가 더 잘못했어?"
+
+f(x) = (
+  PERSONAL_DISPUTE,
+  UNKNOWN,
+  NATURAL_DEBATE,
+  CONTEXT_REQUIRED,
+  REAL_WORLD,
+  SERIOUS
+)
+```
+
+이를 하나의 값으로 합치면 다음과 같은 형태가 필요해진다.
+
+```text
+PERSONAL_DISPUTE_UNKNOWN_NATURAL_CONTEXT_REQUIRED_REAL_WORLD_SERIOUS
+```
+
+이 방식은 논쟁 종류, 사실 상태, 진행 상태, 현실성 프레임, 표현 스타일처럼 성격이 다른 개념을 하나의 분류 체계에 섞는다. 한 책임의 값이 늘어날 때 조합 가능한 전체 상태 수도 함께 증가한다.
+
+현재 구조는 이를 각각의 분리된 출력 차원으로 둔다.
+
+```text
+C(x) = PERSONAL_DISPUTE
+E(x) = UNKNOWN
+T(x) = NATURAL_DEBATE
+I(x) = CONTEXT_REQUIRED
+R(x) = REAL_WORLD
+S(x) = SERIOUS
+```
+
+여기서 “분리”는 각 값이 통계적으로나 논리적으로 완전히 독립이라는 뜻이 아니다. 예를 들어 `PLAYFUL_DEBATE`와 `PLAYFUL`은 서로 관련될 수 있다. 핵심은 **각 필드가 같은 질문에 중복 답하는 것이 아니라, 서로 다른 시스템 결정에 필요한 정보를 표현한다는 점**이다.
+
 ---
 
 ## 1. `claim_type` — 무슨 종류의 논쟁인가
