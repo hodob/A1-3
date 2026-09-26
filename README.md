@@ -190,34 +190,35 @@ src/debate_engine/
 
 ## 4. 토론 엔진 구조 (Debate Engine)
 
-Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 데 있다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤 문장을 생성하고 검증한다.
+Debate Engine은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는다. 다음 발언을 만들기 위해 필요한 결정을 여러 제어 단계로 분리하고, 각 단계가 서로 다른 책임을 맡도록 구성한다.
+
+1. `Protocol / Phase` — **지금 단계에서 무엇을 할 수 있는지** 제한
+2. `Debate State` — **지금까지 무엇이 주장·질문·양보·수정되었는지** 유지
+3. `Turn Task` — **이번 발언이 해결해야 할 가장 중요한 과제** 결정
+4. `Action × Target` — **어떤 논점에 어떤 행동을 할지** 선택
+5. `Persona` — **가능한 행동 중 무엇을 상대적으로 선호할지** 조정
+6. `Generation` — 결정된 계획을 **실제 발언으로 생성**
+7. `Guard / Repair` — 생성된 발언이 **계획·입장·과제를 지켰는지** 검증하고 실패하면 수정
+8. `State Update` — 확정된 발언에서 **다음 턴이 기억해야 할 변화** 반영
+
+이 구조의 목적은 발언의 내용·행동·검증·기억을 하나의 생성 요청에 섞지 않는 데 있다. LLM은 발언을 생성하지만, 무엇을 해야 하는지와 생성 결과를 받아들일 수 있는지는 Debate Engine이 제어한다.
 
 **그림 4. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
 
 ```mermaid
 flowchart TD
-    A[Protocol + Debate State] --> B[현재 질문·과제]
-    B --> C[Action × Target 선택]
+    A[Protocol / Phase + Debate State] --> B[Turn Task]
+    B --> C[Action × Target]
     C --> D[Persona preference]
-    D --> E[발언 생성]
-    E --> F{검증}
+    D --> E[Generation]
+    E --> F{Guard}
     F -->|통과| G[State Update]
     F -->|실패| H[Repair / Replan]
     H --> E
-    G --> I[다음 턴 또는 phase 이동]
+    G --> I[다음 턴 또는 Phase 이동]
 ```
 
-| 계층 | 질문 |
-|---|---|
-| Protocol / Phase | 지금 단계에서 무엇을 할 수 있는가? |
-| Debate State | 지금까지 무엇이 주장·질문·양보·수정되었는가? |
-| 현재 질문·과제 | 이번 발언이 가장 먼저 해야 할 일은 무엇인가? |
-| Action × Target | 어떤 논점에 어떤 방식으로 대응할 것인가? |
-| Persona | 적법한 후보 중 어떤 행동을 상대적으로 선호하는가? |
-| Guard | 생성된 문장이 실제 계획·입장·과제를 수행했는가? |
-| State Update | 확정된 발언에서 다음 턴에 필요한 변화를 무엇으로 남길 것인가? |
-
-이 그림은 Debate Engine의 overview다. 다음 절에서는 여기의 **Debate State와 현재 질문·과제** 부분을 확대한다.
+다음 절에서는 이 흐름의 기반이 되는 **Debate State와 Turn Task**를 먼저 확대한다.
 
 ---
 
