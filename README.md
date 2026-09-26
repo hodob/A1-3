@@ -1,8 +1,8 @@
 # 사이 — AI Debate Harness
 
-> **두 AI의 찬반 답변을 따로 만들어 나란히 보여주는 서비스가 아니라, 상대의 실제 이전 발언과 구조화된 토론 상태 때문에 다음 발언이 달라지도록 만든 관전형 AI 토론 시스템입니다.**
+> **두 AI의 찬반 답변을 따로 만들어 나란히 보여주는 서비스가 아니라, 상대의 실제 이전 발언과 구조화된 토론 상태 때문에 다음 발언이 달라지도록 만든 관전형 AI 토론 시스템이다.**
 
-**사이**는 사용자가 주제를 입력하면 두 AI 토론자가 순차적으로 발언하고, 서로의 주장·질문·반박·양보·수정을 다음 턴의 판단 재료로 사용하는 웹 서비스입니다. 사용자는 토론을 지휘하기보다 공방을 지켜보고, 필요하면 한 번 질문한 뒤 마지막 판단을 직접 내립니다.
+**사이**는 사용자가 주제를 입력하면 두 AI 토론자가 순차적으로 발언하고, 서로의 주장·질문·반박·양보·수정을 다음 턴의 판단 재료로 사용하는 웹 서비스다. 사용자는 토론을 지휘하기보다 공방을 지켜보고, 필요하면 한 번 질문한 뒤 마지막 판단을 직접 내린다.
 
 ## 목차
 
@@ -23,7 +23,7 @@
 
 ## 1. 전체 사용자 흐름
 
-처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않습니다. 먼저 토론 가능한 주제인지, 사용자만 알고 있는 맥락이 필요한지, 사실 설명이 먼저 필요한 입력인지 판단한 뒤 토론을 시작합니다.
+처음 입력된 문장을 바로 찬반 프롬프트에 넣지 않는다. 먼저 토론 가능한 주제인지, 사용자만 알고 있는 맥락이 필요한지, 사실 설명이 먼저 필요한 입력인지 판단한 뒤 토론을 시작한다.
 
 ### 1.1 토론을 시작하기 전
 
@@ -47,16 +47,16 @@ flowchart TD
     M -->|최대 1회 수정| Z[토론 시작]
 ```
 
-Topic Analyzer는 주제를 하나의 유형으로만 분류하지 않습니다. 이후 시스템이 내려야 하는 서로 다른 결정을 각각의 분석 정보로 나누고, 각 항목이 서로 다른 주된 책임을 맡도록 구성했습니다.
+Topic Analyzer는 주제를 하나의 유형으로만 분류하지 않는다. 이후 시스템이 내려야 하는 서로 다른 결정을 각각의 분석 정보로 나누고, 각 항목이 서로 다른 주된 책임을 맡도록 구성한다.
 
-1. `claim_type`은 **무슨 종류의 논쟁인지** 판단합니다.
-2. `epistemic_status`는 **현실에서 사실적으로 어떤 상태인지** 판단합니다.
-3. `treatment_mode`는 **이 입력을 어떤 방식으로 토론할지** 판단합니다.
-4. `interaction_state`는 **사용자에게 다음에 무엇을 요구할지** 판단합니다.
-5. `truth_mode`는 **현실 사실과 가정·놀이를 어떻게 구분할지** 판단합니다.
-6. `tone_hint`는 **어떤 표현 스타일로 말할지** 판단합니다.
+1. `claim_type` — **무슨 종류의 논쟁인지** 분류
+2. `epistemic_status` — **현실에서 사실적으로 어떤 상태인지** 구분
+3. `treatment_mode` — **이 입력을 어떤 방식으로 토론할지** 결정
+4. `interaction_state` — **사용자에게 다음에 무엇을 요구할지** 결정
+5. `truth_mode` — **현실 사실과 가정·놀이를 어떻게 구분할지** 설정
+6. `tone_hint` — **어떤 표현 스타일로 말할지** 결정
 
-아래 값은 README용으로 다시 만든 분류가 아니라 `TopicAnalysis` 계약에 정의된 실제 허용 값입니다. 현재 구현은 Python `Enum` 클래스가 아니라 Pydantic DTO의 `Literal` 타입으로 이 값을 제한합니다.
+아래 값은 README용으로 다시 만든 분류가 아니라 `TopicAnalysis` 계약에 정의된 실제 허용 값이다. 현재 구현은 Python `Enum` 클래스가 아니라 Pydantic DTO의 `Literal` 타입으로 값을 제한한다.
 
 | 계약 필드 | 실제 허용 값(한글 의미) |
 |---|---|
@@ -67,7 +67,7 @@ Topic Analyzer는 주제를 하나의 유형으로만 분류하지 않습니다.
 | `truth_mode`(현실성 프레임) | `REAL_WORLD`(현실 세계, 기본값), `STIPULATED_COUNTERFACTUAL`(명시적으로 가정한 반사실), `RHETORICAL_PLAY`(수사적·놀이형 설정) |
 | `tone_hint`(표현 어조 힌트) | `SERIOUS`(진지함), `PLAYFUL`(가벼움), `None`(미지정 가능) |
 
-개인 사건은 한 번에 하나씩 질문합니다. 답변은 Context Summary에서 **직접 본 일 / 전해 들은 이야기 / 내 해석 / 모르는 부분**으로 구분하고, 사용자가 주지 않은 사건 사실을 AI가 임의로 채우지 않습니다.
+개인 사건은 한 번에 하나씩 질문한다. 답변은 Context Summary에서 **직접 본 일 / 전해 들은 이야기 / 내 해석 / 모르는 부분**으로 구분하고, 사용자가 주지 않은 사건 사실을 AI가 임의로 채우지 않는다.
 
 ### 1.2 토론이 시작된 뒤
 
@@ -85,7 +85,7 @@ flowchart TD
     S --> U[사용자 선택]
 ```
 
-Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 최대 cap입니다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있습니다.
+Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 최대 cap이다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있다.
 
 다음 절에서는 이 Product Flow가 실제 Browser, Serverless Function, Debate Harness, AI Provider로 어떻게 나뉘어 실행되는지 보여줍니다.
 
@@ -93,7 +93,7 @@ Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니�
 
 ## 2. 시스템 경계와 실행 구조 (Runtime)
 
-시스템은 화면, 제품 흐름, 토론 제어, 실제 발언 생성을 분리합니다.
+시스템은 화면, 제품 흐름, 토론 제어, 실제 발언 생성을 분리한다.
 
 **그림 3. 시스템 경계 (System Context / Container View) — 사이와 외부 AI Provider**
 
@@ -138,11 +138,11 @@ flowchart TD
 | Debater Models | 선택된 계획에 따라 실제 A/B 발언 생성 |
 | Control / Coordinator | 주제 분석, 구조화 출력, State Patch, Compliance, Neutral Summary |
 
-그림에서 **사이 시스템** subgraph 안은 이 저장소가 직접 제어하는 영역이고, **외부 AI Provider** subgraph는 모델 호출 경계입니다. 원통형 `engine_token`은 데이터베이스가 아니라 브라우저가 보관하는 signed session payload입니다.
+그림에서 **사이 시스템** subgraph 안은 이 저장소가 직접 제어하는 영역이고, **외부 AI Provider** subgraph는 모델 호출 경계다. 원통형 `engine_token`은 데이터베이스가 아니라 브라우저가 보관하는 signed session payload다.
 
-브라우저의 `engine_token` 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정됩니다. 즉 `engine_token`은 암호화가 아니라 무결성 보호입니다. API Key와 Action 선택 로직은 서버에만 존재합니다.
+브라우저의 `engine_token` 안에는 internal Debate State와 Action history 같은 제어 데이터도 압축되어 들어가지만, 서버의 HMAC 검증을 통과해야 authoritative state로 인정된다. 즉 `engine_token`은 암호화가 아니라 무결성 보호다. API Key와 Action 선택 로직은 서버에만 존재한다.
 
-토론 시작 시 `multi-provider debater pool`에서 서로 다른 두 토론자 모델을 A/B에 배정하고, 그 배정은 한 토론 동안 signed session에 고정됩니다.
+토론 시작 시 `multi-provider debater pool`에서 서로 다른 두 토론자 모델을 A/B에 배정하고, 그 배정은 한 토론 동안 signed session에 고정된다.
 
 다음 절에서는 이 Runtime 구조가 실제 저장소 디렉터리와 어떤 Building Block으로 대응되는지 보여줍니다.
 
@@ -225,13 +225,13 @@ src/debate_engine/
 
 </details>
 
-다음 절부터는 이 중 `src/debate_engine/`을 확대해, 다음 발언이 어떻게 결정되는지 설명합니다.
+다음 절부터는 이 중 `src/debate_engine/`을 확대해 다음 발언이 어떻게 결정되는지 설명한다.
 
 ---
 
 ## 4. 토론 엔진 구조 (Debate Engine)
 
-Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 것입니다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤에 문장을 생성하고 검증합니다.
+Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 데 있다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤 문장을 생성하고 검증한다.
 
 **그림 5. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
 
@@ -258,13 +258,13 @@ flowchart TD
 | Guard | 생성된 문장이 실제 계획·입장·과제를 수행했는가? |
 | State Update | 확정된 발언에서 다음 턴에 필요한 변화를 무엇으로 남길 것인가? |
 
-이 그림은 Debate Engine의 overview입니다. 다음 절에서는 여기의 **Debate State와 현재 질문·과제** 부분을 확대합니다.
+이 그림은 Debate Engine의 overview다. 다음 절에서는 여기의 **Debate State와 현재 질문·과제** 부분을 확대한다.
 
 ---
 
 ## 5. 토론 상태 (Debate State): 무엇을 기억하는가
 
-Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**입니다.
+Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**다.
 
 **그림 6. 토론 상태 구조 (Debate State View) — 확정 상태와 파생 제어 상태**
 
@@ -296,17 +296,17 @@ flowchart TD
 | **Question** | 질문 자체를 별도 Entity로 저장하고 `OPEN / RESOLVED` 관리 |
 | **Commitment Event** | `ASSERT`, `CONCEDE`, `WITHDRAW`, `REVISE` |
 
-기존 Proposition text를 덮어써 과거를 지우지 않습니다. 주장을 바꾸면 새 Proposition과 `REVISE` event를 추가합니다.
+기존 Proposition text를 덮어써 과거를 지우지 않는다. 주장을 바꾸면 새 Proposition과 `REVISE` event를 추가한다.
 
 ### 같은 말을 새 ID로 반복하지 않게 하기
 
-새 Proposition이 생겼다고 곧바로 “토론이 진전됐다”고 보지 않습니다. 기존 논점과의 의미 관계를 판정하고 같은 논지는 하나의 **semantic facet**으로 묶습니다. 따라서 표현만 바꾼 새 Proposition ID로 반복 제한을 우회하기 어렵게 합니다.
+새 Proposition이 생겼다고 곧바로 “토론이 진전됐다”고 보지 않는다. 기존 논점과의 의미 관계를 판정하고 같은 논지는 하나의 **semantic facet**으로 묶는다. 따라서 표현만 바꾼 새 Proposition ID로 반복 제한을 우회하기 어렵게 한다.
 
 ### 현재 가장 먼저 해결할 질문
 
-질문을 오래된 순서대로 전부 다시 꺼내지 않습니다. 현재 쟁점에서 **가장 먼저 해결해야 하는 질문 초점**을 정하고, 한 번의 답변으로 함께 해결할 수 있는 유사 질문은 하나의 Question Group으로 묶을 수 있습니다.
+질문을 오래된 순서대로 전부 다시 꺼내지 않는다. 현재 쟁점에서 **가장 먼저 해결해야 하는 질문 초점**을 정하고, 한 번의 답변으로 함께 해결할 수 있는 유사 질문은 하나의 Question Group으로 묶을 수 있다.
 
-이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했습니다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
+이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
 
 <details>
 <summary><strong>세부 Control State와 Turn Task 전체 보기</strong></summary>
@@ -338,7 +338,7 @@ RELATED_DISTINCT
 
 </details>
 
-> 그림의 위쪽은 확정된 Debate State, 아래쪽은 매 턴 계산되는 제어 상태입니다. README에서는 아키텍처 이해에 필요한 State만 설명합니다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략했습니다.
+> 그림의 위쪽은 확정된 Debate State, 아래쪽은 매 턴 계산되는 제어 상태다. README에서는 아키텍처 이해에 필요한 State만 설명한다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략한다.
 
 
 다음 절에서는 이 State를 바탕으로 실제 Action × Target 후보를 어떻게 좁히는지 보여줍니다.
@@ -349,7 +349,7 @@ RELATED_DISTINCT
 
 ### 6.1 어떤 논점에 어떤 행동을 할지 고르는 과정
 
-Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약입니다.
+Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약이다.
 
 **그림 7. 행동 선택 흐름 (Action Selection View) — 후보를 단계적으로 좁히는 과정**
 
@@ -366,7 +366,7 @@ flowchart TD
     G --> H[최종 Action × Target]
 ```
 
-Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있습니다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 다음 후보에서 제외됩니다.
+Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 다음 후보에서 제외된다.
 
 <details>
 <summary><strong>15개 Strategic Action 전체 보기</strong></summary>
@@ -393,9 +393,9 @@ Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAU
 
 ### 6.2 Persona는 캐릭터가 아니라 행동 선호 정책
 
-Persona는 고정된 세계관이나 역할극 캐릭터가 아닙니다. 현재 구현에서는 **이미 적법하다고 판정된 Action 후보들 사이의 안정적인 soft preference**입니다. Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있습니다.
+Persona는 고정된 세계관이나 역할극 캐릭터가 아니다. 현재 구현에서 Persona는 **이미 적법하다고 판정된 Action 후보들 사이의 안정적인 soft preference**다. Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있다.
 
-Persona 연구에서 role-playing persona, personality prompting, role과 expressive style의 효과를 구분해서 볼 필요가 있다는 점을 참고했습니다. 이를 바탕으로 현재 구현에서는 Big Five나 MBTI 자체를 runtime 제어 변수로 쓰지 않고, 토론 행동과 직접 연결되는 Persona → Action preference만 사용합니다 (Tseng et al., 2024; Jiang et al., 2024; Nagao et al., 2026).
+Persona 연구에서 role-playing persona, personality prompting, role과 expressive style의 효과를 구분해서 볼 필요가 있다는 점을 참고했다. 이를 바탕으로 현재 구현에서는 Big Five나 MBTI 자체를 runtime 제어 변수로 쓰지 않고, 토론 행동과 직접 연결되는 Persona → Action preference만 사용한다 (Tseng et al., 2024; Jiang et al., 2024; Nagao et al., 2026).
 
 | Persona | 사용자 표시 | 무엇을 더 자주 시도하는가 |
 |---|---|---|
@@ -406,7 +406,7 @@ Persona 연구에서 role-playing persona, personality prompting, role과 expres
 | Principlist | **원칙 중심형** | 기준·전제·일관성 점검, 원칙 기반 이유 확장 |
 | Synthesist | **조정 통합형** | 국소적 양보, 주장 수정, 비교와 핵심 압축 |
 
-Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택합니다. Persona는 후보를 새로 만들 수 없고 이미 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 행동을 되살릴 수도 없습니다.
+Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택한다. Persona는 후보를 새로 만들 수 없고 이미 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 행동을 되살릴 수도 없다.
 
 
 다음 절에서는 선택된 Action × Target이 실제 발언으로 생성되고 commit될 때까지의 Runtime을 보여줍니다.
@@ -415,7 +415,7 @@ Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 �
 
 ## 7. 한 턴의 실행 순서 (Runtime Sequence)
 
-아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario입니다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 Building Block 수준으로 묶었습니다.
+아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 Building Block 수준으로 묶는다.
 
 **그림 8. 한 턴 실행 순서 (Runtime Sequence) — request → draft → validation → patch → commit**
 
@@ -450,11 +450,11 @@ sequenceDiagram
     end
 ```
 
-화면에 streaming되는 문장은 **확정 전 draft**입니다. Compliance와 State Patch 적용까지 통과해야 transcript에 commit됩니다.
+화면에 streaming되는 문장은 **확정 전 draft**다. Compliance와 State Patch 적용까지 통과해야 transcript에 commit된다.
 
 ### State Patch와 Adaptive Context
 
-확정 발언 뒤에는 전체 State를 다시 작성하지 않고 필요한 변화만 typed Patch로 추출합니다.
+확정 발언 뒤에는 전체 State를 다시 작성하지 않고 필요한 변화만 typed Patch로 추출한다.
 
 ```text
 ADD_PROPOSITION
@@ -466,17 +466,17 @@ CONCEDE_LOCAL
 WITHDRAW_PROPOSITION
 ```
 
-State가 커져도 전체 graph를 매번 넣지 않습니다. 현재 Action target, 질문 초점, semantic facet의 대표/현재 node, 명시적 reference, 최근 양측 Proposition을 중심으로 working set을 만듭니다. Patch용 Proposition working set은 현재 구현에서 최대 10개입니다.
+State가 커져도 전체 graph를 매번 넣지 않는다. 현재 Action target, 질문 초점, semantic facet의 대표/현재 node, 명시적 reference, 최근 양측 Proposition을 중심으로 working set을 만든다. Patch용 Proposition working set은 현재 구현에서 최대 10개다.
 
-긴 context에서는 필요한 정보의 위치와 양이 모델 활용 성능에 영향을 줄 수 있다는 결과를 참고해, 전체 누적 State보다 현재 과제와 연결된 node를 우선합니다 (Liu et al., 2024).
+긴 context에서는 필요한 정보의 위치와 양이 모델 활용 성능에 영향을 줄 수 있다는 결과를 참고해, 전체 누적 State보다 현재 과제와 연결된 node를 우선한다 (Liu et al., 2024).
 
-다음 절에서는 이 sequence의 **발언 생성 → compliance → repair** 구간 안에 어떤 정보가 들어가는지 확대합니다.
+다음 절에서는 이 sequence의 **발언 생성 → compliance → repair** 구간 안에 어떤 정보가 들어가는지 확대한다.
 
 ---
 
 ## 8. 프롬프트와 검증 흐름 (Prompt / Validation)
 
-프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성합니다.
+프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성한다.
 
 **그림 9. 프롬프트와 검증 흐름 (Prompt / Validation View) — 입력 계층과 Repair loop**
 
@@ -496,9 +496,9 @@ flowchart TD
     L --> I
 ```
 
-Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `assignment`, `phase_instruction`, `surface_style`, `surface_format`처럼 구획을 나눕니다. Motion, Context, transcript, Audience Question은 instruction과 섞이지 않도록 data 영역으로 전달합니다.
+Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `assignment`, `phase_instruction`, `surface_style`, `surface_format`처럼 구획을 나눈다. Motion, Context, transcript, Audience Question은 instruction과 섞이지 않도록 data 영역으로 전달한다.
 
-전역 품질 규칙은 Persona보다 우선합니다.
+전역 품질 규칙은 Persona보다 우선한다.
 
 - 사용자가 제공하지 않은 개인 사건 사실을 만들지 않음
 - 존재하지 않는 통계·연구·인용을 만들어 한쪽을 강화하지 않음
@@ -509,11 +509,11 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 ### 실패 유형에 맞춘 Repair
 
-검증은 단순 pass/fail이 아니라 stance reversal, Action 미수행, target 미사용, off-task, 반복, 잘못된 State reference, Final Focus 형식 위반 등을 구분합니다.
+검증은 단순 pass/fail이 아니라 stance reversal, Action 미수행, target 미사용, off-task, 반복, 잘못된 State reference, Final Focus 형식 위반 등을 구분한다.
 
-첫 retry는 이전 draft에서 무엇을 유지하고 무엇만 바꿀지 알려주는 targeted repair입니다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있습니다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않습니다.
+첫 retry는 이전 draft에서 무엇을 유지하고 무엇만 바꿀지 알려주는 targeted repair다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않는다.
 
-이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했습니다 (Ray & Goyal, 2026).
+이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했다 (Ray & Goyal, 2026).
 
 ---
 
@@ -521,7 +521,7 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 ### 9.1 Frontend 화면 상태
 
-Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리합니다.
+Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리한다.
 
 **그림 10. 화면 상태 전이 (UI State Machine) — 사용자가 보는 단계의 lifecycle**
 
@@ -542,7 +542,7 @@ stateDiagram-v2
     Done --> [*]
 ```
 
-다른 주제로 다시 시작하면 기존 토론을 이어가는 상태 전이가 아니라 새 Topic 상태에서 새 세션을 시작합니다.
+다른 주제로 다시 시작하면 기존 토론을 이어가는 상태 전이가 아니라 새 Topic 상태에서 새 세션을 시작한다.
 
 주요 Frontend 책임:
 
@@ -560,7 +560,7 @@ stateDiagram-v2
 
 ### 9.2 Serverless에서 토론 상태 유지
 
-Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없습니다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어갑니다.
+Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어간다.
 
 **그림 11. Serverless 세션 수명주기 — `engine_token`으로 상태를 이어가는 과정**
 
@@ -575,7 +575,7 @@ flowchart TD
     G -->|새 engine_token| A
 ```
 
-`engine_token`에는 browser-visible session, internal Debate State, Action history, A/B model assignment가 포함됩니다. 브라우저가 공개 DTO의 값을 임의로 바꾸더라도, 이미 시작된 토론에서는 서명된 token에서 복원한 내부 상태가 우선합니다.
+`engine_token`에는 browser-visible session, internal Debate State, Action history, A/B model assignment가 포함된다. 브라우저가 공개 DTO의 값을 임의로 바꾸더라도, 이미 시작된 토론에서는 서명된 token에서 복원한 내부 상태가 우선한다.
 
 ---
 
@@ -583,9 +583,9 @@ flowchart TD
 
 ### Crossfire
 
-Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재 Debate State에서 살아 있는 논점을 골라 **질문, 반례, 추론 공격, commitment 요구, 국소적 양보, 주장 수정**으로 상태를 실제로 변화시키는 구간입니다.
+Crossfire는 정해진 질문을 번갈아 읽는 단계가 아니다. 현재 Debate State에서 살아 있는 논점을 골라 **질문, 반례, 추론 공격, commitment 요구, 국소적 양보, 주장 수정**으로 상태를 실제로 변화시키는 구간이다.
 
-관전 재미도 별도의 농담 생성 모듈보다 **상대의 방금 한 발언을 이용한 callback, 반례, 양보, 수정, 새로운 충돌**에서 나오도록 설계했습니다. PLAYFUL 주제에서는 가벼운 비유나 논증에서 나온 유머를 허용하지만 상대 인격 공격은 허용하지 않습니다.
+관전 재미도 별도의 농담 생성 모듈보다 **상대의 방금 한 발언을 이용한 callback, 반례, 양보, 수정, 새로운 충돌**에서 나오도록 설계한다. PLAYFUL 주제에서는 가벼운 비유나 논증에서 나온 유머를 허용하지만 상대 인격 공격은 허용하지 않는다.
 
 ### Moderator는 별도 AI가 아님
 
@@ -606,7 +606,7 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 
 ## 11. 구현 참고 정보 (Implementation Reference)
 
-앞 절이 시스템 구조와 동작을 이해하기 위한 설명이라면, 이 절은 endpoint·기술 스택·실행 정보를 빠르게 찾기 위한 참고 정보입니다.
+앞 절이 시스템 구조와 동작을 이해하기 위한 설명이라면, 이 절은 endpoint·기술 스택·실행 정보를 빠르게 찾기 위한 참고 정보다.
 
 ### 11.1 API
 
@@ -619,9 +619,9 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 | `POST /api/neutral-summary` | 승자 판정 없는 토론 정리 |
 | `/api/health` | live config와 배포 version 확인, Provider 호출 없음 |
 
-Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control State를 일반 Web DTO에 그대로 노출하지 않습니다.
+Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control State를 일반 Web DTO에 그대로 노출하지 않는다.
 
-> 전체 Pydantic field와 validation bookkeeping은 구조 설명에 직접 필요하지 않아 생략했습니다.
+> 전체 Pydantic field와 validation bookkeeping은 구조 설명에 직접 필요하지 않아 생략한다.
 
 
 ### 11.2 기술 스택과 실행·배포
@@ -642,13 +642,13 @@ Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Pa
 - **비밀 환경 변수**: `DEBATER_API_KEY`, `SESSION_SECRET`
 - **일반 실행 설정**: `config.json`
 
-로컬에서는 `.env.example`을 참고해 `.env`에 두 secret을 설정합니다. Provider 호출 없이 UI 흐름만 확인할 때는 Mock 개발 서버를 사용할 수 있습니다.
+로컬에서는 `.env.example`을 참고해 `.env`에 두 secret을 설정한다. Provider 호출 없이 UI 흐름만 확인할 때는 Mock 개발 서버를 사용할 수 있다.
 
 ```bash
 python -m etc.tools.web_dev_server
 ```
 
-Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 등록합니다. `public/`은 정적 Frontend로 제공되고 `api/*.py`는 Python Serverless Function으로 실행됩니다. GitHub 저장소와 연결된 Vercel 프로젝트는 `main` 변경에 따라 배포됩니다.
+Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 등록한다. `public/`은 정적 Frontend로 제공되고 `api/*.py`는 Python Serverless Function으로 실행된다. GitHub 저장소와 연결된 Vercel 프로젝트는 `main` 변경에 따라 배포된다.
 
 ---
 
