@@ -19,14 +19,14 @@
 | 궁금한 것 | 보면 되는 절 |
 |---|---|
 | 사용자는 어떤 흐름을 경험하는가? | 1. 전체 사용자 흐름 |
-| Browser·Serverless·AI는 어떻게 연결되는가? | 2. 시스템 경계와 Runtime 구조 |
-| 실제 코드가 어떤 블록으로 나뉘는가? | 3. 코드 Building Block 구조 |
-| 다음 발언은 어떤 계층을 거쳐 결정되는가? | 4. Debate Engine |
-| 토론에서 무엇을 구조화해 기억하는가? | 5. Debate State |
-| 어떤 논점에 어떤 행동을 할지 어떻게 고르는가? | 6. Action 선택과 Persona |
-| 실제 API 요청 한 번은 어떻게 확정되는가? | 7. 한 턴의 Runtime Sequence |
-| 프롬프트와 검증·재작성은 어떻게 이어지는가? | 8. Prompt / Validation Pipeline |
-| Frontend와 Serverless session은 어떻게 상태를 유지하는가? | 9. Frontend · Session Runtime |
+| Browser·Serverless·AI는 어떻게 연결되는가? | 2. 시스템 경계와 실행 구조 |
+| 실제 코드가 어떤 블록으로 나뉘는가? | 3. 코드 구성 요소 구조 |
+| 다음 발언은 어떤 계층을 거쳐 결정되는가? | 4. 토론 엔진 구조 |
+| 토론에서 무엇을 구조화해 기억하는가? | 5. 토론 상태 |
+| 어떤 논점에 어떤 행동을 할지 어떻게 고르는가? | 6. 행동 선택과 Persona |
+| 실제 API 요청 한 번은 어떻게 확정되는가? | 7. 한 턴의 실행 순서 |
+| 프롬프트와 검증·재작성은 어떻게 이어지는가? | 8. 프롬프트와 검증 흐름 |
+| Frontend와 Serverless session은 어떻게 상태를 유지하는가? | 9. 화면 상태와 세션 실행 구조 |
 
 ---
 
@@ -36,7 +36,7 @@
 
 ### 1.1 토론을 시작하기 전
 
-**그림 1. Product Flow — 주제를 토론 가능한 상태로 준비하는 과정**
+**그림 1. 토론 준비 흐름 (Product Flow) — 주제를 토론 가능한 상태로 만드는 과정**
 
 ```mermaid
 flowchart TD
@@ -71,10 +71,10 @@ Topic Analyzer는 현재 구현에서 다음 축을 분리합니다.
 
 ### 1.2 토론이 시작된 뒤
 
-**그림 2. Debate Protocol — 토론이 탐색에서 최종 판단으로 진행되는 과정**
+**그림 2. 토론 진행 흐름 (Debate Protocol) — 탐색에서 최종 판단까지**
 
 ```mermaid
-flowchart LR
+flowchart TD
     O[Opening] --> C[Crossfire]
     C --> Q{사용자 질문?}
     Q -->|질문| A[A와 B가 같은 질문에 답변]
@@ -91,17 +91,18 @@ Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니�
 
 ---
 
-## 2. 시스템 경계와 Runtime 구조
+## 2. 시스템 경계와 실행 구조 (Runtime)
 
 시스템은 화면, 제품 흐름, 토론 제어, 실제 발언 생성을 분리합니다.
 
-**그림 3. System Context / Container View — 사이 시스템과 외부 AI Provider의 경계**
+**그림 3. 시스템 경계 (System Context / Container View) — 사이와 외부 AI Provider**
 
 ```mermaid
-flowchart LR
+flowchart TD
     U[사용자]
 
     subgraph SAI[사이 시스템]
+        direction TB
         B[Browser<br/>HTML / CSS / Vanilla JS]
         API[Vercel Python API<br/>Serverless Functions]
         W[Web Service<br/>제품 흐름·세션·오류 처리]
@@ -112,15 +113,16 @@ flowchart LR
         API -->|Pydantic DTO| W
         W -->|턴 계획·상태 제어| H
         W <-->|검증·복원·재서명| T
+        H -->|선택된 계획| W
     end
 
     subgraph EXT[외부 AI Provider]
+        direction LR
         D[Debater Models]
         C[Control / Coordinator]
     end
 
     U -->|주제·답변·질문·선택| B
-    H -->|선택된 계획| W
     W -->|A/B 발언 생성| D
     D -->|draft / final text| W
     W -->|분석·구조화·검증·요약| C
@@ -146,11 +148,11 @@ flowchart LR
 
 ---
 
-## 3. 코드 Building Block 구조
+## 3. 코드 구성 요소 구조 (Building Block View)
 
 상위 코드 구조는 Frontend, Serverless adapter, 제품 orchestration, Debate Core의 네 층으로 나뉩니다.
 
-**그림 4. Building Block View — 저장소의 상위 디렉터리와 책임**
+**그림 4. 코드 구성 요소 (Building Block View) — 상위 디렉터리와 책임**
 
 ```mermaid
 flowchart LR
@@ -227,11 +229,11 @@ src/debate_engine/
 
 ---
 
-## 4. Debate Engine: 다음 발언을 결정하는 계층
+## 4. 토론 엔진 구조 (Debate Engine)
 
 Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 것입니다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤에 문장을 생성하고 검증합니다.
 
-**그림 5. Debate Engine Overview — 다음 발언이 확정되기까지의 제어 단계**
+**그림 5. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
 
 ```mermaid
 flowchart TD
@@ -260,11 +262,11 @@ flowchart TD
 
 ---
 
-## 5. Debate State: 무엇을 기억하는가
+## 5. 토론 상태 (Debate State): 무엇을 기억하는가
 
 Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**입니다.
 
-**그림 6. Debate State View — 확정 상태와 매 턴 계산되는 제어 상태**
+**그림 6. 토론 상태 구조 (Debate State View) — 확정 상태와 파생 제어 상태**
 
 ```mermaid
 flowchart TD
@@ -338,20 +340,18 @@ RELATED_DISTINCT
 
 > 그림의 위쪽은 확정된 Debate State, 아래쪽은 매 턴 계산되는 제어 상태입니다. README에서는 아키텍처 이해에 필요한 State만 설명합니다. provenance, source turn, working-set metadata, debug bookkeeping 등 순수 구현 세부 필드는 길이와 가독성을 위해 생략했습니다.
 
----
-
 
 다음 절에서는 이 State를 바탕으로 실제 Action × Target 후보를 어떻게 좁히는지 보여줍니다.
 
 ---
 
-## 6. Action 선택과 Persona
+## 6. 행동 선택과 Persona
 
-### 5.1 어떤 논점에 어떤 행동을 할지 고르는 과정
+### 6.1 어떤 논점에 어떤 행동을 할지 고르는 과정
 
 Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약입니다.
 
-**그림 7. Action Selection View — 후보를 단계적으로 좁혀 최종 행동을 고르는 과정**
+**그림 7. 행동 선택 흐름 (Action Selection View) — 후보를 단계적으로 좁히는 과정**
 
 ```mermaid
 flowchart TD
@@ -391,7 +391,7 @@ Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAU
 
 </details>
 
-### 5.2 Persona는 캐릭터가 아니라 행동 선호 정책
+### 6.2 Persona는 캐릭터가 아니라 행동 선호 정책
 
 Persona는 고정된 세계관이나 역할극 캐릭터가 아닙니다. 현재 구현에서는 **이미 적법하다고 판정된 Action 후보들 사이의 안정적인 soft preference**입니다. Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있습니다.
 
@@ -408,18 +408,16 @@ Persona 연구에서 role-playing persona, personality prompting, role과 expres
 
 Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택합니다. Persona는 후보를 새로 만들 수 없고 이미 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 행동을 되살릴 수도 없습니다.
 
----
-
 
 다음 절에서는 선택된 Action × Target이 실제 발언으로 생성되고 commit될 때까지의 Runtime을 보여줍니다.
 
 ---
 
-## 7. 한 턴의 Runtime Sequence
+## 7. 한 턴의 실행 순서 (Runtime Sequence)
 
 아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario입니다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 Building Block 수준으로 묶었습니다.
 
-**그림 8. Runtime Sequence — request → provisional draft → validation → State Patch → commit**
+**그림 8. 한 턴 실행 순서 (Runtime Sequence) — request → draft → validation → patch → commit**
 
 ```mermaid
 sequenceDiagram
@@ -431,25 +429,24 @@ sequenceDiagram
 
     B->>W: signed session + NEXT
     W->>W: token 검증 / State 복원
-    W->>H: 현재 State + phase
+    W->>H: 현재 턴 계획 요청
     H-->>W: Turn Task + Action × Target
 
     W->>D: stance + persona + task + target + context
     D-->>W: streaming draft
-    W-->>B: draft_reset / draft_delta
+    W-->>B: provisional draft
 
     W->>C: compliance 검사
     alt 검증 실패
         C-->>W: typed failure
-        W->>D: targeted repair 또는 replan
+        W->>D: targeted repair / replan
     else 검증 통과
         C-->>W: compliant utterance
         W->>C: State Patch 추출
         C-->>W: typed Patch
-        W->>H: Patch 검증 / 적용
+        W->>H: Patch 검증·적용
         H-->>W: 다음 Debate State
-        W->>W: 새 engine_token 서명
-        W-->>B: commit event
+        W-->>B: signed token + commit event
     end
 ```
 
@@ -477,11 +474,11 @@ State가 커져도 전체 graph를 매번 넣지 않습니다. 현재 Action tar
 
 ---
 
-## 8. Prompt / Validation Pipeline
+## 8. 프롬프트와 검증 흐름 (Prompt / Validation)
 
 프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성합니다.
 
-**그림 9. Prompt / Validation View — 발언 생성에 들어가는 정보와 Repair loop**
+**그림 9. 프롬프트와 검증 흐름 (Prompt / Validation View) — 입력 계층과 Repair loop**
 
 ```mermaid
 flowchart TD
@@ -520,13 +517,13 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 ---
 
-## 9. Frontend · Session Runtime
+## 9. 화면 상태와 세션 실행 구조 (Frontend / Session)
 
-### 8.1 Frontend 화면 상태
+### 9.1 Frontend 화면 상태
 
 Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리합니다.
 
-**그림 10. UI State Machine — 사용자가 보는 화면 상태의 lifecycle**
+**그림 10. 화면 상태 전이 (UI State Machine) — 사용자가 보는 단계의 lifecycle**
 
 ```mermaid
 stateDiagram-v2
@@ -542,8 +539,10 @@ stateDiagram-v2
     Debate --> Summary: COMPLETE
     Summary --> Choice
     Choice --> Done
-    Done --> Topic: 다른 주제로 시작
+    Done --> [*]
 ```
+
+다른 주제로 다시 시작하면 기존 토론을 이어가는 상태 전이가 아니라 새 Topic 상태에서 새 세션을 시작합니다.
 
 주요 Frontend 책임:
 
@@ -559,11 +558,11 @@ stateDiagram-v2
 
 토론자가 `[[C24]]`, `[[Q3]]` 같은 내부 State marker를 사용하면 서버는 확정 후 `StateReference` metadata로 변환하고, Frontend는 사용자에게 **A/B · 발언 번호** 형태의 링크로 보여줍니다.
 
-### 8.2 Serverless에서 토론 상태 유지
+### 9.2 Serverless에서 토론 상태 유지
 
 Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없습니다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어갑니다.
 
-**그림 11. Serverless Session — `engine_token`을 이용한 Serverless session lifecycle**
+**그림 11. Serverless 세션 수명주기 — `engine_token`으로 상태를 이어가는 과정**
 
 ```mermaid
 flowchart TD
@@ -580,7 +579,7 @@ flowchart TD
 
 ---
 
-## 10. Debate Protocol과 Moderator
+## 10. 토론 진행 규칙과 사회자 표시 (Moderator)
 
 ### Crossfire
 
@@ -605,9 +604,9 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 
 ---
 
-## 11. Implementation Reference
+## 11. 구현 참고 정보 (Implementation Reference)
 
-앞 절이 시스템을 이해하기 위한 Architecture & Design이라면, 이 절은 endpoint·기술 스택·실행 정보를 빠르게 찾기 위한 Reference입니다.
+앞 절이 시스템 구조와 동작을 이해하기 위한 설명이라면, 이 절은 endpoint·기술 스택·실행 정보를 빠르게 찾기 위한 참고 정보입니다.
 
 ### 11.1 API
 
@@ -623,8 +622,6 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아닙니다. 현재
 Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control State를 일반 Web DTO에 그대로 노출하지 않습니다.
 
 > 전체 Pydantic field와 validation bookkeeping은 구조 설명에 직접 필요하지 않아 생략했습니다.
-
----
 
 
 ### 11.2 기술 스택과 실행·배포
@@ -654,7 +651,6 @@ python -m etc.tools.web_dev_server
 Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 등록합니다. `public/`은 정적 Frontend로 제공되고 `api/*.py`는 Python Serverless Function으로 실행됩니다. GitHub 저장소와 연결된 Vercel 프로젝트는 `main` 변경에 따라 배포됩니다.
 
 ---
-
 
 ## References
 
