@@ -85,9 +85,21 @@ flowchart TD
     S --> U[사용자 선택]
 ```
 
+토론 단계의 기본 골격은 Public Forum Debate에서 볼 수 있는 Constructive–Crossfire–Rebuttal–Final Focus의 진행 요소를 참고하되, 관전형 서비스에 맞게 단순화했다.
+
+| 단계 | 역할 |
+|---|---|
+| Opening | 각 토론자가 입장과 핵심 이유를 제시하고 첫 충돌 지점을 만든다. |
+| Crossfire | 질문·반례·검증을 통해 상대 주장을 시험하고 실제 쟁점을 드러낸다. |
+| 사용자 질문 | 사용자가 원할 때 같은 질문을 A와 B 모두에게 던져 두 입장을 같은 기준에서 비교한다. |
+| Rebuttal | Crossfire에서 드러난 핵심 충돌을 직접 반박·방어하고 필요한 경우 국소적으로 양보하거나 주장을 수정한다. |
+| Final Focus | 새로운 핵심 논점을 늘리지 않고 마지막까지 남길 이유 1~2개를 압축한다. |
+| Neutral Summary | 승자를 정하지 않고 핵심 충돌, 양측의 강한 논점, 합의된 부분, 남은 쟁점을 정리한다. |
+| 사용자 선택 | Neutral Summary까지 본 사용자가 A / 모르겠다 / B 중 최종 판단을 직접 선택한다. |
+
 Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 최대 cap이다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있다.
 
-다음 절에서는 이 Product Flow가 실제 Browser, Serverless Function, Debate Harness, AI Provider로 어떻게 나뉘어 실행되는지 보여줍니다.
+다음 절에서는 이 Product Flow가 실제 Browser, Serverless Function, Debate Harness, AI Provider로 어떻게 나뉘어 실행되는지 보여준다.
 
 ---
 
@@ -654,6 +666,7 @@ Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 �
 
 ## References
 
+- Arkansas Communication & Theatre Arts Association (ACTAA). *Public Forum Debate (PF)*. https://www.actaa.org/Public-Forum-Debate-%28PF%29
 - Tseng, Yu-Min et al. (2024). *Two Tales of Persona in LLMs: A Survey of Role-Playing and Personalization*. Findings of EMNLP 2024. https://aclanthology.org/2024.findings-emnlp.969/
 - Jiang, Hang et al. (2024). *PersonaLLM: Investigating the Ability of Large Language Models to Express Personality Traits*. Findings of NAACL 2024. https://aclanthology.org/2024.findings-naacl.229/
 - Nagao, Moe et al. (2026). *Personality, Role, and Expressive Style in Large Language Models: An Interactionist Analysis*. arXiv preprint. https://arxiv.org/abs/2605.28037
