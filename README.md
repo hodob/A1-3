@@ -47,11 +47,11 @@ flowchart TD
     M -->|최대 1회 수정| Z[토론 시작]
 ```
 
-Topic Analyzer는 현재 구현에서 다음 축을 분리합니다.
+Topic Analyzer는 다음 기준으로 주제의 성격과 처리 방식을 판단합니다.
 
 | 축 | 판단 내용 |
 |---|---|
-| Claim Type | FACT, DEFINITION, CAUSE, VALUE, POLICY, COMPARISON, INTERPRETATION, PERSONAL_DISPUTE 등 |
+| Claim Type | FACT(사실), DEFINITION(정의), CAUSE(원인), VALUE(가치), POLICY(정책), COMPARISON(비교), INTERPRETATION(해석), PERSONAL_DISPUTE(개인 갈등) 등 |
 | Epistemic Status | 사실 우세인지, 실제로 논쟁 가능한지, 아직 불명확한지 |
 | Treatment Mode | 자연스러운 토론 / 가벼운 토론 / 재구성된 토론 |
 | Interaction State | 바로 진행 / 확인 필요 / 추가 맥락 필요 / 먼저 정보 설명 필요 |
