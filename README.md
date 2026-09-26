@@ -145,40 +145,7 @@ flowchart TD
 
 ---
 
-## 3. 코드 구성 요소 구조 (Building Block View)
-
-상위 코드 구조는 Frontend, Serverless adapter, 제품 orchestration, Debate Core의 네 층으로 나뉩니다.
-
-**그림 4. 코드 구성 요소 (Building Block View) — 상위 디렉터리와 책임**
-
-```mermaid
-flowchart LR
-    P[public/<br/>Browser UI]
-    A[api/<br/>Serverless Adapter]
-    W[src/web_app/<br/>제품 흐름·세션·Provider orchestration]
-    D[src/debate_engine/<br/>Debate Control Core]
-    CFG[config.json<br/>비밀이 아닌 설정]
-    ENV[.env / Vercel Env<br/>server-only secret]
-
-    P -->|fetch / SSE| A
-    A -->|DTO 전달| W
-    W -->|토론 제어 호출| D
-    CFG --> W
-    CFG --> D
-    ENV --> W
-```
-
-| Building Block | 역할 |
-|---|---|
-| `public/` | 화면 state, fetch/SSE, 토론 진행, Markdown·reference 렌더링 |
-| `api/` | Vercel HTTP/SSE adapter와 공개 endpoint |
-| `src/web_app/` | Browser-facing DTO, signed session, Mock/Live 제품 흐름 |
-| `src/debate_engine/` | Debate State, Control State, Action 선택, Persona preference, Guard, State Patch |
-| `config.json` | provider URL, model pool, debug mode 등 비밀이 아닌 설정 |
-| 환경 변수 | `DEBATER_API_KEY`, `SESSION_SECRET` 같은 server-only secret |
-
-<details>
-<summary><strong>주요 파일별 역할 보기</strong></summary>
+## 3. 코드 구성 요소 구조
 
 ```text
 public/
@@ -219,18 +186,13 @@ src/debate_engine/
   surface_contract.py        출력 형식과 State reference 검사
   state_harness.py           State Patch 추출·검증·적용
 ```
-
-</details>
-
-다음 절부터는 이 중 `src/debate_engine/`을 확대해 다음 발언이 어떻게 결정되는지 설명한다.
-
 ---
 
 ## 4. 토론 엔진 구조 (Debate Engine)
 
 Debate Engine의 핵심은 LLM에게 곧바로 “다음 말을 써라”라고 맡기지 않는 데 있다. 먼저 현재 쟁점과 과제를 계산하고, 적법한 행동을 고른 뒤 문장을 생성하고 검증한다.
 
-**그림 5. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
+**그림 4. 토론 엔진 개요 (Debate Engine Overview) — 다음 발언의 제어 단계**
 
 ```mermaid
 flowchart TD
@@ -263,7 +225,7 @@ flowchart TD
 
 Debate State는 전체 대화를 다시 요약하기 위한 메모가 아니라 **다음 행동을 결정하기 위한 구조화 상태**다.
 
-**그림 6. 토론 상태 구조 (Debate State View) — 확정 상태와 파생 제어 상태**
+**그림 4. 토론 상태 구조 (Debate State View) — 확정 상태와 파생 제어 상태**
 
 ```mermaid
 flowchart TD
@@ -348,7 +310,7 @@ RELATED_DISTINCT
 
 Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약이다.
 
-**그림 7. 행동 선택 흐름 (Action Selection View) — 후보를 단계적으로 좁히는 과정**
+**그림 4. 행동 선택 흐름 (Action Selection View) — 후보를 단계적으로 좁히는 과정**
 
 ```mermaid
 flowchart TD
@@ -414,7 +376,7 @@ Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 �
 
 아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 Building Block 수준으로 묶는다.
 
-**그림 8. 한 턴 실행 순서 (Runtime Sequence) — request → draft → validation → patch → commit**
+**그림 4. 한 턴 실행 순서 (Runtime Sequence) — request → draft → validation → patch → commit**
 
 ```mermaid
 sequenceDiagram
@@ -475,7 +437,7 @@ State가 커져도 전체 graph를 매번 넣지 않는다. 현재 Action target
 
 프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성한다.
 
-**그림 9. 프롬프트와 검증 흐름 (Prompt / Validation View) — 입력 계층과 Repair loop**
+**그림 4. 프롬프트와 검증 흐름 (Prompt / Validation View) — 입력 계층과 Repair loop**
 
 ```mermaid
 flowchart TD
@@ -520,7 +482,7 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리한다.
 
-**그림 10. 화면 상태 전이 (UI State Machine) — 사용자가 보는 단계의 lifecycle**
+**그림 4. 화면 상태 전이 (UI State Machine) — 사용자가 보는 단계의 lifecycle**
 
 ```mermaid
 stateDiagram-v2
@@ -559,7 +521,7 @@ stateDiagram-v2
 
 Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어간다.
 
-**그림 11. Serverless 세션 수명주기 — `engine_token`으로 상태를 이어가는 과정**
+**그림 4. Serverless 세션 수명주기 — `engine_token`으로 상태를 이어가는 과정**
 
 ```mermaid
 flowchart TD
