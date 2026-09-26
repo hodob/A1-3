@@ -49,21 +49,23 @@ flowchart TD
 
 Topic Analyzer는 주제를 하나의 유형으로만 분류하지 않습니다. 이후 시스템이 내려야 하는 서로 다른 결정을 각각의 분석 정보로 나누고, 각 항목이 서로 다른 주된 책임을 맡도록 구성했습니다.
 
-1. `Claim Type`은 **무슨 종류의 논쟁인지** 판단합니다.
-2. `Epistemic Status`는 **현실에서 사실적으로 어떤 상태인지** 판단합니다.
-3. `Treatment Mode`는 **이 입력을 어떤 방식으로 토론할지** 판단합니다.
-4. `Interaction State`는 **사용자에게 다음에 무엇을 요구할지** 판단합니다.
-5. `Truth Mode`는 **현실 사실과 가정·놀이를 어떻게 구분할지** 판단합니다.
-6. `Tone`은 **어떤 표현 스타일로 말할지** 판단합니다.
+1. `claim_type`은 **무슨 종류의 논쟁인지** 판단합니다.
+2. `epistemic_status`는 **현실에서 사실적으로 어떤 상태인지** 판단합니다.
+3. `treatment_mode`는 **이 입력을 어떤 방식으로 토론할지** 판단합니다.
+4. `interaction_state`는 **사용자에게 다음에 무엇을 요구할지** 판단합니다.
+5. `truth_mode`는 **현실 사실과 가정·놀이를 어떻게 구분할지** 판단합니다.
+6. `tone_hint`는 **어떤 표현 스타일로 말할지** 판단합니다.
 
-| 분석 정보 | 주요 값과 의미 |
+아래 값은 README용으로 다시 만든 분류가 아니라 `TopicAnalysis` 계약에 정의된 실제 허용 값입니다. 현재 구현은 Python `Enum` 클래스가 아니라 Pydantic DTO의 `Literal` 타입으로 이 값을 제한합니다.
+
+| 계약 필드 | 실제 허용 값(한글 의미) |
 |---|---|
-| Claim Type(주제 유형) | FACT(사실), DEFINITION(정의), CAUSE(원인), VALUE(가치), POLICY(정책), COMPARISON(비교), INTERPRETATION(해석), PERSONAL_DISPUTE(개인 갈등) 등 |
-| Epistemic Status(사실 상태) | 사실 우세인지, 실제로 논쟁 가능한지, 아직 불명확한지 |
-| Treatment Mode(토론 처리 방식) | 자연스러운 토론 / 가벼운 토론 / 재구성된 토론 |
-| Interaction State(진행 상태) | 바로 진행 / 확인 필요 / 추가 맥락 필요 / 먼저 정보 설명 필요 |
-| Truth Mode(현실성 프레임) | 현실 세계 사실 / 가정된 반사실 / 수사적·놀이형 논쟁 |
-| Tone(표현 어조) | SERIOUS / PLAYFUL |
+| `claim_type`(주제 유형) | `FACT`(사실), `DEFINITION`(정의), `CAUSE`(원인), `VALUE`(가치), `POLICY`(정책), `COMPARISON`(비교), `INTERPRETATION`(해석), `PERSONAL_DISPUTE`(개인 갈등), `INFORMATIONAL`(정보 요청), `OTHER`(기타) |
+| `epistemic_status`(사실적 지위) | `NON_FACTUAL`(사실 판정 대상 아님), `OPEN_EMPIRICAL`(경험적으로 열린 문제), `GENUINELY_CONTESTED`(실질적 논쟁 상태), `WEIGHT_DOMINANT_TRUE`(참 쪽 근거 우세), `WEIGHT_DOMINANT_FALSE`(거짓 쪽 근거 우세), `FORMALLY_SETTLED`(형식적으로 확정), `UNKNOWN`(불명확) |
+| `treatment_mode`(토론 처리 방식) | `NATURAL_DEBATE`(그대로 토론), `PLAYFUL_DEBATE`(놀이형 토론), `REFRAMED_DEBATE`(토론형으로 재구성) |
+| `interaction_state`(진행 상태) | `READY`(바로 진행), `CONFIRMATION_REQUIRED`(사용자 확인 필요), `CONTEXT_REQUIRED`(추가 맥락 필요), `INFORMATIONAL_FIRST`(정보 설명이 먼저 필요) |
+| `truth_mode`(현실성 프레임) | `REAL_WORLD`(현실 세계, 기본값), `STIPULATED_COUNTERFACTUAL`(명시적으로 가정한 반사실), `RHETORICAL_PLAY`(수사적·놀이형 설정) |
+| `tone_hint`(표현 어조 힌트) | `SERIOUS`(진지함), `PLAYFUL`(가벼움), `None`(미지정 가능) |
 
 개인 사건은 한 번에 하나씩 질문합니다. 답변은 Context Summary에서 **직접 본 일 / 전해 들은 이야기 / 내 해석 / 모르는 부분**으로 구분하고, 사용자가 주지 않은 사건 사실을 AI가 임의로 채우지 않습니다.
 
