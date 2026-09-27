@@ -231,19 +231,31 @@ flowchart TD
 
 ## 5. 토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가
 
-Debate State는 transcript의 복사본도, 매 턴 새로 만드는 요약문도 아니다. **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 현재 쟁점이나 질문 초점처럼 다시 계산할 수 있는 값은 State에 중복 저장하지 않고, 필요할 때 이 기록에서 `Derived Control View`로 계산한다.
+Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 현재 쟁점이나 질문 초점처럼 다시 계산할 수 있는 값은 State에 중복 저장하지 않고, 필요할 때 이 기록에서 `Derived Control View`로 계산한다.
 
-**그림 5. 토론 상태 개요 (Debate State View) — 확정된 발언 → 구조화 상태 → 파생 제어 관점**
+**그림 5. 토론 상태 개요 (Debate State View) — 확정 정보와 파생 제어 관점의 분리**
 
 ```mermaid
 flowchart TD
     A[검증을 통과한 발언]
     A -->|토론의 변화를 구조화해 반영| S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
-    S -->|매 턴 계산| V[Derived Control View]
 
-    V --> F[Semantic Facets<br/>같은 논점 묶기]
-    V --> G[Question Groups / QUD<br/>지금 답해야 할 질문]
-    V --> H[Progress<br/>실제 진전 여부]
+    S -->|build_control_view| V0
+
+    subgraph V[Derived Control View — 매 턴 계산]
+        direction TB
+        V0[DebateControlView]
+        F[Semantic Facets<br/>같은 논점 묶기]
+        G[Question Groups<br/>같은 질문 묶기]
+        H[Progress<br/>실제 진전 여부]
+
+        V0 --> F
+        V0 --> G
+        V0 --> H
+    end
+
+    V0 -->|현재 speaker와 함께 선택| Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
+    S -.->|현재 질문 상태 참조| Q
 ```
 
 ### 무엇을 State로 남기는가
@@ -271,9 +283,11 @@ REVISE  C12 → C19
 
 ### 저장된 State에서 현재 제어 관점을 계산한다
 
+`DebateState`가 직접 소유하는 값과 다음 턴을 위해 계산하는 값은 분리한다. `build_control_view(state)`는 원본 State를 읽어 `Semantic Facets`, `Question Groups`, `Progress`를 가진 `DebateControlView`를 만든다.
+
 새 Proposition ID가 생겼다고 곧바로 새로운 논점이나 진전으로 보지 않는다. `SAME_POINT`, `REFINEMENT`, `QUALIFICATION`처럼 기존 주장과 같은 논지에 속하는 경우에는 **Semantic Facet**으로 묶어 표현만 바뀐 반복을 새 진전으로 세지 않는다.
 
-질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶고, 현재 가장 먼저 해결해야 할 질문을 **QUD (Question Under Discussion)** 로 계산한다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
+질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶는다. **Immediate QUD (Question Under Discussion)** 는 State에 저장된 별도 객체가 아니라, 이 Control View와 현재 speaker를 기준으로 그 순간 먼저 처리할 질문을 선택한 결과다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
 
 이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
 
@@ -283,24 +297,22 @@ REVISE  C12 → C19
 
 ### 6.1 어떤 논점에 어떤 행동을 할지 고르는 과정
 
+Harness는 Debater Model에게 다음 행동을 고르게 하지 않는다. **현재 Turn Task에서 가능한 `Action × Target` 후보를 만들고, 사용할 수 없는 후보를 먼저 제거한 뒤 남은 후보를 평가해 하나를 고른다.**
+
 Action은 단순히 “다음에 할 말의 제목”이 아니라 **target 종류, 필요한 의미 효과, 실패 조건**을 가진 실행 계약이다.
 
-**그림 6. 행동 선택 흐름 (Action Selection View) — 후보를 단계적으로 좁히는 과정**
+**그림 6. 행동 선택 흐름 (Action Selection View) — 후보 생성 → Hard Eligibility → Ranking**
 
 ```mermaid
 flowchart TD
-    A[현재 Turn Task] --> B[Eligible Action × Target]
-    B --> C{Pair 상태가 유효한가?}
-    C -->|아니오| Z[후보 제거]
-    C -->|예| D[Target Quality 평가]
-
-    D --> E[Strategic Utility]
-    E --> F[Persona Preference]
-    F --> G[Repetition / Saturation]
-    G --> H[최종 Action × Target]
+    A[현재 Turn Task] --> B[Task에 맞는<br/>Action × Target 후보 생성]
+    B --> C{Hard Eligibility<br/>상태·대상 제약 확인}
+    C -->|BLOCKED · RESOLVED · EXHAUSTED 등| X[후보 제거]
+    C -->|선택 가능| R[Composite Ranking<br/>Target Quality · Strategic Priority<br/>Persona Preference · Repetition / Saturation]
+    R --> H[최종 Action × Target]
 ```
 
-Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 다음 후보에서 제외된다.
+Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 선택 대상에서 제외된다. 살아남은 후보는 target의 중요도와 현재 clash와의 관련성, 전략적 우선순위, Persona 선호, 반복 소진 정도를 함께 비교한다.
 
 <details>
 <summary><strong>15개 Strategic Action 전체 보기</strong></summary>
@@ -325,11 +337,11 @@ Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAU
 
 </details>
 
-### 6.2 Persona는 캐릭터가 아니라 행동 선호 정책
+### 6.2 Persona는 Hard Constraint가 아니라 Soft Preference다
 
-Persona는 고정된 세계관이나 역할극 캐릭터가 아니다. 현재 구현에서 Persona는 **이미 적법하다고 판정된 Action 후보들 사이의 안정적인 soft preference**다. Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있다.
+Persona는 Action의 허용 여부를 결정하지 않는다. **이미 선택 가능한 후보 사이에서 어떤 행동을 더 선호할지만 조정한다.** 따라서 Persona가 특정 Action을 선호하더라도 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 후보를 다시 선택 가능하게 만들 수 없다.
 
-Persona 연구에서 role-playing persona, personality prompting, role과 expressive style의 효과를 구분해서 볼 필요가 있다는 점을 참고했다. 이를 바탕으로 현재 구현에서는 Big Five나 MBTI 자체를 runtime 제어 변수로 쓰지 않고, 토론 행동과 직접 연결되는 Persona → Action preference만 사용한다 (Tseng et al., 2024; Jiang et al., 2024; Nagao et al., 2026).
+Stance는 별도의 session assignment이므로 같은 Persona도 다른 토론에서는 반대 입장을 맡을 수 있다. 현재 구현은 Big Five나 MBTI 자체를 runtime 제어 변수로 쓰지 않고, 토론 행동과 직접 연결되는 Persona → Action preference만 사용한다 (Tseng et al., 2024; Jiang et al., 2024; Nagao et al., 2026).
 
 | Persona | 사용자 표시 | 무엇을 더 자주 시도하는가 |
 |---|---|---|
@@ -340,18 +352,15 @@ Persona 연구에서 role-playing persona, personality prompting, role과 expres
 | Principlist | **원칙 중심형** | 기준·전제·일관성 점검, 원칙 기반 이유 확장 |
 | Synthesist | **조정 통합형** | 국소적 양보, 주장 수정, 비교와 핵심 압축 |
 
-Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택한다. Persona는 후보를 새로 만들 수 없고 이미 `RESOLVED / EXHAUSTED / BLOCKED` 상태인 행동을 되살릴 수도 없다.
-
-
-다음 절에서는 선택된 Action × Target이 실제 발언으로 생성되고 commit될 때까지의 Runtime을 보여줍니다.
+Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 선택한다.
 
 ---
 
 ## 7. 한 턴의 실행 순서 (Runtime Sequence)
 
-아래 그림은 Browser에서 `/api/debate-step`을 호출한 뒤 한 발언이 확정될 때까지의 대표 Runtime scenario다. 상위 Adapter와 내부 Validator를 각각 별도 participant로 늘어놓기보다, 앞에서 설명한 구성 요소 수준으로 묶는다.
+**한 턴은 발언 생성으로 끝나지 않는다.** 화면에 Draft가 스트리밍되더라도 Compliance와 State Patch 적용까지 성공해야 해당 발언과 다음 Debate State가 확정된다.
 
-**그림 7. 한 턴 실행 순서 (Runtime Sequence) — request → draft → validation → patch → commit**
+**그림 7. 한 턴 실행 순서 (Runtime Sequence) — provisional draft에서 committed turn까지**
 
 ```mermaid
 sequenceDiagram
@@ -359,34 +368,44 @@ sequenceDiagram
     participant W as Web Service / API
     participant H as Debate Harness
     participant D as Debater Model
-    participant C as Coordinator
+    participant C as Control / Coordinator
 
     B->>W: signed session + NEXT
     W->>W: token 검증 / State 복원
-    W->>H: 현재 턴 계획 요청
+    W->>H: 현재 턴 계획
     H-->>W: Turn Task + Action × Target
 
-    W->>D: stance + persona + task + target + context
+    W->>D: Turn Contract + Context
     D-->>W: streaming draft
     W-->>B: provisional draft
 
-    W->>C: compliance 검사
-    alt 검증 실패
-        C-->>W: typed failure
-        W->>D: targeted repair / replan
-    else 검증 통과
+    W->>C: Compliance 검사
+    alt 검증 통과
         C-->>W: compliant utterance
-        W->>C: State Patch 추출
-        C-->>W: typed Patch
-        W->>H: Patch 검증·적용
-        H-->>W: 다음 Debate State
-        W-->>B: signed token + commit event
+    else Targeted Repair
+        C-->>W: typed failure + repair feedback
+        W->>D: 같은 Action × Target + feedback
+        D-->>W: regenerated draft
+    else Replan
+        C-->>W: typed failure + replan 요청
+        W->>H: 같은 Turn Task에서 후보 재선택
+        H-->>W: 새 Action × Target
+        W->>D: 새 Turn Contract + Context
+        D-->>W: regenerated draft
     end
+
+    Note over W,C: 재생성 결과도 다시 Compliance를 거치며 최대 시도 안에 통과해야 다음 단계로 간다.
+
+    W->>C: State Patch 추출
+    C-->>W: typed Patch
+    W->>H: Patch 검증·적용
+    H-->>W: 다음 Debate State
+    W-->>B: commit event + 새 signed token
 ```
 
-화면에 streaming되는 문장은 **확정 전 draft**다. Compliance와 State Patch 적용까지 통과해야 transcript에 commit된다.
+브라우저가 받는 `draft_reset / draft_delta`는 **확정 전 출력**이다. 검증을 통과한 발언에 대해서만 State Patch를 추출하고, Patch까지 검증·적용된 뒤 SSE `commit` event로 확정 결과를 보낸다. 실패하면 기존 Debate State와 committed transcript는 그대로 유지된다.
 
-### State Patch와 Adaptive Context
+### State Patch는 확정된 발언의 변화만 반영한다
 
 확정 발언 뒤에는 전체 State를 다시 작성하지 않고 필요한 변화만 typed Patch로 추출한다.
 
@@ -400,37 +419,36 @@ CONCEDE_LOCAL
 WITHDRAW_PROPOSITION
 ```
 
-State가 커져도 전체 graph를 매번 넣지 않는다. 현재 Action target, 질문 초점, semantic facet의 대표/현재 node, 명시적 reference, 최근 양측 Proposition을 중심으로 working set을 만든다. Patch용 Proposition working set은 현재 구현에서 최대 10개다.
-
-긴 context에서는 필요한 정보의 위치와 양이 모델 활용 성능에 영향을 줄 수 있다는 결과를 참고해, 전체 누적 State보다 현재 과제와 연결된 node를 우선한다 (Liu et al., 2024).
-
-다음 절에서는 이 sequence의 **발언 생성 → compliance → repair** 구간 안에 어떤 정보가 들어가는지 확대한다.
+Patch는 현재 Debate State에 대해 검증한 뒤 적용한다. 추출 결과가 계약을 만족하지 못하면 제한된 repair를 수행하고, 끝까지 유효한 Patch를 만들지 못하면 해당 턴 자체를 확정하지 않는다.
 
 ---
 
 ## 8. 프롬프트와 검증 흐름 (Prompt / Validation)
 
-프롬프트는 하나의 거대한 역할 지시문이 아니라 변하지 않는 규칙, 현재 세션 정보, 이번 턴의 과제, 허용된 State context를 분리해 합성한다.
+발언 생성 요청은 하나의 거대한 역할 지시문이 아니다. **변하지 않는 규칙, 현재 세션 정보, 이번 턴의 계약, 필요한 State context를 한 요청에 합성**하고, 생성된 Draft는 별도의 검증 경계를 통과시킨다.
 
-**그림 8. 프롬프트와 검증 흐름 (Prompt / Validation View) — 입력 계층과 Repair loop**
+### 8.1 모델 입력은 여러 제약과 Context를 한 요청으로 합성한다
+
+**그림 8-A. 발언 생성 입력 (Model Request Composition) — 여러 입력을 하나의 Turn Request로 합성**
 
 ```mermaid
 flowchart TD
-    A[전역 규칙<br/>Global Hard Rules] --> B[현재 사실·맥락<br/>Grounding]
-    B --> C[입장·Persona·Phase<br/>Assignment]
-    C --> D[단계별 지시<br/>Phase Instruction]
-    D --> E[이번 턴 계약<br/>Task + Action + Target]
-    E --> F[허용된 State 참조]
-    F --> G[최근 Transcript]
-    G --> H[표현·형식 규칙]
-    H --> I[Draft]
-    I --> J{검증}
-    J -->|통과| K[Commit 후보]
-    J -->|실패 코드| L[부분 재작성 / 재계획]
-    L --> I
+    A[Global Hard Rules] --> R[Model Request]
+    B[Grounding / Session Context] --> R
+    C[Stance · Persona · Phase] --> R
+    D[Turn Contract<br/>Task · Action · Target] --> R
+    E[Relevant State References] --> R
+    F[Recent Transcript / Audience Input] --> R
+    G[Surface / Format Rules] --> R
+    R --> M[Debater Model]
+    M --> O[Draft]
 ```
 
-Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `assignment`, `phase_instruction`, `surface_style`, `surface_format`처럼 구획을 나눈다. Motion, Context, transcript, Audience Question은 instruction과 섞이지 않도록 data 영역으로 전달한다.
+Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `assignment`, `phase_instruction`, `surface_style`, `surface_format`처럼 역할을 나눠 구성한다. 여기에 Harness가 고른 `Turn Task + Action + Target`을 `turn_contract`로 추가한다. Motion, Context, transcript, Audience Question은 instruction과 섞이지 않도록 data 영역으로 전달한다.
+
+State 전체를 그대로 모델에 넣지는 않는다. 발언 생성에는 현재 target과 task, QUD와 연결된 proposition, semantic facet의 대표·현재 node, 최근에 사용된 reference를 중심으로 **허용된 State reference set**을 만든다. State Patch 추출도 별도의 graph-aware working set을 사용해 Action/QUD target과 명시적 reference를 우선하고, facet anchor와 인접 relation, 최근 proposition만 제한적으로 포함한다.
+
+긴 context에서는 필요한 정보의 위치와 양이 모델 활용 성능에 영향을 줄 수 있다는 결과를 참고해, 전체 누적 State보다 현재 과제와 연결된 node를 우선한다 (Liu et al., 2024).
 
 전역 품질 규칙은 Persona보다 우선한다.
 
@@ -441,11 +459,29 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 - 유효한 반론은 국소적으로 인정할 수 있음
 - 세부 주장은 수정할 수 있지만 Assigned Stance 전체를 뒤집지 않음
 
-### 실패 유형에 맞춘 Repair
+### 8.2 검증 실패는 같은 계획의 Repair와 계획 자체의 Replan으로 나눈다
+
+**그림 8-B. 검증과 수정 (Validation / Repair) — 실패 종류에 따라 수정 범위를 다르게 선택**
+
+```mermaid
+flowchart TD
+    A[Draft] --> B{Compliance}
+    B -->|통과| C[State Patch 단계]
+    B -->|실패| D{Retry Strategy}
+
+    D -->|Targeted Repair| E[기존 Turn Task<br/>Action × Target 유지]
+    E --> F[Failure feedback 추가]
+    F --> G[다시 생성]
+    G --> A
+
+    D -->|Replan| H[Harness가<br/>Action × Target 재선택]
+    H --> I[새 Turn Contract]
+    I --> G
+```
 
 검증은 단순 pass/fail이 아니라 stance reversal, Action 미수행, target 미사용, off-task, 반복, 잘못된 State reference, Final Focus 형식 위반 등을 구분한다.
 
-첫 retry는 이전 draft에서 무엇을 유지하고 무엇만 바꿀지 알려주는 targeted repair다. 같은 계획으로 고치기 어려운 실패가 반복되면 Action/Target 자체를 다시 고를 수 있다. 최대 시도 안에 통과하지 못하면 발언과 State를 확정하지 않는다.
+`Targeted Repair`는 기존 Turn Task와 Action × Target을 유지한 채 실패 원인만 feedback으로 추가해 다시 생성한다. `Replan`은 같은 Turn Task 안에서 Harness가 다른 Action × Target을 고르고 새 Turn Contract로 다시 생성한다. **Debater Model이 Action을 스스로 다시 고르는 구조가 아니다.** 최대 시도 안에 Compliance를 통과하지 못하면 발언과 State를 확정하지 않는다.
 
 이 구조는 실패 위치와 허용 가능한 수정 방향을 명시한 structured feedback이 agent repair에 도움을 줄 수 있다는 연구를 참고했다 (Ray & Goyal, 2026).
 
@@ -453,28 +489,30 @@ Speech prompt는 실제 코드에서 `identity`, `hard_rules`, `grounding`, `ass
 
 ## 9. 화면 상태와 세션 실행 구조 (Frontend / Session)
 
-### 9.1 Frontend 화면 상태
+### 9.1 Frontend 화면 흐름
 
-Frontend는 API 결과를 출력하는 것 외에도 **긴 AI 작업 중 사용자가 어떤 단계에 있는지**를 관리한다.
+여기서 말하는 Frontend State는 5절의 Debate State와 다르다. **Debate State가 토론의 의미 상태라면, Frontend State는 사용자가 현재 어떤 화면과 비동기 작업 단계에 있는지를 나타낸다.**
 
-**그림 9. 화면 상태 전이 (UI State Machine) — 사용자가 보는 단계의 lifecycle**
+**그림 9. Frontend View Flow — 사용자가 이동하는 화면과 Debate Arena 내부 Audience gate**
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Topic
-    Topic --> Context: 추가 맥락 필요
-    Topic --> Motion: 바로 진행
-    Context --> Context: 다음 질문
-    Context --> Motion: debate_ready
-    Motion --> Debate: 토론 시작
-    Debate --> Debate: draft → validation → commit
-    Debate --> Audience: Crossfire 종료
-    Audience --> Debate: 질문 또는 건너뛰기
-    Debate --> Summary: COMPLETE
-    Summary --> Choice
-    Choice --> Done
-    Done --> [*]
+flowchart TD
+    T[Topic] -->|추가 맥락 필요| C[Context]
+    C -->|다음 질문| C
+    C -->|debate_ready| R[Context Review]
+    R --> M[Motion]
+    T -->|바로 진행| M
+
+    M --> D[Debate Arena]
+    D -.->|Crossfire gate| A[Audience Panel<br/>Debate Arena 내부]
+    A -.->|질문 또는 건너뛰기| D
+
+    D -->|COMPLETE| S[Summary]
+    S --> H[Choice]
+    H --> E[Done]
 ```
+
+Audience Question은 별도 page/view로 전환되는 상태가 아니라 `debate-arena` 안에서 열리는 panel이다. Debate Arena 안에서는 provisional draft가 보일 수 있지만, committed transcript는 서버의 `commit` event를 받은 뒤에만 갱신한다.
 
 다른 주제로 다시 시작하면 기존 토론을 이어가는 상태 전이가 아니라 새 Topic 상태에서 새 세션을 시작한다.
 
@@ -490,11 +528,11 @@ stateDiagram-v2
 - 모바일/데스크톱 반응형 UI
 - raw stack trace 대신 안정적인 오류 메시지 표시
 
-토론자가 `[[C24]]`, `[[Q3]]` 같은 내부 State marker를 사용하면 서버는 확정 후 `StateReference` metadata로 변환하고, Frontend는 사용자에게 **A/B · 발언 번호** 형태의 링크로 보여줍니다.
+토론자가 `[[C24]]`, `[[Q3]]` 같은 내부 State marker를 사용하면 서버는 확정 후 `StateReference` metadata로 변환하고, Frontend는 사용자에게 **A/B · 발언 번호** 형태의 링크로 보여준다.
 
 ### 9.2 Serverless에서 토론 상태 유지
 
-Vercel Serverless Function은 다음 요청까지 같은 프로세스 메모리가 유지된다고 가정할 수 없다. 그래서 authoritative state를 전역 메모리에 의존하지 않고 signed client-carried session으로 이어간다.
+Vercel Function 인스턴스는 요청 사이에 재사용될 수 있지만, **그 재사용을 세션 상태 보존 계약으로 의존하지 않는다.** 따라서 토론 상태의 연속성을 프로세스 전역 메모리에 두지 않고 signed client-carried session으로 이어간다.
 
 **그림 10. Serverless 세션 수명주기 — `engine_token`으로 상태를 이어가는 과정**
 
@@ -509,7 +547,9 @@ flowchart TD
     G -->|새 engine_token| A
 ```
 
-`engine_token`에는 browser-visible session, internal Debate State, Action history, A/B model assignment가 포함된다. 브라우저가 공개 DTO의 값을 임의로 바꾸더라도, 이미 시작된 토론에서는 서명된 token에서 복원한 내부 상태가 우선한다.
+`engine_token`에는 browser-visible session, internal Debate State, Action history, A/B model assignment가 포함된다. 브라우저가 공개 DTO의 값을 임의로 바꾸더라도 이미 시작된 토론에서는 서명된 token에서 복원한 내부 상태가 우선한다.
+
+**`engine_token`은 서명된 상태이지 암호화된 상태가 아니다.** HMAC-SHA256 서명은 payload가 서버가 발급한 뒤 변조되지 않았는지 확인하지만, 내용 자체의 비밀성을 제공하지 않는다.
 
 ---
 
@@ -521,14 +561,16 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아니다. 현재 De
 
 관전 재미도 별도의 농담 생성 모듈보다 **상대의 방금 한 발언을 이용한 callback, 반례, 양보, 수정, 새로운 충돌**에서 나오도록 설계한다. PLAYFUL 주제에서는 가벼운 비유나 논증에서 나온 유머를 허용하지만 상대 인격 공격은 허용하지 않는다.
 
-### Moderator는 별도 AI가 아님
+### Moderator는 서버의 진행 결정을 표현한다
+
+토론을 계속할지, Audience gate를 열지, 다음 Phase로 이동할지는 **Server Control Plane이 결정한다.** Frontend Moderator는 그 결정을 사용자가 이해할 수 있는 사회자 카드로 변환한다.
 
 | 책임 | 실제 역할 |
 |---|---|
 | **Server Control Plane** | 더 말할 가치가 있는지, Audience gate를 열지, 다음 phase로 갈지 결정 |
-| **Frontend Moderator** | 서버의 결정을 사용자가 이해할 수 있는 사회자 카드로 표현 |
+| **Frontend Moderator** | `moderator_decision`, `turn_task`, phase transition을 바탕으로 표시용 사회자 event 생성 |
 
-`public/debate_moderator.js`가 새로운 LLM 판단을 추가하는 것이 아닙니다.
+`public/debate_moderator.js`는 새로운 LLM 호출이나 독립적인 토론 판단을 수행하지 않는다.
 
 ### Audience Question / Final Focus / Neutral Summary
 
@@ -553,12 +595,11 @@ Crossfire는 정해진 질문을 번갈아 읽는 단계가 아니다. 현재 De
 | `POST /api/neutral-summary` | 승자 판정 없는 토론 정리 |
 | `/api/health` | live config와 배포 version 확인, Provider 호출 없음 |
 
-Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control State를 일반 Web DTO에 그대로 노출하지 않는다.
+Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Patch와 Control View를 일반 Web DTO에 그대로 노출하지 않는다.
 
 > 전체 Pydantic field와 validation bookkeeping은 구조 설명에 직접 필요하지 않아 생략한다.
 
-
-### 11.2 기술 스택과 실행·배포
+### 11.2 기술 스택
 
 | 영역 | 기술 |
 |---|---|
@@ -570,6 +611,8 @@ Browser-facing DTO는 Pydantic `extra="forbid"` 계약을 사용하며 내부 Pa
 | Debater Routing | multi-provider debater pool |
 | Session | zlib-compressed + HMAC-SHA256 signed client-carried state |
 | Deployment | GitHub + Vercel |
+
+### 11.3 실행·배포
 
 - **배포 URL**: https://a1-3-green.vercel.app
 - **GitHub**: https://github.com/hodob/A1-3
