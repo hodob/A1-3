@@ -237,22 +237,13 @@ Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야
 ```mermaid
 flowchart TD
     A[검증을 통과한 발언]
-    A -->|토론의 변화를 구조화해 반영| S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
-    S -->|build_control_view| V0
+    S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
+    V[Derived Control View — 매 턴 계산<br/>Semantic Facets · Question Groups · Progress]
+    Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
 
-    subgraph V[Derived Control View — 매 턴 계산]
-        direction TD
-        V0[DebateControlView]
-        F[Semantic Facets<br/>같은 논점 묶기]
-        G[Question Groups<br/>같은 질문 묶기]
-        H[Progress<br/>실제 진전 여부]
-
-        V0 --> F
-        V0 --> G
-        V0 --> H
-    end
-
-    V0 -->|Control View + State + 현재 speaker| Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
+    A -->|토론의 변화를 구조화해 반영| S
+    S -->|build_control_view| V
+    V -->|immediate_qud(view, state, speaker)| Q
 ```
 
 ### 무엇을 State로 남기는가
