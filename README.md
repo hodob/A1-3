@@ -253,8 +253,7 @@ flowchart TD
         V0 --> H
     end
 
-    V0 -->|현재 speaker와 함께 선택| Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
-    S -.->|현재 질문 상태 참조| Q
+    V0 -->|Control View + State + 현재 speaker| Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
 ```
 
 ### 무엇을 State로 남기는가
@@ -362,32 +361,20 @@ Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 �
 **그림 7. 한 턴 실행 순서 (Runtime Sequence) — provisional draft에서 committed turn까지**
 
 ```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant H as Web Service / Harness
-    participant D as Debater Model
-    participant C as Control / Coordinator
+flowchart TD
+    A[Browser<br/>signed session + NEXT] --> B[State 복원 + Turn 계획]
+    B --> C[Debater Model 호출<br/>Turn Contract + Context]
+    C --> D[Streaming Draft]
+    D --> E{Compliance}
 
-    B->>H: signed session + NEXT
-    H->>H: State 복원 + Turn 계획
-    H->>D: Turn Contract + Context
-    D-->>H: streaming draft
-    H-->>B: provisional draft
+    E -->|실패| F[Repair 또는 Replan]
+    F --> C
 
-    H->>C: Compliance 검사
-    alt 통과
-        C-->>H: compliant utterance
-    else 실패
-        C-->>H: typed failure
-        H->>H: Repair 또는 Replan
-        H->>D: 수정된 Turn Request
-        D-->>H: regenerated draft
-    end
-
-    H->>C: State Patch 추출
-    C-->>H: typed Patch
-    H->>H: Patch 검증 + Debate State 갱신
-    H-->>B: commit event + 새 engine_token
+    E -->|통과| G[State Patch<br/>추출 · 검증 · 적용]
+    G -->|최종 실패| X[턴 확정 안 함]
+    G -->|성공| H[Debate State 갱신]
+    H --> I[Commit event<br/>새 engine_token]
+    I --> J[Browser<br/>committed transcript]
 ```
 
 브라우저가 받는 `draft_reset / draft_delta`는 **확정 전 출력**이다. 검증을 통과한 발언에 대해서만 State Patch를 추출하고, Patch까지 검증·적용된 뒤 SSE `commit` event로 확정 결과를 보낸다. 실패하면 기존 Debate State와 committed transcript는 그대로 유지된다.
