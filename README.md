@@ -10,7 +10,7 @@
 2. [시스템 경계와 실행 구조 (Runtime)](#2-시스템-경계와-실행-구조-runtime)
 3. [코드 구성 요소 구조](#3-코드-구성-요소-구조)
 4. [토론 엔진 구조 (Debate Engine)](#4-토론-엔진-구조-debate-engine)
-5. [토론 상태 (Debate State): 무엇을 기억하는가](#5-토론-상태-debate-state-무엇을-기억하는가)
+5. [토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가](#5-토론-상태-debate-state-현재-토론을-어떻게-표현하는가)
 6. [행동 선택과 Persona](#6-행동-선택과-persona)
 7. [한 턴의 실행 순서 (Runtime Sequence)](#7-한-턴의-실행-순서-runtime-sequence)
 8. [프롬프트와 검증 흐름 (Prompt / Validation)](#8-프롬프트와-검증-흐름-prompt--validation)
@@ -99,7 +99,6 @@ flowchart TD
 
 Crossfire와 Rebuttal의 턴 수는 반드시 채워야 하는 quota가 아니라 최대 cap이다. 현재 상태에서 더 수행할 가치가 있는 과제가 없으면 Provider를 추가로 호출하기 전에 다음 단계로 이동할 수 있다.
 
-다음 절에서는 이 Product Flow가 실제 Browser, Serverless Function, Debate Harness, AI Provider로 어떻게 나뉘어 실행되는지 보여준다.
 
 ---
 
@@ -379,9 +378,9 @@ flowchart TD
 
 브라우저가 받는 `draft_reset / draft_delta`는 **확정 전 출력**이다. 검증을 통과한 발언에 대해서만 State Patch를 추출하고, Patch까지 검증·적용된 뒤 SSE `commit` event로 확정 결과를 보낸다. 실패하면 기존 Debate State와 committed transcript는 그대로 유지된다.
 
-### State Patch는 확정된 발언의 변화만 반영한다
+### State Patch는 Compliance를 통과한 발언의 변화만 반영한다
 
-확정 발언 뒤에는 전체 State를 다시 작성하지 않고 필요한 변화만 typed Patch로 추출한다.
+Compliance를 통과한 발언에서는 전체 State를 다시 작성하지 않고 필요한 변화만 typed Patch로 추출한다.
 
 ```text
 ADD_PROPOSITION
@@ -511,7 +510,7 @@ flowchart TD
     C --> D[Session + Debate State<br/>Action history + A/B models 복원]
     D --> E[한 턴 실행]
     E --> F[새 State + history]
-    F --> G[JSON → zlib → HMAC-SHA256]
+    F --> G[JSON → zlib → base64url body<br/>HMAC-SHA256 서명 추가]
     G -->|새 engine_token| A
 ```
 
