@@ -309,7 +309,7 @@ flowchart TD
     R --> H[최종 Action × Target]
 ```
 
-Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 선택 대상에서 제외된다. 살아남은 후보는 target의 중요도와 현재 clash와의 관련성, 전략적 우선순위, Persona 선호, 반복 소진 정도를 함께 비교한다.
+Action×Target pair는 `AVAILABLE / OPEN / PARTIALLY_RESOLVED / RESOLVED / EXHAUSTED / BLOCKED` 상태를 가질 수 있다. 이미 충분히 답한 질문, 철회·수정된 주장, 반복 소진된 pair는 선택 대상에서 제외된다. 살아남은 후보는 이 기준들을 하나의 ranking key로 묶어 비교한다. 현재 구현은 `Target Quality`를 먼저 비교하고, 같은 조건에서는 `Strategic Priority → Persona Preference → Saturation` 순으로 우선순위를 좁힌다. 이는 여러 필터를 차례로 통과시키는 pipeline이 아니라, 최종 후보를 비교하는 정렬 기준이다.
 
 <details>
 <summary><strong>15개 Strategic Action 전체 보기</strong></summary>
