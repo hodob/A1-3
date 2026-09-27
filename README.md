@@ -239,11 +239,10 @@ Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야
 flowchart TD
     A[검증을 통과한 발언]
     A -->|토론의 변화를 구조화해 반영| S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
-
     S -->|build_control_view| V0
 
     subgraph V[Derived Control View — 매 턴 계산]
-        direction TB
+        direction TD
         V0[DebateControlView]
         F[Semantic Facets<br/>같은 논점 묶기]
         G[Question Groups<br/>같은 질문 묶기]
@@ -365,42 +364,30 @@ Topic Analyzer의 claim type에 따라 기능적으로 다른 Persona pair를 �
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant W as Web Service / API
-    participant H as Debate Harness
+    participant H as Web Service / Harness
     participant D as Debater Model
     participant C as Control / Coordinator
 
-    B->>W: signed session + NEXT
-    W->>W: token 검증 / State 복원
-    W->>H: 현재 턴 계획
-    H-->>W: Turn Task + Action × Target
+    B->>H: signed session + NEXT
+    H->>H: State 복원 + Turn 계획
+    H->>D: Turn Contract + Context
+    D-->>H: streaming draft
+    H-->>B: provisional draft
 
-    W->>D: Turn Contract + Context
-    D-->>W: streaming draft
-    W-->>B: provisional draft
-
-    W->>C: Compliance 검사
-    alt 검증 통과
-        C-->>W: compliant utterance
-    else Targeted Repair
-        C-->>W: typed failure + repair feedback
-        W->>D: 같은 Action × Target + feedback
-        D-->>W: regenerated draft
-    else Replan
-        C-->>W: typed failure + replan 요청
-        W->>H: 같은 Turn Task에서 후보 재선택
-        H-->>W: 새 Action × Target
-        W->>D: 새 Turn Contract + Context
-        D-->>W: regenerated draft
+    H->>C: Compliance 검사
+    alt 통과
+        C-->>H: compliant utterance
+    else 실패
+        C-->>H: typed failure
+        H->>H: Repair 또는 Replan
+        H->>D: 수정된 Turn Request
+        D-->>H: regenerated draft
     end
 
-    Note over W,C: 재생성 결과도 다시 Compliance를 거치며 최대 시도 안에 통과해야 다음 단계로 간다.
-
-    W->>C: State Patch 추출
-    C-->>W: typed Patch
-    W->>H: Patch 검증·적용
-    H-->>W: 다음 Debate State
-    W-->>B: commit event + 새 signed token
+    H->>C: State Patch 추출
+    C-->>H: typed Patch
+    H->>H: Patch 검증 + Debate State 갱신
+    H-->>B: commit event + 새 engine_token
 ```
 
 브라우저가 받는 `draft_reset / draft_delta`는 **확정 전 출력**이다. 검증을 통과한 발언에 대해서만 State Patch를 추출하고, Patch까지 검증·적용된 뒤 SSE `commit` event로 확정 결과를 보낸다. 실패하면 기존 Debate State와 committed transcript는 그대로 유지된다.
@@ -433,13 +420,7 @@ Patch는 현재 Debate State에 대해 검증한 뒤 적용한다. 추출 결과
 
 ```mermaid
 flowchart TD
-    A[Global Hard Rules] --> R[Model Request]
-    B[Grounding / Session Context] --> R
-    C[Stance · Persona · Phase] --> R
-    D[Turn Contract<br/>Task · Action · Target] --> R
-    E[Relevant State References] --> R
-    F[Recent Transcript / Audience Input] --> R
-    G[Surface / Format Rules] --> R
+    R[Model Request<br/><br/>Global Hard Rules<br/>Grounding / Session Context<br/>Stance · Persona · Phase<br/>Turn Contract — Task · Action · Target<br/>Relevant State References<br/>Recent Transcript / Audience Input<br/>Surface / Format Rules]
     R --> M[Debater Model]
     M --> O[Draft]
 ```
