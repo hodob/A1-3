@@ -262,12 +262,6 @@ Harness는 이번 과제에 쓸 수 있는 `Action × Target` 후보를 모두 �
 
 **Persona**는 토론자의 논증 성향이다. 논제를 확정할 때 주제 유형에 따라 A와 B에게 서로 다른 Persona가 하나씩 배정된다(예: 정의 논쟁은 Socratic과 Falsifier, 정책·가치 논쟁은 Principlist와 Pragmatist). Persona는 **어떤 행동을 허용할지 정하는 규칙이 아니라, 허용된 행동 중에서 무엇을 더 선호할지 정하는 성향**이다. 그래서 Persona가 특정 행동을 선호하더라도, 이미 해결된 질문이나 소진된 Action × Target을 다시 고르게 만들 수는 없다.
 
-Persona는 세 곳에서 반영된다.
-
-1. **배정**: 논제를 확정할 때 주제 유형에 따라 A와 B에 하나씩 정해진다.
-2. **행동 선택**: Persona마다 선호하는 행동 목록(아래 표)이 있어, 중요도와 효과가 같은 후보끼리 비교할 때 목록에 있는 행동을 고른다.
-3. **발언 생성**: 매 턴 모델에게 해야 할 것, 피해야 할 것, 말투가 담긴 짧은 성격 카드를 함께 보낸다. 그래서 같은 행동이라도 Persona마다 다른 방식으로 말한다. 예를 들어 같은 반박이라도 Pragmatist는 비용과 결과로, Principlist는 원칙과 기준으로 반박한다.
-
 | Persona | 화면 표시 | 선호하는 방향 | 말투 |
 |---|---|---|---|
 | Auditor | **근거 검증형** | 근거 요구, 추론 연결 검증, 일관성 확인 | 직설적, 짧게 |
@@ -276,6 +270,34 @@ Persona는 세 곳에서 반영된다.
 | Pragmatist | **현실 실용형** | 결과·비용·득실 비교, 반박과 방어 | 직설적, 보통 길이, 가벼운 유머 |
 | Principlist | **원칙 중심형** | 기준·전제·일관성 점검, 원칙에 근거한 이유 확장 | 격식 있게, 보통 길이 |
 | Synthesist | **조정 통합형** | 부분적 양보, 주장 수정, 비교와 핵심 정리 | 차분하게, 보통 길이 |
+
+**Persona가 반영되는 세 곳** — 3.1의 핫도그 토론으로 따라가 보면 다음과 같다.
+
+1. **배정 (토론 시작 전)**: "핫도그는 샌드위치인가?"는 정의 논쟁으로 분류되어 A에게 Socratic, B에게 Falsifier가 배정된다. 찬반 입장은 이와 따로 정해지므로, 특정 Persona가 늘 찬성이나 반대를 맡지는 않는다.
+2. **행동 선택 (매 턴 계획)**: 6번째 턴에 B에게 남은 후보는 `DEFEND_CLAIM`(자기 기준 방어)과 `REVISE_CLAIM`(기준 수정) 둘이고, 중요도와 효과로는 우열이 가려지지 않는다. Falsifier의 선호 목록에는 둘 다 없어, 기본 순서상 앞에 있는 `DEFEND_CLAIM`이 선택된다. 같은 상황에서 B가 Synthesist였다면 선호 목록에 있는 `REVISE_CLAIM`이 앞서서, 기준을 고치는 발언으로 바뀐다.
+3. **발언 생성 (매 턴 모델 호출)**: 모델에게는 매 턴 다음과 같은 성격 카드가 함께 전달된다. 실제로 B(Falsifier)에게 보내는 카드다.
+
+   ~~~text
+   DO: 반례와 경계 사례로 상대 일반화의 적용 범위를 시험한다.
+       반례가 해결되면 다른 핵심 쟁점으로 이동한다.
+   AVOID: 같은 반례를 근거 없이 반복하거나 가상 사례를 현실 사실처럼 말하지 않는다.
+   Style: 직접성 높음, 길이 짧음, 유머 중간.
+   ~~~
+
+   그래서 같은 `DEFEND_CLAIM`이라도 Falsifier는 짧고 직설적으로, 반례와 경계 사례를 들어 방어하는 쪽으로 유도된다. Principlist였다면 같은 방어를 원칙과 기준을 앞세워 격식 있게 하도록 유도된다.
+
+Persona는 무엇을 더 선호하고 어떻게 말할지에만 영향을 준다. 발언 검사(3.5)는 Persona가 아니라 정해진 Action과 입장을 지켰는지를 확인한다.
+
+**왜 이렇게 설계했나**: Persona의 구조는 아래 연구 결과를 근거로 정했다. 다만 Persona의 개수(6개), 각 Persona의 구성, 주제별 짝은 연구가 정해 준 값이 아니다. 최적 개수를 제시한 연구는 없어서, 아래 원칙에 맞춰 정한 설계 선택이다.
+
+| 설계 결정 | 근거 연구 | 연구 내용 |
+|---|---|---|
+| Persona는 똑똑하게 만드는 장치가 아니라 행동 차이를 만드는 장치로 쓴다 | Zheng et al. (2024) | 시스템 프롬프트에 "전문가" 같은 일반적인 역할을 넣어도 사실 문제의 정확도는 안정적으로 오르지 않았다 |
+| MBTI·Big Five 같은 성격 유형 대신 토론 행동(근거 요구, 반례, 양보 등)으로 정의한다 | Jiang et al. (2024), Chan et al. (2024) | AI는 성격 특성을 표현할 수 있고, 여러 AI가 토론할 때는 서로 다른 역할을 맡겨야 효과가 있었다 |
+| 성향(DO/AVOID)과 말투(Style)를 나눠 적는다 | Nagao et al. (2026), Tong & Zou (2026) | 성격·역할·말투는 서로 영향을 주고받으며, 나눠 설계하면 긴 대화에서 성격이 덜 흐트러졌다 |
+| 성격 카드를 첫 턴에만 주지 않고 매 턴 다시 보낸다 | Tong & Zou (2026), Baltaji et al. (2024) | 대화가 길어지거나 상대 AI와 대화할수록 Persona가 흐려지거나 상대에게 동조했다 |
+| 절대 양보하지 않는 Persona는 만들지 않는다 | Baltaji et al. (2024), Zhu et al. (2026) | 입장을 더 강하게 지키라고 지시하면 오히려 불안정해졌고, 근거에 따라 입장을 조정하는 것이 토론 품질의 핵심이었다 |
+| 같은 성향끼리가 아니라 서로 보완하는 두 Persona를 짝짓는다 | Zhu et al. (2026), Smit et al. (2024) | 처음 관점이 다양할 때 토론 효과가 컸고, AI 여러 개를 단순히 토론시키는 것만으로는 좋아지지 않았다 |
 
 <details>
 <summary><strong>15개 Strategic Action 전체 보기</strong></summary>
@@ -554,6 +576,12 @@ Vercel 같은 Serverless 환경은 요청이 끝나면 서버의 메모리가 �
 - Tseng, Yu-Min et al. (2024). *Two Tales of Persona in LLMs: A Survey of Role-Playing and Personalization*. Findings of EMNLP 2024. https://aclanthology.org/2024.findings-emnlp.969/
 - Jiang, Hang et al. (2024). *PersonaLLM: Investigating the Ability of Large Language Models to Express Personality Traits*. Findings of NAACL 2024. https://aclanthology.org/2024.findings-naacl.229/
 - Nagao, Moe et al. (2026). *Personality, Role, and Expressive Style in Large Language Models: An Interactionist Analysis*. arXiv preprint. https://arxiv.org/abs/2605.28037
+- Zheng, Mingqian et al. (2024). *When "A Helpful Assistant" Is Not Really Helpful: Personas in System Prompts Do Not Improve Performances of Large Language Models*. Findings of EMNLP 2024. https://aclanthology.org/2024.findings-emnlp.888/
+- Chan, Chi-Min et al. (2024). *ChatEval: Towards Better LLM-based Evaluators through Multi-Agent Debate*. ICLR 2024. https://proceedings.iclr.cc/paper_files/paper/2024/hash/25cc3adf8c85f7c70989cb8a97a691a7-Abstract-Conference.html
+- Tong, Jizhou & Sirui Zou (2026). *PersonaForge: Psychology-Grounded Dual-Process Architecture for Personality-Consistent Role-Playing Agents*. Findings of ACL 2026. https://aclanthology.org/2026.findings-acl.386/
+- Baltaji, Razan, Babak Hemmatian & Lav R. Varshney (2024). *Conformity, Confabulation, and Impersonation: Persona Inconstancy in Multi-Agent LLM Collaboration*. C3NLP 2024. https://aclanthology.org/2024.c3nlp-1.2/
+- Zhu, Xiaochen et al. (2026). *Demystifying Multi-Agent Debate: The Role of Confidence and Diversity*. Findings of ACL 2026. https://aclanthology.org/2026.findings-acl.1694/
+- Smit, Andries P. et al. (2024). *Should we be going MAD? A Look at Multi-Agent Debate Strategies for LLMs*. ICML 2024. https://proceedings.mlr.press/v235/smit24a.html
 - Roberts, Craige (2012). *Information Structure in Discourse: Towards an Integrated Formal Theory of Pragmatics*. Semantics & Pragmatics, 5. https://doi.org/10.3765/sp.5.6
 - Prakken, Henry (2005). *Coherence and Flexibility in Dialogue Games for Argumentation*. Journal of Logic and Computation. https://doi.org/10.1093/logcom/exi046
 - D’Agostino, Giulia, Chris Reed, and Daniele Puccinelli (2024). *Segmentation of Complex Question Turns for Argument Mining: A Corpus-based Study in the Financial Domain*. LREC-COLING 2024. https://aclanthology.org/2024.lrec-main.1265/
