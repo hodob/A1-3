@@ -230,21 +230,25 @@ flowchart TD
 
 ## 5. 토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가
 
-Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 현재 쟁점이나 질문 초점처럼 다시 계산할 수 있는 값은 State에 중복 저장하지 않고, 필요할 때 이 기록에서 `Derived Control View`로 계산한다.
+Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 시스템은 이 State에 토론에서 확정된 기록을 저장하고, **같은 논점인지, 어떤 질문이 아직 중요한지, 최근 턴이 실제 진전인지** 같은 제어 정보는 원본 State에서 필요할 때 계산한다.
 
-**그림 5. 토론 상태 개요 (Debate State View) — 확정 정보와 파생 제어 관점의 분리**
+즉, **저장해야 하는 사실과 그 사실을 해석해 얻는 제어 정보를 분리한다.**
+
+**그림 5. 확정된 토론 기록에서 지금 처리할 질문을 고르는 과정**
 
 ```mermaid
 flowchart TD
-    A[검증을 통과한 발언]
-    S[Debate State<br/>Propositions · Relations · Questions · Commitment Events]
-    V[Derived Control View — 매 턴 계산<br/>Semantic Facets · Question Groups · Progress]
-    Q[Immediate QUD<br/>지금 먼저 답해야 할 질문]
+    S[Debate State<br/>저장되는 확정 기록<br/>Propositions · Relations · Questions · Commitment Events]
+    V[Derived Control View<br/>매 턴 다시 계산<br/>Semantic Facets · Question Groups · Progress]
+    Q[Immediate QUD<br/>현재 우선 처리할 질문]
 
-    A -->|토론의 변화를 구조화해 반영| S
     S -->|build_control_view| V
-    V -->|immediate_qud| Q
+    V -->|우선순위 선택| Q
 ```
+
+파생 정보를 State에 함께 저장하면 원본이 바뀔 때 `Semantic Facets`, `Question Groups`, `Progress`, QUD도 함께 맞춰야 한다. 원본 State만 확정 상태로 두면 이런 값은 필요할 때 다시 계산할 수 있다.
+
+이 계산 결과는 다음 턴의 과제와 행동을 정하는 데 쓰이고, 8.1절의 모델 입력을 만들 때도 현재 `Turn Task`, `Action × Target`, QUD, 관련 facet을 기준으로 필요한 State reference만 고르는 데 사용된다. 따라서 **모델에 전체 State를 보내지 않는 것은 이 구조 자체의 정의라기보다, 현재 중요한 정보를 계산할 수 있기 때문에 가능한 활용 결과**다.
 
 ### 무엇을 State로 남기는가
 
@@ -269,9 +273,9 @@ REVISE  C12 → C19
 
 따라서 이후 턴은 최신 주장만 볼 수 있을 뿐 아니라, **무엇이 어떻게 바뀌었는지**도 추적할 수 있다. 양보와 철회도 같은 방식으로 Commitment Event에 남는다.
 
-### 저장된 State에서 현재 제어 관점을 계산한다
+### 파생 정보는 State에서 다시 계산한다
 
-`DebateState`가 직접 소유하는 값과 다음 턴을 위해 계산하는 값은 분리한다. `build_control_view(state)`는 원본 State를 읽어 `Semantic Facets`, `Question Groups`, `Progress`를 가진 `DebateControlView`를 만든다.
+`build_control_view(state)`는 원본 `DebateState`를 읽어 `Semantic Facets`, `Question Groups`, `Progress`를 가진 `DebateControlView`를 만든다. 이 View는 다음 턴을 판단하기 위한 계산 결과이며, 원본 State를 대신하는 별도 저장소가 아니다.
 
 새 Proposition ID가 생겼다고 곧바로 새로운 논점이나 진전으로 보지 않는다. `SAME_POINT`, `REFINEMENT`, `QUALIFICATION`처럼 기존 주장과 같은 논지에 속하는 경우에는 **Semantic Facet**으로 묶어 표현만 바뀐 반복을 새 진전으로 세지 않는다.
 
