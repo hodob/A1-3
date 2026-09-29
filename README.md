@@ -243,7 +243,7 @@ flowchart TD
 
     A -->|토론의 변화를 구조화해 반영| S
     S -->|build_control_view| V
-    V -->|immediate_qud(view, state, speaker)| Q
+    V -->|immediate_qud| Q
 ```
 
 ### 무엇을 State로 남기는가
@@ -275,7 +275,7 @@ REVISE  C12 → C19
 
 새 Proposition ID가 생겼다고 곧바로 새로운 논점이나 진전으로 보지 않는다. `SAME_POINT`, `REFINEMENT`, `QUALIFICATION`처럼 기존 주장과 같은 논지에 속하는 경우에는 **Semantic Facet**으로 묶어 표현만 바뀐 반복을 새 진전으로 세지 않는다.
 
-질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶는다. **Immediate QUD (Question Under Discussion)** 는 State에 저장된 별도 객체가 아니라, 이 Control View와 현재 speaker를 기준으로 그 순간 먼저 처리할 질문을 선택한 결과다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
+질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶는다. **Immediate QUD (Question Under Discussion)** 는 State에 저장된 별도 객체가 아니라, 이 Control View와 원본 State, 현재 speaker를 기준으로 그 순간 먼저 처리할 질문을 선택한 결과다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
 
 이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
 
