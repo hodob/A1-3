@@ -9,14 +9,14 @@
 
 두 토론자는 **A**와 **B**로 부르며, 논제에 대한 양쪽 입장을 하나씩 맡는다. 화면에 보이는 양측의 이름은 주제를 분석할 때 어느 쪽에도 치우치지 않게 짓는다.
 
-이 설계의 핵심은 **이번 턴에 무엇을 할지는 Harness가 정하고, 모델은 그것을 문장으로 옮기기만 한다**는 점이다. 이 문서에서 자주 쓰는 용어는 다음과 같다.
+이 설계의 핵심은 **이번 턴에 무엇을 할지는 Harness가 정하고, 모델은 그것을 문장으로 옮기기만 한다**는 점이다. 모델이 쓴 발언은 Harness의 검증을 통과해야만 토론 기록에 확정된다.
+
+이 문서에서 자주 쓰는 용어는 다음과 같다.
 
 - **Harness**: 사이의 서버 코드. 지금까지의 토론을 정리한 **Debate State**를 읽고 이번 턴에 할 일을 정한 뒤, 생성된 발언을 검증한다.
 - **Debater Model**: A와 B의 발언 문장을 실제로 만드는 외부 AI 모델.
 - **Control Model**: 주제 분석, 발언 검증, 토론 정리처럼 문장이 아닌 구조화된 결과를 만드는 외부 AI 모델.
 - **Provider**: 위 모델들을 호출하는 외부 AI API.
-
-검증을 통과한 발언만 토론 기록과 Debate State에 확정된다.
 
 > 동작 원리가 궁금하면 1~4장을, 직접 실행해 보려면 [5장](#5-실행과-배포)을 먼저 보면 된다. 한 턴이 실제로 어떻게 정해지는지는 [3.1의 예시](#31-예시-핫도그-토론의-6번째-턴)에서 볼 수 있다.
 
@@ -107,6 +107,18 @@ flowchart TD
 
 사용자는 Opening과 Crossfire를 지켜보다가, 원하면 A와 B에게 같은 질문을 하나 던질 수 있다. 토론이 끝나면 AI가 승자를 판정하지 않는다. 사용자는 Neutral Summary를 읽고 A / 아직 모르겠다 / B 중 하나를 직접 고른다. 정리 화면과 마지막 화면에는 각 토론자의 Persona와 실제로 발언을 만든 모델 이름이 함께 표시된다. 토론 내용과 선택은 서버에 저장하지 않는다.
 
+실제 토론 화면에서는 발언이 다음처럼 이어진다. "대학은 출석을 의무화해야 하는가?"를 배포 환경에서 돌린 기록 중 2·3번째 발언의 앞부분이다.
+
+> **B · 의무화 반대** — 발언 2 · 첫 입장
+>
+> 출석 의무화는 학생의 자율성 제약이 실제 학습 성과로 이어지지 않는다는 점에서 정당성이 약합니다. …
+>
+> **A · 의무화 찬성** — 발언 3 · 주고받기
+>
+> ↖ B · 발언 2의 결론은 "자율성 제약이 성과로 이어지지 않는다"는 점을 사실상 의무화 전반의 정당성 약화로 바로 연결하고 있는데, 그 추론은 너무 강합니다. …
+
+`↖ B · 발언 2`는 A가 겨냥한 앞 발언을 가리키는 참조 표시다. A는 새 주장을 늘어놓는 대신 B의 추론 한 곳을 골라 공격했다. 이 선택은 모델이 아니라 Harness가 내렸다. Harness가 정한 이번 턴의 과제는 "상대의 핵심 이유 하나를 검증하기"였고, 행동은 "근거에서 결론으로 가는 추론이 충분한지 문제 삼기"(`CHALLENGE_INFERENCE`)였다. 이런 결정이 어떻게 나오는지는 [3장](#3-토론이-다음-발언을-만드는-방법)에서 설명한다.
+
 단계별 역할과 조기 전환 규칙은 [4. 토론 진행 규칙](#4-토론-진행-규칙)에서 설명한다.
 
 ---
@@ -145,7 +157,7 @@ flowchart TD
 |---|---|
 | **Browser** | 주제 입력, 토론 관전, 사용자 질문, 최종 선택, 확정 전 초안 표시 |
 | **Web Service** | 제품 흐름과 세션을 관리하고 Provider 호출을 조율 |
-| **Debate Harness** | 현재 토론을 읽어 이번 턴의 과제·Action·Target을 정하고 결과를 검증 |
+| **Debate Harness** (이하 Harness) | 현재 토론을 읽어 이번 턴의 과제·Action·Target을 정하고 결과를 검증 |
 | **Debater Models** | Harness가 정한 조건에 맞는 실제 발언을 생성 |
 | **Control Model** | 주제 분석, State Patch 추출, 의미 검증, Neutral Summary 같은 구조화 작업 |
 
@@ -215,8 +227,6 @@ Debate State에는 다음 턴에도 유지해야 할 사실만 저장한다. 어
 
 반면 "두 주장이 사실상 같은 논점인가?", "최근 턴에서 토론이 실제로 진전됐는가?", "지금 가장 먼저 답해야 할 질문은 무엇인가?"처럼 저장된 State로 계산할 수 있는 정보는 저장하지 않고 매 턴 다시 계산한다. 이 계산 결과를 **Control View**라고 부른다. Harness는 Control View로 `Turn Task`를 만들고, 그 과제를 수행할 수 있는 `Action × Target` 후보 중 하나를 고른다.
 
-Debater Model은 전략을 다시 고르지 않는다. **이미 정해진 Turn Task와 Action × Target을 자연스러운 발언으로 옮기는 역할**만 맡는다.
-
 <details>
 <summary><strong>Turn Task 종류 보기</strong></summary>
 
@@ -242,8 +252,8 @@ State의 주요 구조는 다음과 같다.
 |---|---|
 | **Proposition** | 실제로 제시된 주장 |
 | **Relation** | 주장 사이의 지지·공격·모순·한정 관계 |
-| **Question** | 제기된 질문과 `OPEN / RESOLVED` 상태 |
-| **Commitment Event** | 주장·양보·철회·수정 같은 입장 변화 |
+| **Question** | 제기된 질문과 `OPEN / RESOLVED` 상태. 한 발언에 여러 질문이 섞여 있어도 문장 단위로 나눠 빠뜨리지 않게 확인한다(D'Agostino et al., 2024) |
+| **Commitment Event** | 주장·양보·철회·수정 같은 입장 변화. 대화 게임 이론의 commitment 개념을 따랐다(Prakken, 2005) |
 
 주장을 수정해도 기존 Proposition을 덮어쓰지 않고, 새 Proposition과 수정 관계를 함께 남긴다.
 
@@ -266,7 +276,7 @@ Harness는 현재 Turn Task에서 가능한 `Action × Target` 후보를 만든 
 - **소진**: 같은 발언자가 같은 `Action × Target`을 이미 한 번 사용한 상태. 같은 공격을 되풀이하지 않도록 기본적으로 다시 고르지 않는다. 단, 근거가 아직 약한 주장에 대한 근거 요구나, 상대가 부분적으로만 답했거나 피한 질문을 다시 묻는 것은 계속 열어 둔다.
 - **해결**: 그 행동의 목적이 이미 이뤄진 상태. 예를 들어 근거가 충분히 제시된 주장에 대한 근거 요구나, 이미 직접 답이 나온 질문에 대한 재질문은 해결된 것으로 보고 고르지 않는다.
 
-**Persona**는 토론자의 논증 성향이다. 논제를 확정할 때 주제 유형에 따라 A와 B에게 서로 다른 Persona가 하나씩 배정된다(예: 정의 논쟁은 Socratic과 Falsifier, 정책·가치 논쟁은 Principlist와 Pragmatist). Persona는 **어떤 행동을 허용할지 정하는 규칙이 아니라, 허용된 행동 중에서 무엇을 더 선호할지 정하는 성향**이다. 그래서 Persona가 특정 행동을 선호하더라도, 이미 해결된 질문이나 소진된 Action × Target을 다시 고르게 만들 수는 없다.
+**Persona**는 토론자의 논증 성향이다. 논제를 확정할 때 주제 유형에 따라 A와 B에게 서로 다른 Persona가 하나씩 배정된다(예: 정의 논쟁은 Socratic과 Falsifier, 정책·가치 논쟁은 Principlist와 Pragmatist). Persona는 **어떤 행동을 허용할지 정하는 규칙이 아니라, 허용된 행동 중에서 무엇을 더 선호할지 정하는 성향**이다. 그래서 Persona가 특정 행동을 선호하더라도, 이미 해결된 질문이나 소진된 Action × Target을 다시 고르게 만들 수는 없다. 말투나 캐릭터를 연기시키는 대신 논증 행동의 선호로 Persona를 다룬 것은 LLM Persona 연구(Tseng et al., 2024; Jiang et al., 2024; Nagao et al., 2026)를 참고했다.
 
 | Persona | 화면 표시 | 선호하는 방향 |
 |---|---|---|
@@ -304,10 +314,10 @@ Harness는 현재 Turn Task에서 가능한 `Action × Target` 후보를 만든 
 
 ### 3.4 모델에는 이번 턴에 필요한 Context만 보낸다
 
-State를 구조화했다고 해서 매 턴 전체 State를 Debater Model에 넣지는 않는다. 다음 항목을 중심으로 이번 턴의 Context를 고른다.
+State를 구조화했다고 해서 매 턴 전체 State를 Debater Model에 넣지는 않는다. 이번 턴에 꼭 필요한 정보(이 문서에서는 **Relevant Context**라고 부른다)만 골라 넘긴다. 고르는 기준은 다음과 같다.
 
 - 현재 `Turn Task`와 `Action × Target`이 가리키는 항목
-- **QUD**(Question Under Discussion, 지금 가장 먼저 다룰 열린 질문)가 겨냥하는 주장
+- **QUD**(Question Under Discussion, 지금 가장 먼저 다룰 열린 질문. Roberts, 2012)가 겨냥하는 주장
 - 그 주장과 같은 논점으로 묶인 주장(**Semantic Facet**)의 대표형과 최신형
 - 최근 발언에서 실제로 참조된 State 항목
 
@@ -334,7 +344,7 @@ flowchart TD
     P[Turn Plan<br/>Task · Action · Target<br/>Context]
     G[Debater Model<br/>발언 생성]
     D[Streaming Draft<br/>확정 전 초안]
-    V{Compliance 검사}
+    V{규칙 준수 검사}
     R[Repair 또는 Replan]
     S[State Patch<br/>추출 · 검증 · 적용]
     C[Commit<br/>발언 + 새 Debate State 확정]
@@ -347,11 +357,22 @@ flowchart TD
     V -->|3번 모두 실패| X[확정하지 않음<br/>기존 기록 유지]
     V -->|통과| S
     S -->|성공| C
+    S -->|2번 모두 실패| X
 ~~~
 
-화면에 스트리밍되는 초안은 아직 확정된 발언이 아니다. 먼저 발언이 배정된 입장(Assigned Stance), Turn Task, Action × Target, 출력 형식, State 참조 규칙을 지켰는지 검사한다.
+화면에 스트리밍되는 초안은 아직 확정된 발언이 아니다. Harness는 먼저 초안이 규칙을 지켰는지 검사한다(코드에서는 Compliance 검사라고 부른다). 검사 항목은 다음과 같다.
 
-검사에 실패하면 같은 계획을 유지한 채 문제 부분만 고치는 `Targeted Repair`를 시도하고, 그래도 안 되면 Harness가 같은 Turn Task 안에서 다른 Action × Target을 골라 `Replan`한다. 발언 생성은 Repair와 Replan을 포함해 한 턴에 최대 3번까지 시도한다.
+- 배정된 입장(Assigned Stance)을 유지했는가
+- 이번 턴의 과제(Turn Task)를 수행했는가
+- 고른 행동을 고른 대상에 실제로 했는가(Action × Target)
+- 출력 형식과 State 참조 규칙을 지켰는가 (예: Final Focus는 최대 2문장)
+
+형식 검사는 모델 호출 없이 코드로 먼저 하고, 통과하면 Control Model이 나머지 의미를 판단한다.
+
+검사에 실패하면 두 가지 방법으로 다시 시도한다. 발언 생성은 둘을 합쳐 한 턴에 최대 3번까지 한다.
+
+- **Targeted Repair(부분 수정)**: 계획은 그대로 두고, 무엇이 왜 틀렸는지 구조화된 피드백과 함께 모델에게 그 부분만 고쳐 쓰게 한다(Ray & Goyal, 2026).
+- **Replan(재계획)**: 수정으로도 안 되면 Harness가 같은 Turn Task 안에서 다른 Action × Target을 골라 새로 쓰게 한다.
 
 검사를 통과하면 발언에서 State 변화만 타입이 정해진 Patch로 추출한다. 추출된 Patch가 형식 검사를 통과하지 못하면 한 번 더 추출한다(최대 2번). Patch까지 정상적으로 적용되어야 발언과 새 State가 함께 확정된다.
 
@@ -389,7 +410,7 @@ Browser가 받는 `draft_reset / draft_delta` 이벤트는 확정 전 초안이�
 
 ## 4. 토론 진행 규칙
 
-토론 단계는 Public Forum Debate의 Constructive–Crossfire–Rebuttal–Final Focus 구성을 참고해, 관전형 서비스에 맞게 단순화했다.
+토론 단계는 Public Forum Debate의 Constructive–Crossfire–Rebuttal–Final Focus 구성(ACTAA)을 참고해, 관전형 서비스에 맞게 단순화했다.
 
 | 단계 | 화면 표시 | 턴 수 | 역할 |
 |---|---|---|---|
@@ -491,7 +512,19 @@ GitHub Actions도 push와 pull request마다 Python 3.12에서 unittest와 JavaS
 | `provider.url` | OpenAI 호환 Provider 주소. `/v1` 또는 `/chat/completions`로 끝나야 한다. |
 | `provider.model` | Control Model. 주제 분석, 의미 검증, State Patch 추출, Neutral Summary를 맡는다. |
 | `provider.debater_models` | Debater Model 풀. 회사와 모델 ID가 서로 달라야 하며 2개 이상이어야 한다. 토론을 시작할 때 이 중 두 개를 무작위로 뽑아 A/B에 배정하고, 서명된 세션에 고정한다. |
-| `debug_mode` | `true`면 턴마다 진단 정보를 SSE `debug` 이벤트로 보낸다. 사용자가 선택을 마친 화면에 **디버그 로그 JSON 받기** 버튼이 생기며, 턴별 계획(Turn Task·Action·Target), 초안과 재시도 이유, 검사 결과, State Patch, 토큰 사용량을 내려받을 수 있다. 로그는 브라우저 메모리에만 있고 API 키·서명 키·`engine_token`은 포함하지 않는다. 기본값은 `false`다. |
+| `debug_mode` | 진단 로그를 켠다. 기본값은 `false`다. 아래 설명 참고. |
+
+`config.json`은 배포 파일에 포함되므로, 값을 바꾸면 커밋하고 다시 배포해야 반영된다.
+
+**디버그 모드** — `debug_mode`를 `true`로 두면 서버가 턴마다 진단 정보를 SSE `debug` 이벤트로 보낸다. 사용자가 선택을 마친 화면에 **디버그 로그 JSON 받기** 버튼이 생기고, 다음 내용을 내려받을 수 있다.
+
+- 턴별 계획: Turn Task, Action, Target
+- 초안과 재시도 이유
+- 규칙 준수 검사 결과
+- State Patch
+- 호출별 토큰 사용량
+
+로그는 브라우저 메모리에만 있다. API 키, 서명 키, `engine_token`은 포함하지 않는다. 배포 환경에서 켜면 모든 방문자에게 버튼이 보이므로, 점검이 끝나면 다시 끈다.
 
 **환경 변수** — 서버에서만 쓰는 비밀값. Vercel에서는 Project Settings의 Environment Variables에 등록한다. 로컬에서 실제 Provider를 호출하는 `etc/tools/` 진단 도구를 쓸 때는 [.env.example](.env.example)을 복사해 `.env`를 만든다. Mock 개발 서버만 쓸 때는 필요 없다.
 
@@ -530,10 +563,18 @@ GitHub Actions도 push와 pull request마다 Python 3.12에서 unittest와 JavaS
 
 ### 5.7 Vercel 배포
 
+처음 배포할 때는 다음 순서를 따른다.
+
+1. Vercel에서 이 GitHub 저장소를 Import한다. `vercel.json`이 설정을 담고 있으므로 Framework Preset은 따로 고르지 않는다.
+2. Project Settings → Environment Variables에 `DEBATER_API_KEY`와 `SESSION_SECRET`을 등록한다.
+3. 배포가 끝나면 `GET /api/health`가 `"status": "ready"`를 돌려주는지 확인한다.
+
+배포 구조는 다음과 같다.
+
 - `public/`은 정적 Frontend로 제공되고, `api/*.py`는 Python Serverless Function으로 실행된다.
 - 하이픈이 들어간 공개 API 경로(`/api/debate-step` 등)는 `vercel.json`의 rewrite로 해당 Python 파일에 연결된다.
 - GitHub 저장소와 연결된 Vercel 프로젝트는 `main` 브랜치가 바뀔 때마다 배포된다.
-- 배포 직후에는 `GET /api/health`로 Function과 Live 설정이 정상인지 확인한다. 이 요청은 Provider를 호출하지 않는다.
+- `GET /api/health`는 Function과 Live 설정만 확인하며 Provider를 호출하지 않는다. 응답의 `version`으로 어떤 커밋이 배포됐는지 알 수 있다.
 - 화면 하단의 짧은 버전 표시는 Vercel이 `VERCEL_GIT_COMMIT_SHA`를 제공할 때만 나타난다.
 
 ---
