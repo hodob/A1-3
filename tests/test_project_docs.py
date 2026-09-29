@@ -3,6 +3,7 @@ import json
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+LEGACY_DOCS = ROOT / "docs-legacy"
 
 
 class ProjectDocumentationTests(unittest.TestCase):
@@ -23,15 +24,15 @@ class ProjectDocumentationTests(unittest.TestCase):
             self.assertIn(phrase, text)
 
     def test_service_plan_and_architecture_docs_exist(self):
-        plan = (ROOT / "docs" / "SERVICE_PLAN.md").read_text(encoding="utf-8")
-        arch = (ROOT / "docs" / "WEB_MVP_ARCHITECTURE.md").read_text(encoding="utf-8")
+        plan = (LEGACY_DOCS / "SERVICE_PLAN.md").read_text(encoding="utf-8")
+        arch = (LEGACY_DOCS / "WEB_MVP_ARCHITECTURE.md").read_text(encoding="utf-8")
         for phrase in ("Home", "Debate", "How It Works", "Audience Question", "Neutral Summary", "타겟 사용자", "입력", "출력", "실패 처리"):
             self.assertIn(phrase, plan)
         for phrase in ("Browser", "Python", "Environment Variable", "Loading", "Failure"):
             self.assertIn(phrase, arch)
 
     def test_assignment_defense_qa_covers_evaluation_topics(self):
-        text = (ROOT / "docs" / "DEFENSE_QA.md").read_text(encoding="utf-8")
+        text = (LEGACY_DOCS / "DEFENSE_QA.md").read_text(encoding="utf-8")
         for phrase in ("HTML", "CSS", "JavaScript", "fetch", "환경 변수", "응답 지연", "API 키 유출", "프레임워크"):
             self.assertIn(phrase, text)
 

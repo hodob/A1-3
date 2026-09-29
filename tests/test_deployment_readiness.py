@@ -50,12 +50,12 @@ class DeploymentReadinessTests(unittest.TestCase):
 
     def test_vercelignore_excludes_non_runtime_artifacts(self):
         text = (ROOT / ".vercelignore").read_text(encoding="utf-8")
-        for entry in (".env", ".venv/", "tests/", "etc/", "docs/", "__pycache__/", "*.pyc"):
+        for entry in (".env", ".venv/", "tests/", "etc/", "docs/", "docs-legacy/", "__pycache__/", "*.pyc"):
             self.assertIn(entry, text)
 
     def test_final_deployment_and_demo_docs_exist(self):
-        deploy = (ROOT / "docs" / "DEPLOYMENT_CHECKLIST.md").read_text(encoding="utf-8")
-        demo = (ROOT / "docs" / "DEMO_RUNBOOK.md").read_text(encoding="utf-8")
+        deploy = (ROOT / "docs-legacy" / "DEPLOYMENT_CHECKLIST.md").read_text(encoding="utf-8")
+        demo = (ROOT / "docs-legacy" / "DEMO_RUNBOOK.md").read_text(encoding="utf-8")
         for phrase in ("config.json", "DEBATER_API_KEY", "SESSION_SECRET", "Vercel"):
             self.assertIn(phrase, deploy)
         for phrase in ("150만", "Provider", "Audience Question", "Neutral Summary"):

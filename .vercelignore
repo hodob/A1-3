@@ -5,6 +5,7 @@
 tests/
 etc/
 docs/
+docs-legacy/
 __pycache__/
 *.pyc
 *.pyo
