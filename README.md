@@ -89,7 +89,7 @@ Motion은 토론을 시작하기 전에 사용자가 한 번 수정할 수 있�
 
 ### 1.2 토론이 시작된 뒤
 
-단계 이름은 미국 고교 토론 대회 형식인 Public Forum에서 가져왔다. **Opening**은 입론, **Crossfire**는 서로 묻고 답하는 교차 질의, **Rebuttal**은 반박, **Final Focus**는 마무리 발언이다. A와 B는 번갈아 발언하며, 토론 전체는 최대 12턴이다(사용자 질문에 대한 답변 2턴은 별도).
+단계 이름은 미국 고교 토론 대회 형식인 Public Forum에서 가져왔다. **Opening**은 입론, **Crossfire**는 서로 묻고 답하는 교차 질의, **Rebuttal**은 반박, **Final Focus**는 마무리 발언이다. 화면에는 각각 "첫 입장", "주고받기", "쟁점 되짚기", "마지막 한마디"로 표시된다. A와 B는 번갈아 발언하며, 토론 전체는 최대 12턴이다(사용자 질문에 대한 답변 2턴은 별도).
 
 **그림 2. 토론 진행 흐름 — 탐색에서 최종 판단까지**
 
@@ -105,7 +105,7 @@ flowchart TD
     S --> U[사용자 선택]
 ~~~
 
-사용자는 Opening과 Crossfire를 지켜보다가, 원하면 A와 B에게 같은 질문을 하나 던질 수 있다. 토론이 끝나면 AI가 승자를 판정하지 않는다. 사용자는 Neutral Summary를 읽고 A / 모르겠다 / B 중 하나를 직접 고른다.
+사용자는 Opening과 Crossfire를 지켜보다가, 원하면 A와 B에게 같은 질문을 하나 던질 수 있다. 토론이 끝나면 AI가 승자를 판정하지 않는다. 사용자는 Neutral Summary를 읽고 A / 아직 모르겠다 / B 중 하나를 직접 고른다. 정리 화면과 마지막 화면에는 각 토론자의 Persona와 실제로 발언을 만든 모델 이름이 함께 표시된다. 토론 내용과 선택은 서버에 저장하지 않는다.
 
 단계별 역할과 조기 전환 규칙은 [4. 토론 진행 규칙](#4-토론-진행-규칙)에서 설명한다.
 
@@ -216,6 +216,22 @@ Debate State에는 다음 턴에도 유지해야 할 사실만 저장한다. 어
 반면 "두 주장이 사실상 같은 논점인가?", "최근 턴에서 토론이 실제로 진전됐는가?", "지금 가장 먼저 답해야 할 질문은 무엇인가?"처럼 저장된 State로 계산할 수 있는 정보는 저장하지 않고 매 턴 다시 계산한다. 이 계산 결과를 **Control View**라고 부른다. Harness는 Control View로 `Turn Task`를 만들고, 그 과제를 수행할 수 있는 `Action × Target` 후보 중 하나를 고른다.
 
 Debater Model은 전략을 다시 고르지 않는다. **이미 정해진 Turn Task와 Action × Target을 자연스러운 발언으로 옮기는 역할**만 맡는다.
+
+<details>
+<summary><strong>Turn Task 종류 보기</strong></summary>
+
+| Turn Task | 이번 턴의 과제 | 주로 쓰이는 때 |
+|---|---|---|
+| `INTRODUCE_UNCOVERED_FACET` | 입장을 지지하는 핵심 이유 1~2개를 처음 제시한다. | Opening |
+| `ANSWER_OPEN_QUESTION` | 자기에게 온 열린 질문에 먼저 직접 답한다. | 답하지 않은 질문이 있을 때 |
+| `TEST_UNRESOLVED_REASON` | 아직 해결되지 않은 상대의 핵심 이유 하나를 검증하거나 범위를 좁힌다. | Crossfire |
+| `ADDRESS_COUNTEREXAMPLE` | 상대가 새로 제시한 반례를 받아들이거나, 한정하거나, 반박한다. | 반례가 나왔을 때 |
+| `ADDRESS_AUDIENCE` | 사용자 질문에 직접 답한다. | 사용자 질문 단계 |
+| `WEIGH_COMPETING_REASONS` | 양측 핵심 이유를 같은 기준에서 비교해 남은 충돌을 좁힌다. | Rebuttal |
+| `CRYSTALLIZE` | 이미 다룬 핵심 쟁점과 이유만 압축한다. | Final Focus |
+| `NO_VALUABLE_MOVE` | 더 다룰 가치가 있는 과제가 없다. 발언을 만들지 않고 다음 단계로 넘어간다. | Crossfire·Rebuttal 조기 전환 |
+
+</details>
 
 <details>
 <summary><strong>Debate State와 파생 계산의 세부 구조 보기</strong></summary>
@@ -337,9 +353,16 @@ flowchart TD
 
 검사에 실패하면 같은 계획을 유지한 채 문제 부분만 고치는 `Targeted Repair`를 시도하고, 그래도 안 되면 Harness가 같은 Turn Task 안에서 다른 Action × Target을 골라 `Replan`한다. 발언 생성은 Repair와 Replan을 포함해 한 턴에 최대 3번까지 시도한다.
 
-검사를 통과하면 발언에서 State 변화만 타입이 정해진 Patch로 추출한다. Patch까지 정상적으로 적용되어야 발언과 새 State가 함께 확정된다.
+검사를 통과하면 발언에서 State 변화만 타입이 정해진 Patch로 추출한다. 추출된 Patch가 형식 검사를 통과하지 못하면 한 번 더 추출한다(최대 2번). Patch까지 정상적으로 적용되어야 발언과 새 State가 함께 확정된다.
 
 끝까지 실패하면 그 턴은 확정되지 않고, 기존 발언 기록과 Debate State도 바뀌지 않는다. 화면에는 "다음 발언을 이어가지 못했어요"라는 안내와 **이 발언 다시 준비하기** 버튼이 나타나며, 사용자는 여기까지의 토론을 잃지 않고 같은 턴을 다시 시도할 수 있다.
+
+> **실제 실행에서 본 예** — 배포 환경에서 "대학은 출석을 의무화해야 하는가?"로 14턴을 돌렸을 때, 2개 턴이 첫 초안에서 거부되고 `Targeted Repair` 한 번으로 통과했다.
+>
+> - 10번째 턴(B, 의무화 반대): 사용자 질문에 답하면서 "출석 의무화를 유지하되…"라고 써서 자기 입장을 뒤집었다. `STANCE_REVERSAL`로 거부됐고, 재작성본은 반대 입장을 유지했다. 거부된 초안도 스트리밍 중에는 화면에 잠시 보였는데, 초안을 확정 전으로 표시하는 이유가 바로 이것이다.
+> - 14번째 턴(B, Final Focus): 세 문장을 써서 `FINAL_FOCUS_LENGTH`(최대 2문장)로 거부됐다.
+>
+> 5번째 턴에서는 첫 State Patch가 형식 검사에 걸려 한 번 더 추출했다.
 
 <details>
 <summary><strong>State Patch와 검증 세부 항목 보기</strong></summary>
@@ -368,15 +391,15 @@ Browser가 받는 `draft_reset / draft_delta` 이벤트는 확정 전 초안이�
 
 토론 단계는 Public Forum Debate의 Constructive–Crossfire–Rebuttal–Final Focus 구성을 참고해, 관전형 서비스에 맞게 단순화했다.
 
-| 단계 | 턴 수 | 역할 |
-|---|---|---|
-| **Opening** | 2 (A → B) | 각 토론자가 입장과 핵심 이유를 밝히고 첫 충돌 지점을 만든다. |
-| **Crossfire** | 최대 6 | 질문·반례·검증으로 상대 주장을 시험하며 실제 쟁점을 좁힌다. |
-| **사용자 질문** | 0 또는 2 | 사용자가 원하면 A와 B에게 같은 질문을 던지고, 둘 다 답한다. 건너뛸 수 있다. |
-| **Rebuttal** | 최대 2 | Crossfire에서 드러난 핵심 충돌을 직접 반박·방어하고, 필요하면 부분적으로 양보하거나 주장을 수정한다. |
-| **Final Focus** | 2 | 새 논점을 더하지 않고, 끝까지 남길 이유를 짧게 압축한다. |
-| **Neutral Summary** | — | 승자를 정하지 않고 핵심 충돌, 양측의 강한 논점, 합의한 부분, 남은 쟁점을 정리한다. |
-| **사용자 선택** | — | 사용자가 Summary를 읽고 A / 모르겠다 / B 중 하나를 직접 고른다. |
+| 단계 | 화면 표시 | 턴 수 | 역할 |
+|---|---|---|---|
+| **Opening** | 첫 입장 | 2 (A → B) | 각 토론자가 입장과 핵심 이유를 밝히고 첫 충돌 지점을 만든다. |
+| **Crossfire** | 주고받기 | 최대 6 | 질문·반례·검증으로 상대 주장을 시험하며 실제 쟁점을 좁힌다. |
+| **사용자 질문** | 함께 답하기 | 0 또는 2 | 사용자가 원하면 A와 B에게 같은 질문을 던지고, 둘 다 답한다. 건너뛸 수 있다. |
+| **Rebuttal** | 쟁점 되짚기 | 최대 2 | Crossfire에서 드러난 핵심 충돌을 직접 반박·방어하고, 필요하면 부분적으로 양보하거나 주장을 수정한다. |
+| **Final Focus** | 마지막 한마디 | 2 | 새 논점을 더하지 않고, 끝까지 남길 이유를 최대 2문장으로 압축한다. |
+| **Neutral Summary** | 토론 정리 | — | 승자를 정하지 않고 핵심 충돌, 양측의 강한 논점, 합의한 부분, 남은 쟁점을 정리한다. |
+| **사용자 선택** | 내 생각 고르기 | — | 사용자가 Summary를 읽고 A / 아직 모르겠다 / B 중 하나를 직접 고른다. |
 
 ### 4.1 Crossfire와 Rebuttal의 턴 수는 목표가 아니라 상한이다
 
@@ -468,7 +491,7 @@ GitHub Actions도 push와 pull request마다 Python 3.12에서 unittest와 JavaS
 | `provider.url` | OpenAI 호환 Provider 주소. `/v1` 또는 `/chat/completions`로 끝나야 한다. |
 | `provider.model` | Control Model. 주제 분석, 의미 검증, State Patch 추출, Neutral Summary를 맡는다. |
 | `provider.debater_models` | Debater Model 풀. 회사와 모델 ID가 서로 달라야 하며 2개 이상이어야 한다. 토론을 시작할 때 이 중 두 개를 무작위로 뽑아 A/B에 배정하고, 서명된 세션에 고정한다. |
-| `debug_mode` | `true`면 토론 진단 로그를 SSE `debug` 이벤트로 보내고, 토론이 끝난 화면에서 JSON으로 내려받을 수 있다. 기본값은 `false`다. |
+| `debug_mode` | `true`면 턴마다 진단 정보를 SSE `debug` 이벤트로 보낸다. 사용자가 선택을 마친 화면에 **디버그 로그 JSON 받기** 버튼이 생기며, 턴별 계획(Turn Task·Action·Target), 초안과 재시도 이유, 검사 결과, State Patch, 토큰 사용량을 내려받을 수 있다. 로그는 브라우저 메모리에만 있고 API 키·서명 키·`engine_token`은 포함하지 않는다. 기본값은 `false`다. |
 
 **환경 변수** — 서버에서만 쓰는 비밀값. Vercel에서는 Project Settings의 Environment Variables에 등록한다. 로컬에서 실제 Provider를 호출하는 `etc/tools/` 진단 도구를 쓸 때는 [.env.example](.env.example)을 복사해 `.env`를 만든다. Mock 개발 서버만 쓸 때는 필요 없다.
 
@@ -490,7 +513,20 @@ GitHub Actions도 push와 pull request마다 Python 3.12에서 unittest와 JavaS
 
 ### 5.6 호출량과 시간
 
-한 턴마다 Debater Model 발언 생성(재시도 포함 최대 3번)과 Control Model 검증·State Patch 추출 호출이 일어난다. Provider 호출 하나의 제한 시간은 90초, Vercel Function 하나의 최대 실행 시간은 300초다. 참고로 단일 모델(`gpt-5.4`)을 쓰던 시기에 주제 분석부터 토론 3턴, 요약까지 한 번 돌린 Live 점검에서는 Provider 호출 11번, 12,653 토큰이 들었다([docs-legacy/VALIDATION_EVIDENCE.md](docs-legacy/VALIDATION_EVIDENCE.md)). 여러 모델을 섞어 쓰는 현재 구성에서는 다시 측정하지 않았다.
+한 턴은 Debater Model 발언 생성, Control Model 검사, State Patch 추출 호출로 이뤄지며, 실패하면 각 단계를 다시 시도한다. Provider 호출 하나의 제한 시간은 90초, Vercel Function 하나의 최대 실행 시간은 300초다.
+
+2026-09-29 배포본에서 디버그 모드를 켜고 한 번 실측한 값이다(주제 "대학은 출석을 의무화해야 하는가?", 사용자 질문 1개 포함 14턴, A `gpt-5.4-mini` · B `claude-haiku-4` · Control `gpt-5.4`).
+
+| 항목 | 값 |
+|---|---|
+| 한 턴 소요 시간 | 약 10~31초 |
+| 토론 전체 | 약 5분 30초 (화면 조작 시간 포함) |
+| 발언 생성 | 16번 (재시도 2번 포함), 67,031 토큰 |
+| 발언 검사 | 16번 (1번은 형식 위반으로 모델 호출 없이 거부), 20,502 토큰 |
+| State Patch 추출 | 15번 (재시도 1번 포함), 55,974 토큰 |
+| 합계 | 약 14.4만 토큰 (턴당 약 1만) |
+
+이 값에는 주제 분석, 논제 확정, Neutral Summary 호출이 빠져 있다. 디버그 로그가 토론 턴의 호출만 기록하기 때문이다. 주제와 모델 조합에 따라 달라지므로 대략적인 규모로만 참고한다.
 
 ### 5.7 Vercel 배포
 
