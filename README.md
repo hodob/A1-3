@@ -49,10 +49,10 @@ flowchart TD
     B -->|확인 필요| C[확인 이유 표시]
     C --> M
 
-    B -->|개인 맥락 필요| D[Context 질문 1개]
+    B -->|개인 맥락 필요| D[맥락 질문 1개]
     D -->|사용자 답변| E{맥락이 충분한가?}
     E -->|아니오| D
-    E -->|예| F[Context Summary]
+    E -->|예| F[맥락 요약]
     F --> M
 
     B -->|사실 설명이 먼저 필요| I[주제 수정 안내]
@@ -119,18 +119,17 @@ flowchart TD
 
 ~~~mermaid
 flowchart TD
-    U[사용자]
+    U[사용자] --> B
 
     subgraph SAI[사이]
         B[Browser<br/>UI]
         API[Vercel Python API]
-        W[Web Service<br/>제품 흐름 · 세션 · Provider 호출]
         H[Debate Harness<br/>State · 계획 · 검증]
+        W[Web Service<br/>제품 흐름 · 세션 · Provider 호출]
 
         B -->|JSON / SSE| API
         API --> W
-        W --> H
-        H --> W
+        H <--> W
     end
 
     subgraph EXT[외부 AI Provider]
@@ -138,7 +137,6 @@ flowchart TD
         C[Control Model<br/>분석 · 구조화 · 검증 · 요약]
     end
 
-    U --> B
     W <-->|발언 생성| D
     W <-->|구조화된 판단| C
 ~~~
@@ -199,8 +197,8 @@ Debater Model은 `Q3`, `C15`와 관련 주장을 Context로 받아, "왜 번이 
 
 ~~~mermaid
 flowchart TD
-    S[Debate State<br/>확정된 주장 · 질문 · 관계 · 입장 변화]
-    V[Control View<br/>현재 논점 · 열린 질문 · 진전 상태]
+    S[Debate State<br/>확정된 주장 · 질문<br/>관계 · 입장 변화]
+    V[Control View<br/>현재 논점 · 열린 질문<br/>진전 상태]
     T[Turn Task<br/>이번 턴에 해결할 일]
     A[Action × Target<br/>어떤 행동을 어떤 대상에 할지]
     C[Relevant Context<br/>이번 턴에 필요한 State 정보]
@@ -213,7 +211,7 @@ flowchart TD
     C --> M
 ~~~
 
-`DebateState`에는 다음 턴에도 유지해야 할 사실만 저장한다. 어떤 주장이 나왔는지, 어떤 질문이 열려 있는지, 누가 무엇을 양보·철회·수정했는지가 여기에 해당한다.
+Debate State에는 다음 턴에도 유지해야 할 사실만 저장한다. 어떤 주장이 나왔는지, 어떤 질문이 열려 있는지, 누가 무엇을 양보·철회·수정했는지가 여기에 해당한다.
 
 반면 "두 주장이 사실상 같은 논점인가?", "최근 턴에서 토론이 실제로 진전됐는가?", "지금 가장 먼저 답해야 할 질문은 무엇인가?"처럼 저장된 State로 계산할 수 있는 정보는 저장하지 않고 매 턴 다시 계산한다. 이 계산 결과를 **Control View**라고 부른다. Harness는 Control View로 `Turn Task`를 만들고, 그 과제를 수행할 수 있는 `Action × Target` 후보 중 하나를 고른다.
 
@@ -239,7 +237,7 @@ C19  수정 주장: "조건 Y에서는 X다"
 REVISE  C12 → C19
 ~~~
 
-Control View는 `build_control_view(state)`가 만든다. 이 함수는 State를 읽어 `Semantic Facets`(같은 논점으로 묶인 주장), `Question Groups`, `Progress`를 계산한다. `Immediate QUD`는 이 결과와 현재 발언자를 기준으로 지금 가장 먼저 다룰 열린 질문을 고른 것이다.
+Control View는 `build_control_view(state)`가 만든다. 이 함수는 State를 읽어 `Semantic Facets`(같은 논점으로 묶인 주장), `Question Groups`, `Progress`를 계산한다. `Immediate QUD`(QUD는 Question Under Discussion의 약자)는 이 결과와 현재 발언자를 기준으로 지금 가장 먼저 다룰 열린 질문을 고른 것이다.
 
 계산할 수 있는 값을 따로 저장하지 않으면 원본과 사본이 어긋날 일이 없다. React와 Redux가 중복·파생 state를 줄이라고 권장하는 것, PostgreSQL의 View가 데이터를 복제하지 않고 조회할 때 계산하는 것과 같은 원리다.
 
@@ -250,7 +248,7 @@ Control View는 `build_control_view(state)`가 만든다. 이 함수는 State를
 Harness는 현재 Turn Task에서 가능한 `Action × Target` 후보를 만든 뒤, 이미 해결됐거나 반복으로 소진됐거나 대상 조건에 맞지 않는 후보를 먼저 제외한다. 남은 후보 중에서 현재 쟁점과의 관련성, 전략적 우선순위, Persona 선호, 반복 정도를 비교해 하나를 고른다.
 
 - **소진**: 같은 발언자가 같은 `Action × Target`을 이미 한 번 사용한 상태. 같은 공격을 되풀이하지 않도록 기본적으로 다시 고르지 않는다. 단, 근거가 아직 약한 주장에 대한 근거 요구나, 상대가 부분적으로만 답했거나 피한 질문을 다시 묻는 것은 계속 열어 둔다.
-- **해결**: 행동의 목적이 이미 이뤄진 상태. 예를 들어 근거가 충분히 제시된 주장에 근거를 또 요구하거나, 직접 답이 나온 질문을 다시 묻는 경우다.
+- **해결**: 그 행동의 목적이 이미 이뤄진 상태. 예를 들어 근거가 충분히 제시된 주장에 대한 근거 요구나, 이미 직접 답이 나온 질문에 대한 재질문은 해결된 것으로 보고 고르지 않는다.
 
 **Persona**는 토론자의 논증 성향이다. 논제를 확정할 때 주제 유형에 따라 A와 B에게 서로 다른 Persona가 하나씩 배정된다(예: 정의 논쟁은 Socratic과 Falsifier, 정책·가치 논쟁은 Principlist와 Pragmatist). Persona는 **어떤 행동을 허용할지 정하는 규칙이 아니라, 허용된 행동 중에서 무엇을 더 선호할지 정하는 성향**이다. 그래서 Persona가 특정 행동을 선호하더라도, 이미 해결된 질문이나 소진된 Action × Target을 다시 고르게 만들 수는 없다.
 
@@ -317,7 +315,7 @@ State가 구조화되어 있기 때문에 지금 중요한 항목을 계산해 �
 
 ~~~mermaid
 flowchart TD
-    P[Turn Plan<br/>Task · Action · Target · Context]
+    P[Turn Plan<br/>Task · Action · Target<br/>Context]
     G[Debater Model<br/>발언 생성]
     D[Streaming Draft<br/>확정 전 초안]
     V{Compliance 검사}
@@ -330,6 +328,7 @@ flowchart TD
     D --> V
     V -->|실패| R
     R --> P
+    V -->|3번 모두 실패| X[확정하지 않음<br/>기존 기록 유지]
     V -->|통과| S
     S -->|성공| C
 ~~~
@@ -424,7 +423,7 @@ pip install -r requirements.txt
 python -m etc.tools.web_dev_server
 ~~~
 
-http://127.0.0.1:8765 에 접속한다(`--port`로 변경 가능). 이 서버는 `config.json`의 `web_mode`와 관계없이 항상 Mock 서비스를 사용하므로 API 키가 필요 없고 토큰도 소모하지 않는다.
+http://127.0.0.1:8765 에 접속한다(`--port`로 변경 가능). 이 서버는 `config.json`의 `web_mode`와 관계없이 항상 Mock 서비스를 사용하므로 API 키가 필요 없고 토큰도 소모하지 않는다. Mock 서비스는 미리 정해 둔 문장으로 응답하므로 화면 흐름을 확인하는 용도다. 로컬 개발 서버는 Live 모드를 지원하지 않으므로, 실제 모델로 토론하려면 [5.7](#57-vercel-배포)처럼 Vercel에 배포한다.
 
 ### 5.3 테스트
 
@@ -480,16 +479,20 @@ GitHub Actions도 push와 pull request마다 Python 3.12에서 unittest와 JavaS
 
 `.env`에는 이 두 키만 둘 수 있다. URL·모델·모드 같은 일반 설정을 넣으면 실행 시 오류가 나며 `config.json`으로 옮기라는 안내가 표시된다.
 
-**다른 Provider를 쓰려면** — 기본 설정의 `copa.codyssey.kr`은 Codyssey 과정용 게이트웨이다. 다른 환경에서는 `provider.url`, 모델 ID, `DEBATER_API_KEY`를 아래 조건을 만족하는 Provider로 바꾸면 된다. 다만 다른 Provider로는 아직 검증하지 않았다.
+### 5.5 다른 Provider로 실행하기
+
+기본 설정의 `copa.codyssey.kr`은 Codyssey 과정용 게이트웨이다. 다른 환경에서는 `provider.url`, 모델 ID, `DEBATER_API_KEY`를 아래 조건을 만족하는 Provider로 바꾸면 된다. 다만 다른 Provider로는 아직 검증하지 않았다.
 
 - 모든 호출이 **하나의 URL과 하나의 API 키**로 나간다. 그래서 여러 회사의 모델을 한 주소에서 제공하는 OpenAI 호환 게이트웨이가 필요하다.
 - Chat Completions의 `stream: true`와 `stream_options.include_usage`를 지원해야 한다.
 - Tool Calling(`tools`)을 지원해야 한다. 구조화된 결과는 모두 Tool Call로 받는다.
 - `company`는 `GOOGLE`, `ANTHROPIC`, `OPENAI` 중 하나이며, A와 B가 서로 다른 회사 모델을 쓰도록 구분하는 라벨로만 쓰인다.
 
-**호출량과 시간** — 한 턴마다 Debater Model 발언 생성(재시도 포함 최대 3번)과 Control Model 검증·State Patch 추출 호출이 일어난다. Provider 호출 하나의 제한 시간은 90초, Vercel Function 하나의 최대 실행 시간은 300초다. 참고로 단일 모델(`gpt-5.4`)을 쓰던 시기에 주제 분석부터 토론 3턴, 요약까지 한 번 돌린 Live 점검에서는 Provider 호출 11번, 12,653 토큰이 들었다([docs-legacy/VALIDATION_EVIDENCE.md](docs-legacy/VALIDATION_EVIDENCE.md)). 여러 모델을 섞어 쓰는 현재 구성에서는 다시 측정하지 않았다.
+### 5.6 호출량과 시간
 
-### 5.5 Vercel 배포
+한 턴마다 Debater Model 발언 생성(재시도 포함 최대 3번)과 Control Model 검증·State Patch 추출 호출이 일어난다. Provider 호출 하나의 제한 시간은 90초, Vercel Function 하나의 최대 실행 시간은 300초다. 참고로 단일 모델(`gpt-5.4`)을 쓰던 시기에 주제 분석부터 토론 3턴, 요약까지 한 번 돌린 Live 점검에서는 Provider 호출 11번, 12,653 토큰이 들었다([docs-legacy/VALIDATION_EVIDENCE.md](docs-legacy/VALIDATION_EVIDENCE.md)). 여러 모델을 섞어 쓰는 현재 구성에서는 다시 측정하지 않았다.
+
+### 5.7 Vercel 배포
 
 - `public/`은 정적 Frontend로 제공되고, `api/*.py`는 Python Serverless Function으로 실행된다.
 - 하이픈이 들어간 공개 API 경로(`/api/debate-step` 등)는 `vercel.json`의 rewrite로 해당 Python 파일에 연결된다.
@@ -553,7 +556,10 @@ src/debate_engine/
   provider_transport.py          Provider 스트리밍 호출과 응답 조립
 
 etc/tools/                       개발 서버, preflight, 진단 도구
+etc/fixtures/                    회귀 검증에 쓰는 실제 토론 기록
 tests/                           Python 회귀 테스트와 tests/js/ JavaScript 테스트
+docs/                            현재 설계 문서 (Topic Analyzer)
+docs-legacy/                     이전 기획·검증·배포 문서 보관
 ~~~
 
 </details>
