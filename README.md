@@ -10,7 +10,7 @@
 2. [시스템 경계와 실행 구조 (Runtime)](#2-시스템-경계와-실행-구조-runtime)
 3. [코드 구성 요소 구조](#3-코드-구성-요소-구조)
 4. [토론 엔진 구조 (Debate Engine)](#4-토론-엔진-구조-debate-engine)
-5. [토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가](#5-토론-상태-debate-state-현재-토론을-어떻게-표현하는가)
+5. [토론 상태 (Debate State): 무엇을 저장하고 무엇을 계산하는가](#5-토론-상태-debate-state-무엇을-저장하고-무엇을-계산하는가)
 6. [행동 선택과 Persona](#6-행동-선택과-persona)
 7. [한 턴의 실행 순서 (Runtime Sequence)](#7-한-턴의-실행-순서-runtime-sequence)
 8. [프롬프트와 검증 흐름 (Prompt / Validation)](#8-프롬프트와-검증-흐름-prompt--validation)
@@ -228,42 +228,32 @@ flowchart TD
 
 ---
 
-## 5. 토론 상태 (Debate State): 현재 토론을 어떻게 표현하는가
+## 5. 토론 상태 (Debate State): 무엇을 저장하고 무엇을 계산하는가
 
-Debate State는 **검증을 통과한 발언에서 다음 턴에도 보존해야 할 주장·관계·질문·입장 변화를 구조화해 유지하는 확정 상태**다. 시스템은 이 State에 토론에서 확정된 기록을 저장하고, **같은 논점인지, 어떤 질문이 아직 중요한지, 최근 턴이 실제 진전인지** 같은 제어 정보는 원본 State에서 필요할 때 계산한다.
+다음 발언을 정하려면 직전 문장만 보는 것으로는 부족하다. 시스템은 **무엇이 주장됐는지, 어떤 주장이 무엇을 지지하거나 공격하는지, 어떤 질문이 아직 열려 있는지, 누가 무엇을 수정·양보·철회했는지**를 다음 턴에서도 이어서 사용할 수 있어야 한다.
 
-즉, **저장해야 하는 사실과 그 사실을 해석해 얻는 제어 정보를 분리한다.**
+`DebateState`는 이 정보를 구조화해 보존하는 **확정 기록**이다. 반대로 “이 두 주장은 사실 같은 논점인가?”, “방금 턴이 실제로 진전됐는가?”, “지금 가장 먼저 답해야 할 질문은 무엇인가?”처럼 원본 기록에서 다시 계산할 수 있는 값은 State에 중복 저장하지 않는다.
 
-**그림 5. 확정된 토론 기록에서 지금 처리할 질문을 고르는 과정**
+### 5.1 State에는 토론에서 확정된 기록을 남긴다
 
-```mermaid
-flowchart TD
-    S[Debate State<br/>저장되는 확정 기록<br/>Propositions · Relations · Questions · Commitment Events]
-    V[Derived Control View<br/>매 턴 다시 계산<br/>Semantic Facets · Question Groups · Progress]
-    Q[Immediate QUD<br/>현재 우선 처리할 질문]
+주요 구조는 다음 네 가지다.
 
-    S -->|build_control_view| V
-    V -->|우선순위 선택| Q
+| 구조 | 기록하는 것 |
+|---|---|
+| **Proposition** | 실제로 제시된 주장 |
+| **Relation** | 주장 사이의 지지·공격·모순·한정 관계 |
+| **Question** | 제기된 질문과 `OPEN / RESOLVED` 상태 |
+| **Commitment Event** | 주장·양보·철회·수정 같은 입장 변화 |
+
+여기에 질문 응답 기록과 내부 event log도 함께 남는다. 이 기록들이 이후 계산의 원본이 된다.
+
+예를 들어 A가 처음에 다음처럼 주장했다고 하자.
+
+```text
+C12  "모든 경우에 X다"
 ```
 
-파생 정보를 State에 함께 저장하면 원본이 바뀔 때 `Semantic Facets`, `Question Groups`, `Progress`, QUD도 함께 맞춰야 한다. 원본 State만 확정 상태로 두면 이런 값은 필요할 때 다시 계산할 수 있다.
-
-이 계산 결과는 다음 턴의 과제와 행동을 정하는 데 쓰이고, 8.1절의 모델 입력을 만들 때도 현재 `Turn Task`, `Action × Target`, QUD, 관련 facet을 기준으로 필요한 State reference만 고르는 데 사용된다. 따라서 **모델에 전체 State를 보내지 않는 것은 이 구조 자체의 정의라기보다, 현재 중요한 정보를 계산할 수 있기 때문에 가능한 활용 결과**다.
-
-### 무엇을 State로 남기는가
-
-| 구조 | State가 답하는 질문 |
-|---|---|
-| **Proposition** | 무엇이 주장됐는가? |
-| **Relation** | 어떤 주장이 무엇을 지지·공격·모순·한정하는가? |
-| **Question** | 무엇이 아직 답을 요구하는가? `OPEN / RESOLVED`로 관리한다. |
-| **Commitment Event** | 누가 무엇을 주장·양보·철회·수정했는가? |
-
-이 구조를 두는 이유는 발언 문장 자체와 **토론에서 남아야 할 의미 상태**가 같지 않기 때문이다. 같은 문장을 다시 읽는 것만으로는 어떤 질문이 아직 열려 있는지, 어떤 주장이 수정되었는지, 무엇이 무엇을 공격하는지 안정적으로 구분하기 어렵다.
-
-### 변경은 기존 기록을 덮어쓰지 않는다
-
-주장을 수정해도 기존 Proposition text를 바꾸지 않는다. 수정된 내용을 새 Proposition으로 추가하고 `REVISE` event로 이전 주장과 연결한다.
+이후 A가 자신의 주장을 조건부로 고치면 기존 `C12`의 문장을 덮어쓰지 않는다.
 
 ```text
 C12  기존 주장: "모든 경우에 X다"
@@ -271,17 +261,74 @@ C19  수정 주장: "조건 Y에서는 X다"
 REVISE  C12 → C19
 ```
 
-따라서 이후 턴은 최신 주장만 볼 수 있을 뿐 아니라, **무엇이 어떻게 바뀌었는지**도 추적할 수 있다. 양보와 철회도 같은 방식으로 Commitment Event에 남는다.
+이렇게 두면 현재 주장뿐 아니라 **무엇이 어떻게 바뀌었는지**도 남는다. 실제 구현에서도 `REVISE_PROPOSITION`은 새 Proposition을 만들고 기존 Proposition과 `REVISE` event로 연결한다.
 
-### 파생 정보는 State에서 다시 계산한다
+### 5.2 현재 토론의 모습은 State에서 다시 계산한다
 
-`build_control_view(state)`는 원본 `DebateState`를 읽어 `Semantic Facets`, `Question Groups`, `Progress`를 가진 `DebateControlView`를 만든다. 이 View는 다음 턴을 판단하기 위한 계산 결과이며, 원본 State를 대신하는 별도 저장소가 아니다.
+State에 `C12`와 `C19`가 둘 다 있다고 해서 시스템이 이를 서로 완전히 다른 논점으로 취급하는 것은 아니다. `build_control_view(state)`는 확정된 State를 읽어 다음 정보를 다시 계산한다.
 
-새 Proposition ID가 생겼다고 곧바로 새로운 논점이나 진전으로 보지 않는다. `SAME_POINT`, `REFINEMENT`, `QUALIFICATION`처럼 기존 주장과 같은 논지에 속하는 경우에는 **Semantic Facet**으로 묶어 표현만 바뀐 반복을 새 진전으로 세지 않는다.
+| 계산 결과 | 답하는 질문 |
+|---|---|
+| **Semantic Facets** | 여러 Proposition이 같은 논점을 표현하는가? |
+| **Question Groups** | 여러 질문이 실질적으로 같은 질문인가? |
+| **Progress** | 새 이유·반례·한정·질문 해결·양보·수정이 있었는가, 아니면 반복인가? |
+| **Immediate QUD** | 현재 speaker가 지금 먼저 처리해야 할 열린 질문은 무엇인가? |
 
-질문도 오래된 순서대로 전부 다시 꺼내지 않는다. 한 번의 답변으로 함께 처리할 수 있는 질문은 **Question Group**으로 묶는다. **Immediate QUD (Question Under Discussion)** 는 State에 저장된 별도 객체가 아니라, 이 Control View와 원본 State, 현재 speaker를 기준으로 그 순간 먼저 처리할 질문을 선택한 결과다. `Progress`는 새 이유·반례·한정·질문 해결·양보·수정처럼 의미 있는 변화와 단순 재진술·반복 질문을 구분한다.
+예를 들어 `C19`가 `C12`의 수정이라면 두 Proposition은 같은 Semantic Facet에 묶이고, 현재 형태는 `C19`가 된다. `C12`를 삭제하지 않아도 다음 턴에서는 “현재 주장이 무엇인지”를 계산해서 사용할 수 있다.
 
-이 구조는 담화를 현재의 Question Under Discussion 중심으로 보는 연구와 복합 질문 턴을 의미 단위로 묶는 접근을 참고했다 (Roberts, 2012; Prakken, 2005; D’Agostino et al., 2024).
+**그림 5. 확정된 기록에서 현재 토론 상황을 계산하는 과정**
+
+```mermaid
+flowchart TD
+    S[Debate State<br/>확정된 기록]
+    V[Derived Control View<br/>논점 · 질문 · 진전 상태 계산]
+    Q[Immediate QUD<br/>지금 먼저 답할 질문]
+
+    S -->|build_control_view| V
+    V -->|열린 질문이 있으면 선택| Q
+```
+
+`DebateControlView`와 `Immediate QUD`는 별도의 영구 상태가 아니다. State가 바뀌면 다음 턴에서 다시 계산한다. 계산 가능한 값을 원본 State에 중복 저장하지 않으므로, 원본과 파생 값이 서로 어긋나는 문제를 줄일 수 있다.
+
+### 5.3 계산 결과는 다음 턴을 정하는 데 사용한다
+
+Crossfire와 Rebuttal에서 `plan_turn_task()`는 현재 State를 읽고 `DebateControlView`를 만든 뒤, 열린 `Immediate QUD`가 있으면 그 질문에 먼저 답하는 `ANSWER_OPEN_QUESTION` 과제를 만든다.
+
+열린 QUD가 없다면 새 반례가 있는지, 아직 검증하지 않은 상대 핵심 이유가 있는지, 같은 논점을 반복하고 있는지 등을 보고 다음 과제를 정한다. 따라서 Control View의 역할은 단순한 요약이 아니라 **현재 기록을 다음 행동으로 연결하는 판단용 관점**이다.
+
+```text
+Debate State
+    ↓
+현재 논점 · 질문 · 진전 상태 계산
+    ↓
+지금 해결할 과제 결정
+    ↓
+Action × Target 선택
+```
+
+여기서 `Action × Target` 선택은 6절에서 이어서 설명한다.
+
+### 5.4 이 구조는 모델에 보낼 Context를 고르는 데도 쓰인다
+
+Debater Model에게 매 턴 전체 Debate State를 그대로 보내지는 않는다. 현재 `Turn Task`, 선택된 `Action × Target`, QUD가 가리키는 Proposition, 관련 Semantic Facet의 대표·현재 Proposition, 최근에 실제로 참조된 State 항목을 중심으로 허용 reference를 고른다.
+
+현재 구현의 `working_reference_ids()`는 이런 항목을 모아 중복을 제거하고 최대 12개의 State reference만 발언 생성 요청에 포함한다. State Patch 추출도 별도의 graph-aware working set을 사용한다.
+
+따라서 5절의 구조와 8.1절의 Context 구성은 다음처럼 연결된다.
+
+```text
+Debate State
+    ↓ 현재 상황 계산
+DebateControlView / QUD / Turn Task
+    ↓ 관련 항목 선택
+Prompt에 넣을 State reference
+    ↓
+Debater Model
+```
+
+즉, **State와 파생 정보를 분리한 직접적인 목적은 토론의 확정 기록과 현재 판단을 분리하는 것**이고, 전체 State 대신 현재 과제와 관련된 Context만 모델에 전달할 수 있다는 점은 그 구조를 실제 생성 단계에서 활용한 결과다.
+
+이 설계 원칙은 계산 가능한 값을 state에 중복 저장하지 않고 필요할 때 derive하는 일반적인 state 관리 방식과 같은 방향이다. Redux와 React는 중복·파생 state를 최소화하도록 권장하고, PostgreSQL의 일반 View도 원본 데이터를 별도로 복제하지 않고 조회 시점에 query 결과를 계산한다.
 
 ---
 
@@ -602,3 +649,6 @@ Vercel에서는 Project Settings의 Environment Variables에 같은 secret을 �
 - D’Agostino, Giulia, Chris Reed, and Daniele Puccinelli (2024). *Segmentation of Complex Question Turns for Argument Mining: A Corpus-based Study in the Financial Domain*. LREC-COLING 2024. https://aclanthology.org/2024.lrec-main.1265/
 - Liu, Nelson F. et al. (2024). *Lost in the Middle: How Language Models Use Long Contexts*. Transactions of the Association for Computational Linguistics, 12, 157–173. https://aclanthology.org/2024.tacl-1.9/
 - Ray, Jaideep & Ankit Goyal (2026). *Structured Feedback Improves Repair in an LLM Agent Loop*. arXiv preprint. https://arxiv.org/abs/2607.14167
+- PostgreSQL. *CREATE VIEW*. https://www.postgresql.org/docs/current/sql-createview.html
+- React. *Choosing the State Structure*. https://react.dev/learn/choosing-the-state-structure
+- Redux. *Deriving Data with Selectors*. https://redux.js.org/usage/deriving-data-selectors
