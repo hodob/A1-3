@@ -17,6 +17,7 @@ STATIC = {
     "/index.html": (PUBLIC / "index.html", "text/html; charset=utf-8"),
     "/styles.css": (PUBLIC / "styles.css", "text/css; charset=utf-8"),
     "/app.js": (PUBLIC / "app.js", "application/javascript; charset=utf-8"),
+    "/theme.js": (PUBLIC / "theme.js", "application/javascript; charset=utf-8"),
     "/debate_stream.js": (PUBLIC / "debate_stream.js", "application/javascript; charset=utf-8"),
     "/debate_moderator.js": (PUBLIC / "debate_moderator.js", "application/javascript; charset=utf-8"),
     "/markdown_renderer.js": (PUBLIC / "markdown_renderer.js", "application/javascript; charset=utf-8"),
